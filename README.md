@@ -5,14 +5,22 @@ Homelab infrastructure for [woodhead.tech](https://woodhead.tech) -- a Talos Lin
 ## Architecture
 
 ```
-Internet -> [Router :80/:443] -> Traefik LXC (10.0.0.20)
-                                    |
-                    +---------------+---------------+
-                    |                               |
-            Recipe Site LXC              K8s VIP (10.0.0.100)
-            (10.0.0.21:80)              (talos-proxmox cluster)
-                    |
-            Future LXCs...
+ISP Modem/ONT
+    |
+    | (WAN - vmbr1)
+    |
+[OPNsense VM] (10.0.0.1) -- NAT, firewall, DHCP, DNS, VPN
+    |
+    | vmbr0 (LAN - 10.0.0.0/24)
+    |
+    +-- Traefik LXC (10.0.0.20)  <-- ports 80/443 forwarded here
+    |       |
+    |       +-- Recipe Site LXC (10.0.0.21)
+    |       +-- ARR Stack LXC (10.0.0.22) -- Sonarr, Radarr, Prowlarr, etc.
+    |       +-- K8s VIP (10.0.0.100)
+    |
+    +-- TrueNAS VM (10.0.0.30) -- NFS media storage for ARR/Plex/Jellyfin
+    +-- K8s Cluster (10.0.0.101, 10.0.0.111-112)
 ```
 
 - **Proxmox VE 8.x** -- 2-3 node cluster with Ceph storage
@@ -56,6 +64,7 @@ make init && make apply
 # 4. Configure services
 make traefik
 make recipe-site
+make arr-stack
 
 # 5. Bootstrap Kubernetes
 export CLUSTER_VIP="10.0.0.100"
@@ -74,26 +83,31 @@ make harden
 
 ## Makefile Targets
 
-| Target           | Phase | Description                                    |
-|------------------|-------|------------------------------------------------|
-| `setup`          | 0     | Verify/configure Proxmox hosts (run once)      |
-| `prepare`        | 0     | Download Talos ISO to Proxmox                  |
-| `ddns`           | 1     | Deploy Cloudflare DDNS updater                 |
-| `init`           | --    | Initialize Terraform providers                 |
-| `plan`           | --    | Preview all Terraform changes                  |
-| `apply`          | --    | Create/update all VMs + LXCs                   |
-| `plan-lxc`       | --    | Preview LXC changes only                       |
-| `apply-lxc`      | --    | Create/update LXC containers only              |
-| `traefik`        | 2     | Configure Traefik reverse proxy                |
-| `recipe-site`    | 3     | Deploy recipe site into its LXC                |
-| `bootstrap`      | 4     | Generate Talos configs and bootstrap K8s       |
-| `kubeconfig`     | 4     | Fetch kubeconfig from running cluster          |
-| `health`         | 4     | Check K8s cluster health via talosctl          |
-| `k8s-base`       | 4     | Apply base K8s manifests (namespaces)          |
-| `k8s-base-metallb`| 4   | Apply base manifests + MetalLB                 |
-| `harden`         | 5     | Security hardening (SSH, firewall, fail2ban)   |
-| `destroy`        | --    | Tear down K8s VMs and clean configs            |
-| `clean`          | --    | Remove generated Talos configs only            |
+| Target              | Phase | Description                                    |
+|---------------------|-------|------------------------------------------------|
+| `setup`             | 0     | Verify/configure Proxmox hosts (run once)      |
+| `prepare`           | 0     | Download Talos ISO to Proxmox                  |
+| `prepare-opnsense`  | 0     | Download OPNsense ISO to Proxmox               |
+| `prepare-truenas`   | 0     | Download TrueNAS Scale ISO to Proxmox          |
+| `ddns`              | 1     | Deploy Cloudflare DDNS updater                 |
+| `init`              | --    | Initialize Terraform providers                 |
+| `plan`              | --    | Preview all Terraform changes                  |
+| `apply`             | --    | Create/update all VMs + LXCs                   |
+| `apply-opnsense`    | --    | Create OPNsense firewall VM only               |
+| `apply-truenas`     | --    | Create TrueNAS NAS VM only                     |
+| `plan-lxc`          | --    | Preview LXC changes only                       |
+| `apply-lxc`         | --    | Create/update LXC containers only              |
+| `traefik`           | 2     | Configure Traefik reverse proxy                |
+| `recipe-site`       | 3     | Deploy recipe site into its LXC                |
+| `arr-stack`         | 3     | Deploy ARR media stack into its LXC            |
+| `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
+| `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
+| `health`            | 4     | Check K8s cluster health via talosctl          |
+| `k8s-base`          | 4     | Apply base K8s manifests (namespaces)          |
+| `k8s-base-metallb`  | 4     | Apply base manifests + MetalLB                 |
+| `harden`            | 5     | Security hardening (SSH, firewall, fail2ban)   |
+| `destroy`           | --    | Tear down K8s VMs and clean configs            |
+| `clean`             | --    | Remove generated Talos configs only            |
 
 ## Project Structure
 
@@ -101,7 +115,10 @@ make harden
 .
 ├── Makefile                              # Workflow orchestration
 ├── docs/
-│   └── RUNBOOK.md                        # Step-by-step deployment guide
+│   ├── RUNBOOK.md                        # Step-by-step deployment guide
+│   ├── ROADMAP.md                        # Future services + IP plan
+│   ├── OPNSENSE-SETUP.md                 # OPNsense install + config guide
+│   └── TRUENAS-SETUP.md                  # TrueNAS install + NFS config guide
 ├── terraform/
 │   ├── versions.tf                       # Provider config (bpg/proxmox)
 │   ├── variables.tf                      # K8s VM variables
@@ -110,6 +127,11 @@ make harden
 │   ├── workers.tf                        # Talos worker VM definitions
 │   ├── lxc-traefik.tf                    # Traefik reverse proxy LXC
 │   ├── lxc-recipe-site.tf               # Recipe site LXC
+│   ├── lxc-arr.tf                        # ARR media stack LXC (Docker)
+│   ├── vm-opnsense.tf                    # OPNsense firewall/router VM
+│   ├── vm-opnsense-variables.tf          # OPNsense variables
+│   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
+│   ├── vm-truenas-variables.tf           # TrueNAS variables
 │   ├── outputs.tf                        # Infrastructure outputs
 │   └── terraform.tfvars.example          # Configuration template
 ├── talos/
@@ -123,15 +145,24 @@ make harden
 │   ├── playbooks/
 │   │   ├── setup-proxmox-base.yml        # Proxmox verification + base config
 │   │   ├── prepare-proxmox.yml           # Download Talos ISO
+│   │   ├── prepare-opnsense.yml          # Download OPNsense ISO
+│   │   ├── prepare-truenas.yml           # Download TrueNAS ISO
 │   │   ├── setup-ddns.yml                # Deploy DDNS updater
 │   │   ├── setup-traefik.yml             # Configure Traefik
 │   │   ├── setup-recipe-site.yml         # Deploy recipe site
+│   │   ├── setup-arr-stack.yml           # Deploy ARR media stack (Docker)
 │   │   └── harden-proxmox.yml            # Security hardening
 │   └── files/
+│       ├── arr-stack/
+│       │   └── docker-compose.yml        # ARR stack Docker Compose
 │       └── traefik/
 │           ├── traefik.yml               # Traefik static config
 │           └── dynamic/
 │               ├── recipe-site.yml       # Route: recipes.woodhead.tech
+│               ├── arr-stack.yml         # Routes: sonarr/radarr/prowlarr.*
+│               ├── media-stack.yml       # Routes: plex/jellyfin/nas.*
+│               ├── homeassistant.yml     # Route: home.woodhead.tech
+│               ├── opnsense.yml          # Route: firewall.woodhead.tech
 │               ├── k8s-ingress.yml       # Route: *.woodhead.tech -> K8s
 │               └── dashboard.yml         # Route: traefik.woodhead.tech
 ├── k8s/
@@ -184,14 +215,14 @@ Then `make apply` and `make bootstrap`.
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware considerations.
 
-| Service          | Type | Priority | Subdomain                  |
-|------------------|------|----------|----------------------------|
-| OPNsense Router  | VM   | 1        | `firewall.woodhead.tech`   |
-| TrueNAS Scale    | VM   | 2        | `nas.woodhead.tech`        |
-| ARR Stack        | LXC  | 3        | `sonarr/radarr/prowlarr.*` |
-| Plex             | LXC  | 4        | `plex.woodhead.tech`       |
-| Jellyfin         | LXC  | 4        | `jellyfin.woodhead.tech`   |
-| Home Assistant   | VM   | 5        | `home.woodhead.tech`       |
+| Service          | Type | Status      | Subdomain                  |
+|------------------|------|-------------|----------------------------|
+| OPNsense Router  | VM   | Ready       | `firewall.woodhead.tech`   |
+| TrueNAS Scale    | VM   | Ready       | `nas.woodhead.tech`        |
+| ARR Stack        | LXC  | Ready       | `sonarr/radarr/prowlarr.*` |
+| Plex             | LXC  | Planned     | `plex.woodhead.tech`       |
+| Jellyfin         | LXC  | Planned     | `jellyfin.woodhead.tech`   |
+| Home Assistant   | VM   | Planned     | `home.woodhead.tech`       |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 

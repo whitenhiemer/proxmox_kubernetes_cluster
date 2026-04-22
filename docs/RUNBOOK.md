@@ -191,7 +191,16 @@ Key values to update:
 - Network IPs - adjust to match your subnet
 - Domain settings
 
-### 2.2 Initialize and Apply
+### 2.2 Download ISOs
+
+Download service ISOs before creating VMs:
+```bash
+make prepare           # Talos ISO
+make prepare-opnsense  # OPNsense ISO
+make prepare-truenas   # TrueNAS Scale ISO
+```
+
+### 2.3 Initialize and Apply
 
 ```bash
 # Download providers
@@ -205,14 +214,19 @@ make apply
 ```
 
 This creates:
+- 1 OPNsense firewall VM (ID 100)
+- 1 TrueNAS NAS VM (ID 300)
 - 1 control plane VM (ID 400)
 - 2 worker VMs (IDs 410, 411)
 - 1 Traefik LXC (ID 200)
 - 1 Recipe site LXC (ID 201)
+- 1 ARR stack LXC (ID 202)
 
-If you only want LXC containers first:
+Or create infrastructure piecemeal:
 ```bash
-make apply-lxc
+make apply-opnsense  # OPNsense VM only
+make apply-truenas   # TrueNAS VM only
+make apply-lxc       # LXC containers only (Traefik, recipe site, ARR)
 ```
 
 ---
@@ -289,15 +303,143 @@ In the recipes repo on GitHub (Settings > Webhooks > Add webhook):
 
 ---
 
-## Phase 5: Kubernetes Cluster
+## Phase 5: OPNsense Firewall/Router
 
-### 5.1 Download Talos ISO
+See [docs/OPNSENSE-SETUP.md](OPNSENSE-SETUP.md) for the full setup guide.
+
+### 5.1 Download OPNsense ISO
+
+```bash
+make prepare-opnsense
+```
+
+### 5.2 Create the VM
+
+```bash
+make apply-opnsense
+```
+
+### 5.3 Install OPNsense
+
+1. Open Proxmox web UI -> VM 100 (opnsense) -> Console
+2. Boot from ISO, run the installer
+3. Assign interfaces: WAN = vtnet0 (vmbr1), LAN = vtnet1 (vmbr0)
+4. Set LAN IP to `10.0.0.1/24`
+5. Access web UI at `https://10.0.0.1` (default: root / opnsense)
+
+### 5.4 Configure OPNsense
+
+Key steps (detailed in OPNSENSE-SETUP.md):
+- Port forward 80/443 -> Traefik LXC (10.0.0.20)
+- DNS overrides for `*.woodhead.tech` -> internal IPs
+- Enable Cloudflare DDNS plugin (replaces custom script)
+- Configure WireGuard VPN for remote access
+- Optional: Suricata IDS/IPS
+
+---
+
+## Phase 6: TrueNAS Scale NAS
+
+See [docs/TRUENAS-SETUP.md](TRUENAS-SETUP.md) for the full setup guide.
+
+### 6.1 Download TrueNAS ISO
+
+```bash
+make prepare-truenas
+```
+
+### 6.2 Create the VM
+
+```bash
+make apply-truenas
+```
+
+### 6.3 Pass Through Data Disks
+
+From the Proxmox host, attach physical disks for the ZFS pool:
+```bash
+# Identify disks by stable ID
+ls -la /dev/disk/by-id/ | grep -v part
+
+# Attach data disks (replace with your disk IDs)
+qm set 300 -scsi1 /dev/disk/by-id/<disk-id-1>
+qm set 300 -scsi2 /dev/disk/by-id/<disk-id-2>
+```
+
+### 6.4 Install TrueNAS
+
+1. Open Proxmox web UI -> VM 300 (truenas) -> Console
+2. Boot from ISO, install to the 16GB OS disk (NOT the data disks)
+3. Set admin password, reboot
+
+### 6.5 Configure TrueNAS
+
+1. Set static IP: `10.0.0.30/24`, gateway `10.0.0.1`
+2. Create ZFS pool from passthrough disks (mirror or RAIDZ1)
+3. Create dataset: `pool/media`
+4. Create NFS share: `/mnt/pool/media` -> authorized network `10.0.0.0/24`
+5. Set permissions: `chown -R 1000:1000 /mnt/pool/media`
+
+---
+
+## Phase 7: ARR Media Stack
+
+### 7.1 Deploy (Without NFS)
+
+If TrueNAS isn't ready yet, the ARR stack uses local `/media` as a fallback:
+```bash
+make arr-stack
+```
+
+### 7.2 Deploy (With NFS from TrueNAS)
+
+After TrueNAS is configured with NFS shares:
+```bash
+cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
+  --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+```
+
+### 7.3 Configure Services
+
+Access each service via its web UI:
+| Service   | URL                        | First step                           |
+|-----------|----------------------------|--------------------------------------|
+| Prowlarr  | `http://10.0.0.22:9696`    | Add indexers                         |
+| SABnzbd   | `http://10.0.0.22:8080`    | Configure Usenet server              |
+| Sonarr    | `http://10.0.0.22:8989`    | Connect to Prowlarr + SABnzbd       |
+| Radarr    | `http://10.0.0.22:7878`    | Connect to Prowlarr + SABnzbd       |
+| Bazarr    | `http://10.0.0.22:6767`    | Connect to Sonarr + Radarr          |
+| Overseerr | `http://10.0.0.22:5055`    | Connect to Sonarr + Radarr          |
+
+### 7.4 Configure Gluetun VPN
+
+Edit the Docker Compose file on the ARR LXC to add your VPN credentials:
+```bash
+ssh root@10.0.0.22
+vim /opt/arr/docker-compose.yml
+# Update gluetun environment: VPN_SERVICE_PROVIDER, WIREGUARD_PRIVATE_KEY, etc.
+docker compose -f /opt/arr/docker-compose.yml up -d gluetun
+```
+
+### 7.5 Enable Traefik Routes (Optional)
+
+To expose ARR services externally, uncomment the routes in
+`ansible/files/traefik/dynamic/arr-stack.yml` and redeploy:
+```bash
+make traefik
+```
+
+---
+
+## Phase 8: Kubernetes Cluster
+
+### 8.1 Download Talos ISO
 
 ```bash
 make prepare
 ```
 
-### 5.2 Bootstrap
+### 8.2 Bootstrap
 
 ```bash
 export CLUSTER_VIP="10.0.0.100"
@@ -306,7 +448,7 @@ export WORKER_IPS="10.0.0.111,10.0.0.112"
 make bootstrap
 ```
 
-### 5.3 Verify
+### 8.3 Verify
 
 ```bash
 export KUBECONFIG=talos/_out/kubeconfig
@@ -314,7 +456,7 @@ kubectl get nodes
 # Should show 3 nodes in Ready state
 ```
 
-### 5.4 Apply Base Manifests
+### 8.4 Apply Base Manifests
 
 ```bash
 # Without MetalLB
@@ -324,7 +466,7 @@ make k8s-base
 make k8s-base-metallb
 ```
 
-### 5.5 Enable K8s Routing in Traefik
+### 8.5 Enable K8s Routing in Traefik
 
 Once K8s has an ingress controller, uncomment the routes in `ansible/files/traefik/dynamic/k8s-ingress.yml` and redeploy:
 ```bash
@@ -333,16 +475,16 @@ make traefik
 
 ---
 
-## Phase 6: Security Hardening
+## Phase 9: Security Hardening
 
-### 6.1 Verify SSH Key Access
+### 9.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@10.0.0.10  # Should work without password
 ```
 
-### 6.2 Apply Hardening
+### 9.2 Apply Hardening
 
 ```bash
 make harden
