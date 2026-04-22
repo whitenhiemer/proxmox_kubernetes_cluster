@@ -1,0 +1,28 @@
+# namespace.yml - Base Kubernetes namespaces
+#
+# These namespaces organize workloads deployed to the Talos cluster.
+# Apply after bootstrap: kubectl apply -f k8s/base/namespace.yml
+---
+# Namespace for ingress controllers and load balancer infrastructure
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress-system
+  labels:
+    app.kubernetes.io/managed-by: manual
+---
+# Namespace for application workloads
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+  labels:
+    app.kubernetes.io/managed-by: manual
+---
+# Namespace for monitoring and observability (Prometheus, Grafana, etc.)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/managed-by: manual

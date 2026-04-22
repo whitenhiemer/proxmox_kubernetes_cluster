@@ -1,0 +1,33 @@
+# k8s-ingress.yml - Traefik dynamic route for Kubernetes services
+#
+# Catch-all router that forwards unmatched subdomains to the K8s cluster.
+# The K8s cluster should have its own ingress controller (nginx-ingress or
+# Traefik CRD) running behind the Talos VIP to handle per-service routing.
+#
+# Priority is set low (1) so that explicit routes like recipe-site.yml
+# take precedence. Any subdomain not matched by another router will
+# be forwarded to K8s.
+#
+# NOTE: Only enable this after the K8s cluster is bootstrapped and an
+# ingress controller is running. Comment out until then.
+
+# http:
+#   routers:
+#     # Catch-all for K8s-hosted services
+#     k8s-default:
+#       rule: "HostRegexp(`{subdomain:[a-z0-9-]+}.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: k8s-ingress
+#       tls:
+#         certResolver: cloudflare
+#       # Low priority so explicit routes win
+#       priority: 1
+#
+#   services:
+#     # Backend: K8s cluster via Talos VIP
+#     # This assumes an ingress controller is running and exposed on port 80
+#     k8s-ingress:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.100:80"

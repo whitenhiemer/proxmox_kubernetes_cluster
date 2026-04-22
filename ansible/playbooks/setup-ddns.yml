@@ -1,0 +1,85 @@
+# setup-ddns.yml - Deploy Cloudflare DDNS updater to the primary Proxmox host
+#
+# Installs the DDNS script and sets up a cron job to run every 5 minutes.
+# Requires the Cloudflare env file to be configured with valid credentials.
+#
+# Usage: ansible-playbook playbooks/setup-ddns.yml
+---
+- name: Deploy Cloudflare DDNS updater
+  hosts: proxmox[0]  # Only deploy to the first Proxmox node
+  vars:
+    ddns_env_src: "{{ playbook_dir }}/../../scripts/ddns/cloudflare.env"
+    ddns_script_src: "{{ playbook_dir }}/../../scripts/ddns/cloudflare-ddns.sh"
+
+  tasks:
+    # --- Prerequisites ---
+    - name: Ensure jq is installed
+      ansible.builtin.apt:
+        name: jq
+        state: present
+        update_cache: true
+
+    # --- Deploy script ---
+    - name: Create DDNS directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /usr/local/bin
+        - /etc/ddns
+        - /var/lib/ddns
+
+    - name: Copy DDNS script
+      ansible.builtin.copy:
+        src: "{{ ddns_script_src }}"
+        dest: /usr/local/bin/cloudflare-ddns
+        mode: "0755"
+        owner: root
+        group: root
+
+    # --- Deploy environment file ---
+    - name: Check if Cloudflare env file exists locally
+      ansible.builtin.stat:
+        path: "{{ ddns_env_src }}"
+      delegate_to: localhost
+      become: false
+      register: env_file
+
+    - name: Copy Cloudflare env file
+      ansible.builtin.copy:
+        src: "{{ ddns_env_src }}"
+        dest: /etc/ddns/cloudflare.env
+        mode: "0600"
+        owner: root
+        group: root
+      when: env_file.stat.exists
+
+    - name: Warn if env file not found
+      ansible.builtin.debug:
+        msg: >
+          WARNING: scripts/ddns/cloudflare.env not found locally.
+          Copy cloudflare.env.example to cloudflare.env and fill in your
+          Cloudflare credentials, then re-run this playbook.
+      when: not env_file.stat.exists
+
+    # --- Cron job ---
+    - name: Install DDNS cron job (every 5 minutes)
+      ansible.builtin.cron:
+        name: "Cloudflare DDNS updater"
+        minute: "*/5"
+        job: "/usr/local/bin/cloudflare-ddns 2>&1 | logger -t cloudflare-ddns"
+        user: root
+
+    # --- Verify ---
+    - name: Run DDNS script (dry run to verify connectivity)
+      ansible.builtin.command:
+        cmd: /usr/local/bin/cloudflare-ddns -v
+      register: ddns_test
+      changed_when: false
+      failed_when: false
+      when: env_file.stat.exists
+
+    - name: Display DDNS test output
+      ansible.builtin.debug:
+        msg: "{{ ddns_test.stdout_lines | default(['Skipped -- no env file']) }}"

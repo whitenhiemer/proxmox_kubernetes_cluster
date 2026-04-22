@@ -1,0 +1,12 @@
+# namespace.yml - MetalLB namespace
+#
+# MetalLB provides LoadBalancer service support for bare-metal Kubernetes.
+# Without it, Services of type LoadBalancer will stay in "Pending" state.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+  labels:
+    app.kubernetes.io/managed-by: manual
+    app.kubernetes.io/name: metallb

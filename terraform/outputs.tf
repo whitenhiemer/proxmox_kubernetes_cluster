@@ -39,3 +39,30 @@ output "cluster_endpoint" {
   description = "Kubernetes API endpoint URL"
   value       = "https://${var.cluster_vip}:6443"
 }
+
+# --- LXC Outputs ---
+
+output "traefik_ip" {
+  description = "Traefik reverse proxy LXC IP"
+  value       = var.traefik_ip
+}
+
+output "traefik_vmid" {
+  description = "Traefik LXC VM ID"
+  value       = proxmox_virtual_environment_container.traefik.vm_id
+}
+
+output "recipe_site_ip" {
+  description = "Recipe site LXC IP"
+  value       = var.recipe_site_ip
+}
+
+output "recipe_site_vmid" {
+  description = "Recipe site LXC VM ID"
+  value       = proxmox_virtual_environment_container.recipe_site.vm_id
+}
+
+output "domain" {
+  description = "Base domain for services"
+  value       = var.domain
+}

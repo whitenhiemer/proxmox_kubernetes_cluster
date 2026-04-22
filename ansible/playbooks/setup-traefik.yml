@@ -1,0 +1,196 @@
+# setup-traefik.yml - Install and configure Traefik in its LXC container
+#
+# This playbook configures the Traefik reverse proxy that serves as the
+# "front door" for all web traffic into the homelab. It handles:
+#   - TLS termination via Let's Encrypt (DNS-01 challenge with Cloudflare)
+#   - Routing to LXC services (recipe site, future apps)
+#   - Routing to K8s services via the cluster VIP
+#   - HTTP -> HTTPS redirect
+#
+# Prerequisites:
+#   - Traefik LXC created via Terraform (make apply-lxc)
+#   - Cloudflare API token with Zone:DNS:Edit for woodhead.tech
+#   - SSH access to the Traefik LXC (key injected by Terraform)
+#
+# Usage: ansible-playbook playbooks/setup-traefik.yml
+---
+- name: Configure Traefik reverse proxy
+  hosts: traefik
+  vars:
+    traefik_version: "v3.2.0"
+    traefik_arch: "linux_amd64"
+    traefik_bin: "/usr/local/bin/traefik"
+    traefik_config_dir: "/etc/traefik"
+    traefik_dynamic_dir: "/etc/traefik/dynamic"
+    traefik_user: "traefik"
+    traefik_group: "traefik"
+    # Override these in your inventory or extra-vars
+    cf_api_token: ""  # Pass via --extra-vars or ansible-vault
+    acme_email: ""    # Email for Let's Encrypt registration
+
+  tasks:
+    # --- System Dependencies ---
+    - name: Install required packages
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: true
+
+    # --- Traefik User ---
+    - name: Create traefik system user
+      ansible.builtin.user:
+        name: "{{ traefik_user }}"
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    # --- Download Traefik Binary ---
+    - name: Check if Traefik is already installed
+      ansible.builtin.stat:
+        path: "{{ traefik_bin }}"
+      register: traefik_installed
+
+    - name: Download Traefik binary
+      ansible.builtin.get_url:
+        url: "https://github.com/traefik/traefik/releases/download/{{ traefik_version }}/traefik_{{ traefik_version }}_{{ traefik_arch }}.tar.gz"
+        dest: /tmp/traefik.tar.gz
+        mode: "0644"
+        timeout: 120
+      when: not traefik_installed.stat.exists
+
+    - name: Extract Traefik binary
+      ansible.builtin.unarchive:
+        src: /tmp/traefik.tar.gz
+        dest: /usr/local/bin/
+        remote_src: true
+        mode: "0755"
+      when: not traefik_installed.stat.exists
+
+    - name: Clean up download
+      ansible.builtin.file:
+        path: /tmp/traefik.tar.gz
+        state: absent
+
+    # Allow Traefik to bind to privileged ports (80/443) without root
+    - name: Set cap_net_bind_service on Traefik binary
+      community.general.capabilities:
+        path: "{{ traefik_bin }}"
+        capability: cap_net_bind_service=+ep
+        state: present
+      failed_when: false  # capabilities module may not be available in LXC
+
+    # --- Configuration Directories ---
+    - name: Create Traefik config directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: "0755"
+      loop:
+        - "{{ traefik_config_dir }}"
+        - "{{ traefik_dynamic_dir }}"
+
+    # --- Static Configuration ---
+    - name: Deploy Traefik static configuration
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/traefik/traefik.yml"
+        dest: "{{ traefik_config_dir }}/traefik.yml"
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: "0644"
+      notify: Restart Traefik
+
+    # --- Dynamic Route Configurations ---
+    - name: Deploy dynamic route configs
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ traefik_dynamic_dir }}/"
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: "0644"
+      with_fileglob:
+        - "{{ playbook_dir }}/../files/traefik/dynamic/*.yml"
+      notify: Restart Traefik
+
+    # --- Cloudflare Credentials ---
+    # Traefik needs the Cloudflare API token for DNS-01 ACME challenges.
+    # The token is stored in an environment file read by the systemd service.
+    - name: Deploy Cloudflare credentials for ACME
+      ansible.builtin.copy:
+        content: |
+          # Cloudflare API token for Traefik DNS-01 ACME challenges
+          CF_DNS_API_TOKEN={{ cf_api_token }}
+        dest: /etc/traefik/cloudflare.env
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: "0600"
+      when: cf_api_token != ""
+      notify: Restart Traefik
+
+    # --- ACME Storage ---
+    # Create the acme.json file with strict permissions (Traefik requirement)
+    - name: Create ACME certificate storage file
+      ansible.builtin.file:
+        path: "{{ traefik_config_dir }}/acme.json"
+        state: touch
+        owner: "{{ traefik_user }}"
+        group: "{{ traefik_group }}"
+        mode: "0600"
+        modification_time: preserve
+        access_time: preserve
+
+    # --- Systemd Service ---
+    - name: Deploy Traefik systemd service
+      ansible.builtin.copy:
+        content: |
+          # Traefik reverse proxy service
+          # Manages TLS termination and routing for woodhead.tech
+          [Unit]
+          Description=Traefik Reverse Proxy
+          Documentation=https://doc.traefik.io/traefik/
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=notify
+          User={{ traefik_user }}
+          Group={{ traefik_group }}
+          EnvironmentFile=-/etc/traefik/cloudflare.env
+          ExecStart={{ traefik_bin }} --configFile={{ traefik_config_dir }}/traefik.yml
+          Restart=on-failure
+          RestartSec=5
+          LimitNOFILE=65536
+
+          # Security hardening
+          NoNewPrivileges=true
+          ProtectSystem=strict
+          ProtectHome=true
+          ReadWritePaths={{ traefik_config_dir }}
+          PrivateTmp=true
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/traefik.service
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - Restart Traefik
+
+    - name: Enable Traefik service
+      ansible.builtin.systemd:
+        name: traefik
+        enabled: true
+        state: started
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Restart Traefik
+      ansible.builtin.systemd:
+        name: traefik
+        state: restarted

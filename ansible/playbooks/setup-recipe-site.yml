@@ -1,0 +1,80 @@
+# setup-recipe-site.yml - Deploy the recipe site into its LXC container
+#
+# This playbook runs the existing install-recipe-site.sh script from the
+# recipes repository inside the recipe site LXC. The script is idempotent --
+# it checks for existing users, repos, and services before creating them.
+#
+# What the install script does:
+#   1. Installs dependencies (nginx, Go, git, sqlite3, certbot)
+#   2. Creates a 'recipe-site' system user
+#   3. Clones the recipes repo from GitHub
+#   4. Builds the Go binary
+#   5. Sets up systemd service + nginx reverse proxy
+#   6. Creates webhook secret for GitHub auto-deploy
+#   7. Sets up daily SQLite backup cron (14-day retention)
+#
+# Prerequisites:
+#   - Recipe site LXC created via Terraform (make apply-lxc)
+#   - SSH access to the LXC (key injected by Terraform)
+#   - Internet access from the LXC (for GitHub clone + Go module download)
+#
+# Usage: ansible-playbook playbooks/setup-recipe-site.yml
+---
+- name: Deploy recipe site
+  hosts: lxc_services
+  vars:
+    # Path to the install script in the recipes repo
+    # Assumes both repos are cloned in ~/WORKSPACE on the control machine
+    install_script: "{{ lookup('env', 'HOME') }}/WORKSPACE/recipes/site/deploy/install-recipe-site.sh"
+
+  tasks:
+    # --- Copy Install Script ---
+    - name: Copy install script to container
+      ansible.builtin.copy:
+        src: "{{ install_script }}"
+        dest: /tmp/install-recipe-site.sh
+        mode: "0755"
+
+    # --- Run Install Script ---
+    # The script is designed to run unattended and handles all setup.
+    # It creates /opt/recipe-site/ with the app, database, and configs.
+    - name: Run recipe site install script
+      ansible.builtin.command:
+        cmd: /bin/bash /tmp/install-recipe-site.sh
+      register: install_result
+      changed_when: "'already exists' not in install_result.stdout"
+
+    - name: Display install output
+      ansible.builtin.debug:
+        msg: "{{ install_result.stdout_lines[-10:] }}"
+
+    # --- Cleanup ---
+    - name: Remove install script
+      ansible.builtin.file:
+        path: /tmp/install-recipe-site.sh
+        state: absent
+
+    # --- Verify ---
+    - name: Check recipe-site service is running
+      ansible.builtin.systemd:
+        name: recipe-site
+        state: started
+      register: service_status
+
+    - name: Verify HTTP response
+      ansible.builtin.uri:
+        url: "http://localhost:80"
+        return_content: false
+        status_code: 200
+      register: http_check
+      retries: 3
+      delay: 5
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Recipe site deployed successfully"
+          - "Service status: {{ service_status.status.ActiveState | default('unknown') }}"
+          - "HTTP check: {{ http_check.status }}"
+          - "Internal URL: http://{{ ansible_host }}:80"
+          - "External URL: https://recipes.woodhead.tech (after Traefik setup)"

@@ -1,0 +1,135 @@
+# harden-proxmox.yml - Security hardening for Proxmox hosts
+#
+# Applies baseline security to Proxmox nodes:
+#   - SSH key-only auth (disables password login)
+#   - fail2ban for brute-force protection
+#   - iptables rules to limit inbound traffic
+#   - Disables unnecessary services
+#
+# IMPORTANT: Make sure you have SSH key access BEFORE running this,
+# as it disables password-based SSH login.
+#
+# Usage: ansible-playbook playbooks/harden-proxmox.yml
+---
+- name: Harden Proxmox hosts
+  hosts: proxmox
+  vars:
+    # Subnet allowed to SSH into Proxmox (your LAN)
+    management_subnet: "10.0.0.0/24"
+    # IP of the Traefik LXC (receives port-forwarded 80/443 from router)
+    traefik_ip: "10.0.0.20"
+
+  tasks:
+    # --- SSH Hardening ---
+    - name: Disable SSH password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PasswordAuthentication"
+        line: "PasswordAuthentication no"
+      notify: Restart SSH
+
+    - name: Disable SSH root password login (key only)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PermitRootLogin"
+        line: "PermitRootLogin prohibit-password"
+      notify: Restart SSH
+
+    # --- fail2ban ---
+    - name: Install fail2ban
+      ansible.builtin.apt:
+        name: fail2ban
+        state: present
+        update_cache: true
+
+    - name: Configure fail2ban for SSH
+      ansible.builtin.copy:
+        content: |
+          # fail2ban jail for SSH brute-force protection
+          [sshd]
+          enabled = true
+          port = ssh
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 5
+          bantime = 3600
+          findtime = 600
+
+          # Proxmox web UI protection
+          [proxmox]
+          enabled = true
+          port = 8006
+          filter = proxmox
+          logpath = /var/log/daemon.log
+          maxretry = 3
+          bantime = 3600
+          findtime = 600
+        dest: /etc/fail2ban/jail.local
+        mode: "0644"
+      notify: Restart fail2ban
+
+    - name: Create Proxmox fail2ban filter
+      ansible.builtin.copy:
+        content: |
+          # Proxmox VE authentication failure filter
+          [Definition]
+          failregex = pvedaemon\[.*authentication failure; rhost=<HOST>
+          ignoreregex =
+        dest: /etc/fail2ban/filter.d/proxmox.conf
+        mode: "0644"
+      notify: Restart fail2ban
+
+    - name: Enable fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        enabled: true
+        state: started
+
+    # --- Proxmox Firewall ---
+    # Uses Proxmox's built-in firewall (pve-firewall) rather than raw iptables
+    # to avoid conflicts with Proxmox's networking.
+    - name: Enable Proxmox firewall at datacenter level
+      ansible.builtin.copy:
+        content: |
+          # Proxmox datacenter firewall configuration
+          # /etc/pve/firewall/cluster.fw
+          [OPTIONS]
+          enable: 1
+          policy_in: DROP
+          policy_out: ACCEPT
+
+          [RULES]
+          # Allow SSH from management subnet
+          IN ACCEPT -source {{ management_subnet }} -p tcp -dport 22 -log nolog
+          # Allow Proxmox web UI from management subnet
+          IN ACCEPT -source {{ management_subnet }} -p tcp -dport 8006 -log nolog
+          # Allow Ceph cluster communication between nodes
+          IN ACCEPT -source {{ management_subnet }} -p tcp -dport 6789 -log nolog
+          IN ACCEPT -source {{ management_subnet }} -p tcp -dport 6800:7300 -log nolog
+          # Allow ICMP (ping)
+          IN ACCEPT -p icmp -log nolog
+          # Allow established/related connections
+          IN ACCEPT -log nolog -macro Established
+        dest: /etc/pve/firewall/cluster.fw
+        mode: "0640"
+      run_once: true  # Only needs to be applied once (shared config)
+
+    # --- Summary ---
+    - name: Hardening summary
+      ansible.builtin.debug:
+        msg:
+          - "SSH: key-only auth, password login disabled"
+          - "fail2ban: protecting SSH (5 retries) and Proxmox UI (3 retries)"
+          - "Firewall: enabled, inbound DROP by default"
+          - "Allowed: SSH + PVE UI from {{ management_subnet }}, Ceph inter-node"
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
+
+    - name: Restart fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted

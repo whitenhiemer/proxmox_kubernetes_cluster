@@ -1,0 +1,32 @@
+# ip-pool.yml - MetalLB IP address pool and L2 advertisement
+#
+# Defines the range of IPs MetalLB can assign to LoadBalancer services.
+# Uses L2 mode (ARP announcements) which works on any network without
+# BGP router support. IPs must be in the same subnet as the nodes.
+#
+# This pool reserves 10.0.0.150-10.0.0.199 for K8s LoadBalancer services.
+# Adjust the range to match your network layout.
+#
+# Prerequisites: MetalLB must be installed first (see metallb-install.yml)
+---
+# Pool of IPs available for LoadBalancer services
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    # Reserved range for K8s LoadBalancer services
+    # Make sure these IPs are NOT in your DHCP range
+    - 10.0.0.150-10.0.0.199
+---
+# L2 advertisement - MetalLB responds to ARP requests for assigned IPs
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default-l2
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - default-pool

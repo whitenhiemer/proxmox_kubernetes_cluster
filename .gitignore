@@ -13,9 +13,13 @@ talos/_out/
 # Ansible
 ansible/*.retry
 
-# Environment files
+# Environment files (may contain API tokens)
 .env
 *.env
+!scripts/ddns/cloudflare.env.example
+
+# DDNS state
+/var/lib/ddns/
 
 # OS
 .DS_Store

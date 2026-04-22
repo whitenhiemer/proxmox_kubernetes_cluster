@@ -1,0 +1,22 @@
+# metallb-install.yml - MetalLB installation reference
+#
+# MetalLB is installed from its official manifests. This file documents
+# the installation process rather than bundling the full manifest
+# (which is large and version-specific).
+#
+# Install MetalLB:
+#   kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.9/config/manifests/metallb-native.yaml
+#
+# Then apply the IP pool config:
+#   kubectl apply -f k8s/base/metallb/ip-pool.yml
+#
+# Verify:
+#   kubectl get pods -n metallb-system
+#   kubectl get ipaddresspool -n metallb-system
+#
+# To test, create a LoadBalancer service:
+#   kubectl create deployment nginx --image=nginx
+#   kubectl expose deployment nginx --port=80 --type=LoadBalancer
+#   kubectl get svc nginx  # Should show an external IP from the pool
+#
+# See: https://metallb.universe.tf/installation/

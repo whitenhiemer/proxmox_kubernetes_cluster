@@ -1,0 +1,128 @@
+# setup-proxmox-base.yml - Verify and configure Proxmox hosts after fresh install
+#
+# Run this once after installing Proxmox VE on your nodes.
+# Checks prerequisites, downloads LXC templates, and sets base sysctl values.
+#
+# Usage: ansible-playbook playbooks/setup-proxmox-base.yml
+---
+- name: Configure Proxmox base environment
+  hosts: proxmox
+  vars:
+    ceph_pool: "ceph-pool"
+    network_bridge: "vmbr0"
+    debian_template: "debian-12-standard_12.7-1_amd64.tar.zst"
+
+  tasks:
+    # --- Proxmox Version Check ---
+    - name: Get Proxmox VE version
+      ansible.builtin.command:
+        cmd: pveversion
+      register: pve_version
+      changed_when: false
+
+    - name: Verify Proxmox VE 8.x
+      ansible.builtin.assert:
+        that:
+          - "'pve-manager/8' in pve_version.stdout"
+        fail_msg: "Expected Proxmox VE 8.x, got: {{ pve_version.stdout }}"
+        success_msg: "Proxmox version: {{ pve_version.stdout }}"
+
+    # --- Network Bridge Check ---
+    - name: Check network bridge exists
+      ansible.builtin.command:
+        cmd: "ip link show {{ network_bridge }}"
+      register: bridge_check
+      changed_when: false
+      failed_when: bridge_check.rc != 0
+
+    - name: Confirm bridge is up
+      ansible.builtin.debug:
+        msg: "Bridge {{ network_bridge }} is present and configured"
+
+    # --- Ceph Health Check ---
+    - name: Check Ceph cluster health
+      ansible.builtin.command:
+        cmd: ceph health
+      register: ceph_health
+      changed_when: false
+      failed_when: false
+
+    - name: Display Ceph status
+      ansible.builtin.debug:
+        msg: "Ceph health: {{ ceph_health.stdout | default('Ceph not configured') }}"
+
+    - name: Verify Ceph pool exists
+      ansible.builtin.command:
+        cmd: ceph osd pool ls
+      register: ceph_pools
+      changed_when: false
+      when: ceph_health.rc == 0
+
+    - name: Confirm target Ceph pool
+      ansible.builtin.assert:
+        that:
+          - "ceph_pool in ceph_pools.stdout"
+        fail_msg: "Ceph pool '{{ ceph_pool }}' not found. Available: {{ ceph_pools.stdout_lines }}"
+        success_msg: "Ceph pool '{{ ceph_pool }}' exists"
+      when: ceph_health.rc == 0
+
+    # --- Sysctl Tuning ---
+    - name: Enable IP forwarding (for container/VM networking)
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+
+    - name: Enable bridge netfilter for iptables
+      ansible.posix.sysctl:
+        name: "{{ item }}"
+        value: "1"
+        sysctl_set: true
+        state: present
+        reload: true
+      loop:
+        - net.bridge.bridge-nf-call-iptables
+        - net.bridge.bridge-nf-call-ip6tables
+      failed_when: false  # Module may not be loaded yet
+
+    # --- LXC Template ---
+    - name: Update available LXC templates list
+      ansible.builtin.command:
+        cmd: pveam update
+      changed_when: false
+
+    - name: Check if Debian 12 LXC template exists
+      ansible.builtin.stat:
+        path: "/var/lib/vz/template/cache/{{ debian_template }}"
+      register: debian_tmpl
+
+    - name: Download Debian 12 LXC template
+      ansible.builtin.command:
+        cmd: "pveam download local {{ debian_template }}"
+      when: not debian_tmpl.stat.exists
+      register: tmpl_download
+      changed_when: "'download finished' in (tmpl_download.stdout | default(''))"
+
+    - name: Confirm Debian template is available
+      ansible.builtin.stat:
+        path: "/var/lib/vz/template/cache/{{ debian_template }}"
+      register: debian_tmpl_final
+
+    - name: Assert Debian template exists
+      ansible.builtin.assert:
+        that:
+          - debian_tmpl_final.stat.exists
+        fail_msg: "Debian 12 LXC template download failed"
+        success_msg: "Debian 12 LXC template ready"
+
+    # --- Summary ---
+    - name: Base setup summary
+      ansible.builtin.debug:
+        msg:
+          - "Proxmox VE: {{ pve_version.stdout }}"
+          - "Network bridge: {{ network_bridge }} -- OK"
+          - "Ceph: {{ ceph_health.stdout | default('not configured') }}"
+          - "Debian 12 LXC template: ready"
+          - "IP forwarding: enabled"

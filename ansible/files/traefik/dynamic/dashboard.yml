@@ -1,0 +1,30 @@
+# dashboard.yml - Traefik dashboard route with basic auth
+#
+# Exposes the Traefik dashboard at traefik.woodhead.tech.
+# Protected by HTTP basic auth -- generate a password hash with:
+#   htpasswd -nb admin your-password-here
+#
+# Replace the users entry below with the htpasswd output.
+# The dollar signs ($) must be doubled ($$) in YAML to escape them.
+
+http:
+  routers:
+    # Traefik dashboard - protected by basic auth
+    traefik-dashboard:
+      rule: "Host(`traefik.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: api@internal
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - dashboard-auth
+
+  middlewares:
+    # Basic auth middleware for the dashboard
+    # Generate hash: htpasswd -nb admin your-password-here
+    # IMPORTANT: Replace the placeholder below with your actual hash
+    dashboard-auth:
+      basicAuth:
+        users:
+          - "admin:$$apr1$$PLACEHOLDER$$REPLACE_WITH_HTPASSWD_HASH"
