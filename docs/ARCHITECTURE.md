@@ -48,10 +48,16 @@ and resource allocation.
                    +----------+----------+
                               |
                          vmbr0 (LAN)
-                     10.0.0.0/24
+                     10.0.0.0/24 (flat)
                               |
           +-------------------+-------------------+
           |                   |                   |
+    +-----+------+           |                   |
+    | Google     |           |                   |
+    | Nest WiFi  |           |                   |
+    | Pro (mesh) |           |                   |
+    | bridge mode|           |                   |
+    +------------+           |                   |
     +-----+------+    +------+------+    +-------+-------+
     | Proxmox    |    | Proxmox    |    | Proxmox       |
     | Node 1     |    | Node 2     |    | Node 3 (opt.) |
@@ -69,7 +75,15 @@ and resource allocation.
      | :80 :443    |   | .21 :80  |   | .22      |   | W1: .111   |
      +------+------+   +----------+   +----------+   | W2: .112   |
             |                                         | VIP: .100  |
-            |   +----------+   +--------------+       +------------+
+            |   +----------+   +----------+           +------------+
+            |   | Plex     |   | Jellyfin |
+            |   | LXC 203  |   | LXC 204  |
+            |   | .23      |   | .24      |
+            |   | :32400   |   | :8096    |
+            |   | iGPU     |   | iGPU     |
+            |   +----------+   +----------+
+            |
+            |   +----------+   +--------------+
             |   | TrueNAS  |   | Home         |
             |   | VM 300   |   | Assistant    |
             |   | .30      |   | VM 301       |
@@ -88,6 +102,8 @@ and resource allocation.
     |  sabnzbd.*    +---> 10.0.0.22:8080
     |  nas.*        +---> 10.0.0.30:443
     |  home.*       +---> 10.0.0.31:8123
+    |  grafana.*    +---> 10.0.0.25:3000
+    |  prometheus.* +---> 10.0.0.25:9090
     |  traefik.*    +---> dashboard (local)
     |  firewall.*   +---> 10.0.0.1:443 (internal only)
     +---------------+
@@ -106,8 +122,9 @@ and resource allocation.
 | 10.0.0.20       | traefik          | LXC    | 200   | Reverse proxy, TLS termination      |
 | 10.0.0.21       | recipe-site      | LXC    | 201   | Go + SQLite recipe app              |
 | 10.0.0.22       | arr-stack        | LXC    | 202   | Docker: Sonarr, Radarr, etc.        |
-| 10.0.0.23       | plex             | LXC    | 203   | Plex Media Server (planned)         |
-| 10.0.0.24       | jellyfin         | LXC    | 204   | Jellyfin Media Server (planned)     |
+| 10.0.0.23       | plex             | LXC    | 203   | Plex Media Server + iGPU            |
+| 10.0.0.24       | jellyfin         | LXC    | 204   | Jellyfin Media Server + iGPU        |
+| 10.0.0.25       | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
 | 10.0.0.30       | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 10.0.0.31       | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
 | 10.0.0.100      | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
@@ -283,21 +300,39 @@ obtained via Cloudflare DNS-01 challenges.
     +-----v----v-+ +----v---+ +---v---+ +---v--------+
     | ARR Stack  | | Recipe | | Home  | | K8s Pods   |
     | (media)    | | Site   | | Asst  | | (future)   |
-    +------------+ +--------+ +-------+ +------------+
+    +-----+------+ +--------+ +-------+ +------------+
           |
-    NFS mount
-    /media
+    +-----v----------+
+    | Monitoring     |  Scrapes all services via
+    | (Prometheus)   |  PVE Exporter, Blackbox,
+    | (observes all) |  Traefik metrics, K8s exporters
+    +----------------+
+          |
+    NFS mount (/media, read-write)
+          |
+    +-----v------+ +------------+
+    | Plex       | | Jellyfin   |
+    | (media)    | | (media)    |
+    +------------+ +------------+
+          |              |
+    NFS mount (/media, read-only)
 ```
 
 **Hard dependencies (service won't function without):**
 - All services -> OPNsense (gateway, DNS)
 - All external access -> Traefik (TLS, routing)
 - ARR stack media storage -> TrueNAS (NFS at `/media`)
+- Plex/Jellyfin media library -> TrueNAS (NFS at `/media`, read-only)
+- Plex/Jellyfin transcoding -> iGPU (`/dev/dri` passthrough from Proxmox host)
 
 **Soft dependencies (service works but with reduced functionality):**
 - ARR stack without TrueNAS: uses local `/media` directory (no NAS)
+- Plex/Jellyfin without TrueNAS: no media to serve
+- Plex/Jellyfin without iGPU: falls back to software transcoding (CPU-heavy)
 - Services without Traefik: accessible via direct IP:port (no TLS, no subdomain)
 - K8s without MetalLB: ClusterIP services only (no external access)
+- Monitoring without PVE token: Proxmox metrics unavailable (all other scrapes still work)
+- Monitoring without K8s manifests: K8s metrics unavailable (deploy kube-state-metrics later)
 
 ---
 
@@ -314,6 +349,9 @@ in parallel after the host is ready.
 | auto  | Traefik LXC          | 200   | --     | Starts on boot, no ordering constraint      |
 | auto  | Recipe Site LXC      | 201   | --     | Starts on boot                              |
 | auto  | ARR Stack LXC        | 202   | --     | Starts on boot, NFS mount may retry         |
+| auto  | Plex LXC             | 203   | --     | Starts on boot, iGPU node pinned            |
+| auto  | Jellyfin LXC         | 204   | --     | Starts on boot, iGPU node pinned            |
+| auto  | Monitoring LXC       | 205   | --     | Starts on boot, scrapes all services        |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
 
 ---
@@ -364,8 +402,8 @@ in parallel after the host is ready.
 | Export Path            | Mount Point  | Consumer        | Access    |
 |------------------------|--------------|-----------------|-----------|
 | /mnt/pool/media        | /media       | ARR Stack LXC   | Read/write|
-| /mnt/pool/media        | /media       | Plex (future)   | Read-only |
-| /mnt/pool/media        | /media       | Jellyfin (fut.) | Read-only |
+| /mnt/pool/media        | /media       | Plex LXC        | Read-only |
+| /mnt/pool/media        | /media       | Jellyfin LXC    | Read-only |
 | /mnt/pool/backups      | --           | Proxmox, HA     | Read/write|
 
 ---
@@ -383,6 +421,9 @@ in parallel after the host is ready.
 | K8s Workers       | 4     | 8192     | x86-64   | Per node, default 2 nodes       |
 | Traefik LXC       | 1     | 256      | --       | Lightweight reverse proxy       |
 | Recipe Site LXC   | 1     | 512      | --       | Go binary + SQLite              |
+| Plex LXC          | 2     | 2048     | --       | iGPU passthrough for Quick Sync |
+| Jellyfin LXC      | 2     | 2048     | --       | iGPU passthrough for VAAPI      |
+| Monitoring LXC    | 2     | 2048     | --       | Prometheus, Grafana, exporters  |
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
@@ -397,15 +438,18 @@ in parallel after the host is ready.
 | K8s Workers       | 100 GB | ceph-pool   | raw       | Container images + volumes  |
 | Traefik LXC       | 4 GB   | local-lvm   | --        | Binary + certs + configs    |
 | Recipe Site LXC   | 4 GB   | local-lvm   | --        | Go binary + SQLite DB       |
+| Plex LXC          | 8 GB   | local-lvm   | --        | Plex binary + DB (media on NAS) |
+| Jellyfin LXC      | 8 GB   | local-lvm   | --        | Jellyfin binary + DB (media on NAS) |
+| Monitoring LXC    | 20 GB  | local-lvm   | --        | Prometheus TSDB (30-day retention)  |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
 
 ### Total resource budget (all services running)
 
 | Resource | Total       | Notes                                      |
 |----------|-------------|--------------------------------------------|
-| CPU      | ~20 cores   | Shared across Proxmox nodes                |
-| RAM      | ~33 GB      | TrueNAS benefits from more (ZFS ARC)       |
-| local-lvm| ~96 GB      | OS disks for VMs + all LXCs                |
+| CPU      | ~26 cores   | Shared across Proxmox nodes                |
+| RAM      | ~39 GB      | TrueNAS benefits from more (ZFS ARC)       |
+| local-lvm| ~132 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
 ---
@@ -418,6 +462,9 @@ in parallel after the host is ready.
 | `proxmox_virtual_environment_container.traefik`   | lxc-traefik.tf              | LXC  | 200 |
 | `proxmox_virtual_environment_container.recipe_site`| lxc-recipe-site.tf         | LXC  | 201 |
 | `proxmox_virtual_environment_container.arr`       | lxc-arr.tf                  | LXC  | 202 |
+| `proxmox_virtual_environment_container.plex`      | lxc-plex.tf                 | LXC  | 203 |
+| `proxmox_virtual_environment_container.jellyfin`  | lxc-jellyfin.tf             | LXC  | 204 |
+| `proxmox_virtual_environment_container.monitoring`| lxc-monitoring.tf           | LXC  | 205 |
 | `proxmox_virtual_environment_vm.truenas`          | vm-truenas.tf               | VM   | 300 |
 | `proxmox_virtual_environment_vm.homeassistant`    | vm-homeassistant.tf         | VM   | 301 |
 | `proxmox_virtual_environment_download_file.haos_image` | vm-homeassistant.tf    | File | --  |
@@ -454,6 +501,9 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | nas.woodhead.tech      | 10.0.0.30            | 443   | media-stack.yml       | Commented |
 | home.woodhead.tech     | 10.0.0.31            | 8123  | homeassistant.yml     | Commented |
 | firewall.woodhead.tech | 10.0.0.1             | 443   | opnsense.yml          | Commented |
+| grafana.woodhead.tech  | 10.0.0.25            | 3000  | monitoring.yml        | Commented |
+| prometheus.woodhead.tech| 10.0.0.25           | 9090  | monitoring.yml        | Commented |
+| alertmanager.woodhead.tech| 10.0.0.25         | 9093  | monitoring.yml        | Commented |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Commented |
 | *.woodhead.tech        | K8s VIP (10.0.0.100) | 80    | k8s-ingress.yml       | Commented |
 
@@ -559,10 +609,49 @@ all management is through `talosctl` and `kubectl`.
 
 ---
 
-## VLAN Segmentation Plan
+## WiFi Architecture
 
-Currently all services run on a flat 10.0.0.0/24 network. Recommended
-future segmentation via OPNsense VLAN support:
+Google Nest WiFi Pro mesh in **bridge mode** provides WiFi coverage. All
+routing, DHCP, and DNS handled by OPNsense. The Nest acts as a pure
+access point -- no routing, no NAT, no DHCP.
+
+```
+OPNsense VM (10.0.0.1)
+    |
+    | vmbr0 (LAN)
+    |
+    +-- [Managed Switch] -- Proxmox nodes, wired devices
+    |
+    +-- Google Nest WiFi Pro (bridge mode)
+            |
+            +-- Primary unit (wired to switch)
+            +-- Satellite(s) (wireless mesh backhaul)
+            |
+            WiFi clients get DHCP from OPNsense
+            DNS from OPNsense (10.0.0.1)
+```
+
+**Bridge mode setup**: Google Home app > WiFi > Settings > Networking mode > Bridge.
+Disables Nest routing/DHCP/NAT. Nest becomes a transparent L2 bridge.
+
+**Limitation**: Google Nest does not support VLANs or multiple SSIDs per VLAN.
+All WiFi clients land on the same flat 10.0.0.0/24 network. This is fine
+for current use -- no services require VLAN segmentation to function.
+
+---
+
+## VLAN Segmentation Plan (Deferred)
+
+All services currently run on a flat 10.0.0.0/24 network. This works --
+no services require VLAN segmentation to function. VLAN support is deferred
+until VLAN-aware WiFi APs replace the Google Nest mesh.
+
+**Prerequisites for VLANs:**
+- Replace Google Nest WiFi with VLAN-aware APs (Ubiquiti UniFi U6 or TP-Link Omada EAP)
+- VLAN-aware managed switch (assigns VLANs to physical ports)
+- OPNsense VLAN interface configuration
+
+**Target segmentation (when ready):**
 
 | VLAN | Subnet         | Purpose           | Example Devices                    |
 |------|----------------|-------------------|------------------------------------|
@@ -572,7 +661,7 @@ future segmentation via OPNsense VLAN support:
 | 30   | 10.0.30.0/24   | IoT               | Zigbee, Z-Wave, cameras, sensors   |
 | 40   | 10.0.40.0/24   | Guest WiFi        | Visitors (internet only)           |
 
-**Inter-VLAN firewall rules:**
+**Inter-VLAN firewall rules (future):**
 
 ```
 Trusted (10) ---> Servers (20)     ALLOW   (access services)
@@ -583,8 +672,6 @@ IoT (30) -------> Trusted (10)     DENY    (protect workstations)
 Guest (40) -----> Internet         ALLOW   (internet only)
 Guest (40) -----> ALL internal     DENY    (full isolation)
 ```
-
-Requires: VLAN-aware managed switch + OPNsense VLAN interface config.
 
 ---
 

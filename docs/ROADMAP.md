@@ -198,7 +198,15 @@ This replaces the consumer router entirely. The ISP modem/ONT connects directly 
 the OPNsense VM's WAN interface, and OPNsense becomes the default gateway for the
 entire network.
 
-**VLANs** (recommended segmentation):
+**WiFi**: Google Nest WiFi Pro mesh in **bridge mode**. Nest handles WiFi only --
+OPNsense handles all routing, DHCP, and DNS. All clients land on the flat
+10.0.0.0/24 network. Setup: Google Home app > WiFi > Settings > Bridge mode.
+
+**VLANs** (deferred -- requires replacing Nest with VLAN-aware APs):
+Google Nest does not support VLANs or multiple SSIDs per VLAN. VLAN segmentation
+is a future upgrade requiring Ubiquiti UniFi or TP-Link Omada APs plus a
+VLAN-aware managed switch. Target segmentation when ready:
+
 | VLAN | Subnet         | Purpose                              |
 |------|----------------|--------------------------------------|
 | 1    | 10.0.0.0/24    | Management (Proxmox, SSH, admin UIs) |
@@ -207,8 +215,8 @@ entire network.
 | 30   | 10.0.30.0/24   | IoT (Home Assistant devices, cameras) |
 | 40   | 10.0.40.0/24   | Guest WiFi (isolated, internet only) |
 
-Firewall rules between VLANs control what can talk to what. IoT devices can reach
-Home Assistant but not the NAS. Guests get internet only.
+No services require VLANs to function. The flat network works fine for all
+current and planned services.
 
 **Key features to configure**:
 - **NAT / port forwarding**: 80/443 -> Traefik LXC (replaces router config)
@@ -242,9 +250,13 @@ Home Assistant but not the NAS. Guests get internet only.
   the network gateway, so nothing else gets internet without it
 - If deploying alongside an existing consumer router, run OPNsense in "router on a
   stick" mode first (single NIC with VLANs) and cut over when ready
+- Google Nest WiFi Pro runs in bridge mode behind OPNsense -- Nest provides WiFi
+  only, OPNsense handles all routing/DHCP/DNS
 - Back up the OPNsense config to TrueNAS (XML export, small file)
 - OPNsense's built-in Cloudflare DDNS plugin replaces our `scripts/ddns/cloudflare-ddns.sh`
   cron job -- one less thing to maintain
+- UDM (UniFi Dream Machine) available as backup hardware if OPNsense VM approach
+  doesn't work out -- trades flexibility for physical independence from Proxmox
 
 ---
 
@@ -261,6 +273,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 10.0.0.22     | ARR stack            | LXC  | 202   |
 | 10.0.0.23     | Plex                 | LXC  | 203   |
 | 10.0.0.24     | Jellyfin             | LXC  | 204   |
+| 10.0.0.25     | Monitoring           | LXC  | 205   |
 | 10.0.0.30     | TrueNAS              | VM   | 300   |
 | 10.0.0.31     | Home Assistant       | VM   | 301   |
 | 10.0.0.100    | K8s API VIP          | VIP  | --    |

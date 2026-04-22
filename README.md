@@ -11,12 +11,15 @@ ISP Modem/ONT
     |
 [OPNsense VM] (10.0.0.1) -- NAT, firewall, DHCP, DNS, VPN
     |
-    | vmbr0 (LAN - 10.0.0.0/24)
+    | vmbr0 (LAN - 10.0.0.0/24, flat network)
+    |
+    +-- Google Nest WiFi Pro (bridge mode) -- WiFi clients
     |
     +-- Traefik LXC (10.0.0.20)  <-- ports 80/443 forwarded here
     |       |
     |       +-- Recipe Site LXC (10.0.0.21)
     |       +-- ARR Stack LXC (10.0.0.22) -- Sonarr, Radarr, Prowlarr, etc.
+    |       +-- Monitoring LXC (10.0.0.25) -- Prometheus, Grafana, Alertmanager
     |       +-- K8s VIP (10.0.0.100)
     |
     +-- TrueNAS VM (10.0.0.30) -- NFS media storage for ARR/Plex/Jellyfin
@@ -104,6 +107,7 @@ make harden
 | `arr-stack`         | 3     | Deploy ARR media stack into its LXC            |
 | `plex`              | 3     | Deploy Plex Media Server with iGPU passthrough |
 | `jellyfin`          | 3     | Deploy Jellyfin Media Server with iGPU         |
+| `monitoring`        | 3     | Deploy monitoring stack (Prometheus, Grafana)  |
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
@@ -135,6 +139,7 @@ make harden
 │   ├── lxc-arr.tf                        # ARR media stack LXC (Docker)
 │   ├── lxc-plex.tf                       # Plex Media Server LXC
 │   ├── lxc-jellyfin.tf                   # Jellyfin Media Server LXC
+│   ├── lxc-monitoring.tf                 # Monitoring stack LXC (Docker)
 │   ├── vm-opnsense.tf                    # OPNsense firewall/router VM
 │   ├── vm-opnsense-variables.tf          # OPNsense variables
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
@@ -162,10 +167,21 @@ make harden
 │   │   ├── setup-arr-stack.yml           # Deploy ARR media stack (Docker)
 │   │   ├── setup-plex.yml               # Deploy Plex + iGPU passthrough
 │   │   ├── setup-jellyfin.yml           # Deploy Jellyfin + iGPU passthrough
+│   │   ├── setup-monitoring.yml          # Deploy monitoring stack (Docker)
 │   │   └── harden-proxmox.yml            # Security hardening
 │   └── files/
 │       ├── arr-stack/
 │       │   └── docker-compose.yml        # ARR stack Docker Compose
+│       ├── monitoring/
+│       │   ├── docker-compose.yml        # Monitoring stack Docker Compose
+│       │   ├── prometheus/
+│       │   │   ├── prometheus.yml        # Scrape targets config
+│       │   │   └── rules/alerts.yml      # Alert rules
+│       │   ├── alertmanager/
+│       │   │   └── alertmanager.yml      # Alert routing (Discord/Slack)
+│       │   ├── blackbox/
+│       │   │   └── blackbox.yml          # HTTP/ICMP probe modules
+│       │   └── grafana/provisioning/     # Auto-provisioned datasources + dashboards
 │       └── traefik/
 │           ├── traefik.yml               # Traefik static config
 │           └── dynamic/
@@ -174,11 +190,15 @@ make harden
 │               ├── media-stack.yml       # Routes: plex/jellyfin/nas.*
 │               ├── homeassistant.yml     # Route: home.woodhead.tech
 │               ├── opnsense.yml          # Route: firewall.woodhead.tech
+│               ├── monitoring.yml         # Routes: grafana/prometheus/alertmanager.*
 │               ├── k8s-ingress.yml       # Route: *.woodhead.tech -> K8s
 │               └── dashboard.yml         # Route: traefik.woodhead.tech
 ├── k8s/
 │   └── base/
 │       ├── namespace.yml                 # Base namespaces
+│       ├── monitoring/                   # K8s monitoring exporters
+│       │   ├── kube-state-metrics.yml    # Cluster state metrics + RBAC
+│       │   └── node-exporter-daemonset.yml # Host metrics for Talos nodes
 │       └── metallb/                      # MetalLB LoadBalancer support
 │           ├── namespace.yml
 │           ├── ip-pool.yml               # IP range: 10.0.0.150-199
@@ -234,6 +254,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | Plex             | LXC  | Ready       | `plex.woodhead.tech`       |
 | Jellyfin         | LXC  | Ready       | `jellyfin.woodhead.tech`   |
 | Home Assistant   | VM   | Ready       | `home.woodhead.tech`       |
+| Monitoring       | LXC  | Ready       | `grafana.woodhead.tech`    |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 
