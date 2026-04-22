@@ -48,6 +48,23 @@ On node 2 (and 3):
 pvecm add 10.0.0.10
 ```
 
+### 0.3 Repository Setup (Handled by Ansible)
+
+The `make setup` playbook automatically switches from the enterprise repos (which require a paid subscription) to the free no-subscription community repos. You don't need to do this manually -- just be aware that `apt update` will fail until `make setup` runs if you haven't done this step.
+
+If you want to do it manually before running Ansible:
+```bash
+# Remove enterprise repos
+rm /etc/apt/sources.list.d/pve-enterprise.list
+rm /etc/apt/sources.list.d/ceph.list
+
+# Add community repos
+echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" > /etc/apt/sources.list.d/pve-no-subscription.list
+echo "deb http://download.proxmox.com/debian/ceph-reef bookworm no-subscription" > /etc/apt/sources.list.d/ceph-no-subscription.list
+
+apt update
+```
+
 ### 0.3 Configure Ceph
 
 Via the Proxmox web UI (Datacenter > Ceph):
