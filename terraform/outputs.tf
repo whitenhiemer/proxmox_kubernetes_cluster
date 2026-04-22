@@ -102,6 +102,16 @@ output "monitoring_vmid" {
   value       = proxmox_virtual_environment_container.monitoring.vm_id
 }
 
+output "openclaw_ip" {
+  description = "OpenClaw AI agent LXC IP"
+  value       = var.openclaw_ip
+}
+
+output "openclaw_vmid" {
+  description = "OpenClaw LXC VM ID"
+  value       = proxmox_virtual_environment_container.openclaw.vm_id
+}
+
 output "domain" {
   description = "Base domain for services"
   value       = var.domain

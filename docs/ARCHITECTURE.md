@@ -90,6 +90,13 @@ and resource allocation.
             |   | NFS:2049 |   | .31 :8123    |
             |   +----------+   +--------------+
             |
+            |   +----------+
+            |   | OpenClaw |
+            |   | LXC 206  |
+            |   | .26      |
+            |   | :18789   |
+            |   +----------+
+            |
     +-------+-------+
     | Traefik       |
     | Routes:       |
@@ -102,6 +109,7 @@ and resource allocation.
     |  sabnzbd.*    +---> 10.0.0.22:8080
     |  nas.*        +---> 10.0.0.30:443
     |  home.*       +---> 10.0.0.31:8123
+    |  claw.*       +---> 10.0.0.26:18789
     |  grafana.*    +---> 10.0.0.25:3000
     |  prometheus.* +---> 10.0.0.25:9090
     |  traefik.*    +---> dashboard (local)
@@ -125,6 +133,7 @@ and resource allocation.
 | 10.0.0.23       | plex             | LXC    | 203   | Plex Media Server + iGPU            |
 | 10.0.0.24       | jellyfin         | LXC    | 204   | Jellyfin Media Server + iGPU        |
 | 10.0.0.25       | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
+| 10.0.0.26       | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
 | 10.0.0.30       | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 10.0.0.31       | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
 | 10.0.0.100      | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
@@ -352,6 +361,7 @@ in parallel after the host is ready.
 | auto  | Plex LXC             | 203   | --     | Starts on boot, iGPU node pinned            |
 | auto  | Jellyfin LXC         | 204   | --     | Starts on boot, iGPU node pinned            |
 | auto  | Monitoring LXC       | 205   | --     | Starts on boot, scrapes all services        |
+| auto  | OpenClaw LXC         | 206   | --     | Starts on boot, AI agent framework          |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
 
 ---
@@ -424,6 +434,7 @@ in parallel after the host is ready.
 | Plex LXC          | 2     | 2048     | --       | iGPU passthrough for Quick Sync |
 | Jellyfin LXC      | 2     | 2048     | --       | iGPU passthrough for VAAPI      |
 | Monitoring LXC    | 2     | 2048     | --       | Prometheus, Grafana, exporters  |
+| OpenClaw LXC      | 2     | 2048     | --       | AI agent gateway + CLI          |
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
@@ -441,15 +452,16 @@ in parallel after the host is ready.
 | Plex LXC          | 8 GB   | local-lvm   | --        | Plex binary + DB (media on NAS) |
 | Jellyfin LXC      | 8 GB   | local-lvm   | --        | Jellyfin binary + DB (media on NAS) |
 | Monitoring LXC    | 20 GB  | local-lvm   | --        | Prometheus TSDB (30-day retention)  |
+| OpenClaw LXC      | 20 GB  | local-lvm   | --        | Source build + Docker images + workspace |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
 
 ### Total resource budget (all services running)
 
 | Resource | Total       | Notes                                      |
 |----------|-------------|--------------------------------------------|
-| CPU      | ~26 cores   | Shared across Proxmox nodes                |
-| RAM      | ~39 GB      | TrueNAS benefits from more (ZFS ARC)       |
-| local-lvm| ~132 GB     | OS disks for VMs + all LXCs                |
+| CPU      | ~28 cores   | Shared across Proxmox nodes                |
+| RAM      | ~41 GB      | TrueNAS benefits from more (ZFS ARC)       |
+| local-lvm| ~152 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
 ---
@@ -465,6 +477,7 @@ in parallel after the host is ready.
 | `proxmox_virtual_environment_container.plex`      | lxc-plex.tf                 | LXC  | 203 |
 | `proxmox_virtual_environment_container.jellyfin`  | lxc-jellyfin.tf             | LXC  | 204 |
 | `proxmox_virtual_environment_container.monitoring`| lxc-monitoring.tf           | LXC  | 205 |
+| `proxmox_virtual_environment_container.openclaw`  | lxc-openclaw.tf             | LXC  | 206 |
 | `proxmox_virtual_environment_vm.truenas`          | vm-truenas.tf               | VM   | 300 |
 | `proxmox_virtual_environment_vm.homeassistant`    | vm-homeassistant.tf         | VM   | 301 |
 | `proxmox_virtual_environment_download_file.haos_image` | vm-homeassistant.tf    | File | --  |
@@ -504,6 +517,7 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | grafana.woodhead.tech  | 10.0.0.25            | 3000  | monitoring.yml        | Commented |
 | prometheus.woodhead.tech| 10.0.0.25           | 9090  | monitoring.yml        | Commented |
 | alertmanager.woodhead.tech| 10.0.0.25         | 9093  | monitoring.yml        | Commented |
+| claw.woodhead.tech     | 10.0.0.26            | 18789 | openclaw.yml          | Commented |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Commented |
 | *.woodhead.tech        | K8s VIP (10.0.0.100) | 80    | k8s-ingress.yml       | Commented |
 

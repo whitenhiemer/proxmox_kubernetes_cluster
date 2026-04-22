@@ -20,6 +20,7 @@ ISP Modem/ONT
     |       +-- Recipe Site LXC (10.0.0.21)
     |       +-- ARR Stack LXC (10.0.0.22) -- Sonarr, Radarr, Prowlarr, etc.
     |       +-- Monitoring LXC (10.0.0.25) -- Prometheus, Grafana, Alertmanager
+    |       +-- OpenClaw LXC (10.0.0.26) -- AI agent gateway
     |       +-- K8s VIP (10.0.0.100)
     |
     +-- TrueNAS VM (10.0.0.30) -- NFS media storage for ARR/Plex/Jellyfin
@@ -108,6 +109,7 @@ make harden
 | `plex`              | 3     | Deploy Plex Media Server with iGPU passthrough |
 | `jellyfin`          | 3     | Deploy Jellyfin Media Server with iGPU         |
 | `monitoring`        | 3     | Deploy monitoring stack (Prometheus, Grafana)  |
+| `openclaw`          | 3     | Deploy OpenClaw AI agent framework             |
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
@@ -140,6 +142,7 @@ make harden
 │   ├── lxc-plex.tf                       # Plex Media Server LXC
 │   ├── lxc-jellyfin.tf                   # Jellyfin Media Server LXC
 │   ├── lxc-monitoring.tf                 # Monitoring stack LXC (Docker)
+│   ├── lxc-openclaw.tf                  # OpenClaw AI agent LXC (Docker)
 │   ├── vm-opnsense.tf                    # OPNsense firewall/router VM
 │   ├── vm-opnsense-variables.tf          # OPNsense variables
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
@@ -168,10 +171,13 @@ make harden
 │   │   ├── setup-plex.yml               # Deploy Plex + iGPU passthrough
 │   │   ├── setup-jellyfin.yml           # Deploy Jellyfin + iGPU passthrough
 │   │   ├── setup-monitoring.yml          # Deploy monitoring stack (Docker)
+│   │   ├── setup-openclaw.yml           # Deploy OpenClaw AI agent (Docker)
 │   │   └── harden-proxmox.yml            # Security hardening
 │   └── files/
 │       ├── arr-stack/
 │       │   └── docker-compose.yml        # ARR stack Docker Compose
+│       ├── openclaw/
+│       │   └── docker-compose.yml        # OpenClaw AI agent Docker Compose
 │       ├── monitoring/
 │       │   ├── docker-compose.yml        # Monitoring stack Docker Compose
 │       │   ├── prometheus/
@@ -191,6 +197,7 @@ make harden
 │               ├── homeassistant.yml     # Route: home.woodhead.tech
 │               ├── opnsense.yml          # Route: firewall.woodhead.tech
 │               ├── monitoring.yml         # Routes: grafana/prometheus/alertmanager.*
+│               ├── openclaw.yml          # Route: claw.woodhead.tech
 │               ├── k8s-ingress.yml       # Route: *.woodhead.tech -> K8s
 │               └── dashboard.yml         # Route: traefik.woodhead.tech
 ├── k8s/
@@ -255,6 +262,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | Jellyfin         | LXC  | Ready       | `jellyfin.woodhead.tech`   |
 | Home Assistant   | VM   | Ready       | `home.woodhead.tech`       |
 | Monitoring       | LXC  | Ready       | `grafana.woodhead.tech`    |
+| OpenClaw         | LXC  | Ready       | `claw.woodhead.tech`       |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 

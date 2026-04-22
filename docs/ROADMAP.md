@@ -274,6 +274,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 10.0.0.23     | Plex                 | LXC  | 203   |
 | 10.0.0.24     | Jellyfin             | LXC  | 204   |
 | 10.0.0.25     | Monitoring           | LXC  | 205   |
+| 10.0.0.26     | OpenClaw             | LXC  | 206   |
 | 10.0.0.30     | TrueNAS              | VM   | 300   |
 | 10.0.0.31     | Home Assistant       | VM   | 301   |
 | 10.0.0.100    | K8s API VIP          | VIP  | --    |

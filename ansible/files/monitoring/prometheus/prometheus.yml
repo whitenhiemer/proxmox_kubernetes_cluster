@@ -112,6 +112,7 @@ scrape_configs:
           - http://10.0.0.23:32400    # Plex
           - http://10.0.0.24:8096     # Jellyfin
           - http://10.0.0.31:8123     # Home Assistant
+          - http://10.0.0.26:18789   # OpenClaw gateway
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

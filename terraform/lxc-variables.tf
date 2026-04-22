@@ -171,6 +171,37 @@ variable "monitoring_disk_size" {
   default     = 20
 }
 
+# --- OpenClaw LXC ---
+variable "openclaw_vmid" {
+  description = "VM ID for the OpenClaw AI agent framework LXC"
+  type        = number
+  default     = 206
+}
+
+variable "openclaw_ip" {
+  description = "Static IP for the OpenClaw LXC"
+  type        = string
+  default     = "10.0.0.26"
+}
+
+variable "openclaw_cores" {
+  description = "CPU cores for OpenClaw (Node.js gateway + CLI)"
+  type        = number
+  default     = 2
+}
+
+variable "openclaw_memory" {
+  description = "Memory in MB for OpenClaw (Node.js runtime + LLM API calls)"
+  type        = number
+  default     = 2048
+}
+
+variable "openclaw_disk_size" {
+  description = "Disk size in GB for OpenClaw (source build + Docker images + workspace)"
+  type        = number
+  default     = 20
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

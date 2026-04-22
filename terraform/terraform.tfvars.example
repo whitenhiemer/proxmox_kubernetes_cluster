@@ -64,6 +64,13 @@ monitoring_cores    = 2
 monitoring_memory   = 2048
 monitoring_disk_size = 20    # Prometheus TSDB, 30-day retention
 
+# OpenClaw AI agent framework (built from source, needs LLM API keys)
+openclaw_vmid     = 206
+openclaw_ip       = "10.0.0.26"
+openclaw_cores    = 2
+openclaw_memory   = 2048
+openclaw_disk_size = 20    # Source build + Docker images + workspace
+
 # --- TrueNAS Scale NAS ---
 # Centralized storage for media, backups, ISOs
 # Data disks are passed through manually after VM creation (see docs/TRUENAS-SETUP.md)

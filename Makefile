@@ -13,13 +13,14 @@
 #   make recipe-site    - Deploy recipe site
 #   make arr-stack      - Deploy ARR media stack
 #   make monitoring     - Deploy monitoring stack
+#   make openclaw       - Deploy OpenClaw AI agent
 #   make bootstrap      - Bootstrap Talos K8s cluster
 #   make k8s-base       - Apply base K8s manifests
 #   make harden         - Security hardening
 
 .PHONY: setup prepare prepare-opnsense prepare-truenas ddns init plan apply \
         apply-opnsense apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw \
         bootstrap kubeconfig health k8s-base harden destroy clean help
 
 TERRAFORM_DIR := terraform
@@ -86,7 +87,8 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.arr \
 		-target=proxmox_virtual_environment_container.plex \
 		-target=proxmox_virtual_environment_container.jellyfin \
-		-target=proxmox_virtual_environment_container.monitoring
+		-target=proxmox_virtual_environment_container.monitoring \
+		-target=proxmox_virtual_environment_container.openclaw
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -95,7 +97,8 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.arr \
 		-target=proxmox_virtual_environment_container.plex \
 		-target=proxmox_virtual_environment_container.jellyfin \
-		-target=proxmox_virtual_environment_container.monitoring
+		-target=proxmox_virtual_environment_container.monitoring \
+		-target=proxmox_virtual_environment_container.openclaw
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -116,6 +119,9 @@ jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
 
 monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager) into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml
+
+openclaw: ## Deploy OpenClaw AI agent framework into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-openclaw.yml
 
 # ===== Phase 4: Talos K8s Cluster =====
 

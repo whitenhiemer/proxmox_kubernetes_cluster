@@ -1,0 +1,20 @@
+# openclaw.yml - OpenClaw AI agent gateway route
+#
+# Uncomment after deploying OpenClaw (make openclaw).
+# Routes claw.woodhead.tech to the OpenClaw gateway API.
+#
+# http:
+#   routers:
+#     openclaw:
+#       rule: "Host(`claw.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: openclaw
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     openclaw:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.26:18789"
