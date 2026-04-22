@@ -1,0 +1,66 @@
+# media-stack.yml - Traefik routes for media services
+#
+# Routes for Plex, Jellyfin, and TrueNAS web UIs.
+# Uncomment each section as you deploy the corresponding service.
+#
+# All services terminate TLS at Traefik and proxy to internal HTTP.
+
+# --- Plex ---
+# Uncomment after deploying Plex LXC (VM ID 203, IP 10.0.0.23)
+# http:
+#   routers:
+#     plex:
+#       rule: "Host(`plex.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: plex
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     plex:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.23:32400"
+
+# --- Jellyfin ---
+# Uncomment after deploying Jellyfin LXC (VM ID 204, IP 10.0.0.24)
+# http:
+#   routers:
+#     jellyfin:
+#       rule: "Host(`jellyfin.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: jellyfin
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     jellyfin:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.24:8096"
+
+# --- TrueNAS ---
+# Uncomment after deploying TrueNAS VM (VM ID 300, IP 10.0.0.30)
+# Note: TrueNAS uses HTTPS internally, so we proxy to port 443
+# http:
+#   routers:
+#     truenas:
+#       rule: "Host(`nas.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: truenas
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     truenas:
+#       loadBalancer:
+#         servers:
+#           - url: "https://10.0.0.30:443"
+#         serversTransport: truenas-transport
+#
+#   serversTransports:
+#     truenas-transport:
+#       insecureSkipVerify: true  # TrueNAS uses self-signed certs

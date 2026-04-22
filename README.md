@@ -180,6 +180,20 @@ worker_ips   = ["10.0.0.111", "10.0.0.112", "10.0.0.113", "10.0.0.114", "10.0.0.
 
 Then `make apply` and `make bootstrap`.
 
+## Roadmap
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware considerations.
+
+| Service          | Type | Priority | Subdomain                  |
+|------------------|------|----------|----------------------------|
+| TrueNAS Scale    | VM   | 1        | `nas.woodhead.tech`        |
+| ARR Stack        | LXC  | 2        | `sonarr/radarr/prowlarr.*` |
+| Plex             | LXC  | 3        | `plex.woodhead.tech`       |
+| Jellyfin         | LXC  | 3        | `jellyfin.woodhead.tech`   |
+| Home Assistant   | VM   | 4        | `home.woodhead.tech`       |
+
+Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
+
 ## Migrating to kubeadm
 
 If Talos doesn't fit your needs, the Terraform VM configs can be reused with a standard Ubuntu/Debian cloud image. Swap the `cdrom` block for a `clone` from a cloud-init template and add Ansible roles for kubeadm setup.

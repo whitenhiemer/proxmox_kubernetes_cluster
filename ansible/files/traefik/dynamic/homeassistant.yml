@@ -1,0 +1,21 @@
+# homeassistant.yml - Traefik route for Home Assistant
+#
+# Home Assistant runs as a full VM (HAOS) for addon support.
+# VM ID 301, IP 10.0.0.31, web UI on port 8123.
+# Uncomment after deploying the Home Assistant VM.
+
+# http:
+#   routers:
+#     homeassistant:
+#       rule: "Host(`home.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: homeassistant
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     homeassistant:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.31:8123"

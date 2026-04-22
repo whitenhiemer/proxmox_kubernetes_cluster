@@ -1,0 +1,88 @@
+# arr-stack.yml - Traefik routes for the ARR media management stack
+#
+# Routes for Sonarr, Radarr, Prowlarr, Bazarr, Overseerr, and SABnzbd.
+# All services run in a single LXC (VM ID 202, IP 10.0.0.22) via Docker Compose.
+# Uncomment each section as you deploy the corresponding service.
+
+# --- Overseerr (user-facing request portal) ---
+# Uncomment after deploying ARR LXC
+# http:
+#   routers:
+#     overseerr:
+#       rule: "Host(`requests.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: overseerr
+#       tls:
+#         certResolver: cloudflare
+#
+#     prowlarr:
+#       rule: "Host(`prowlarr.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: prowlarr
+#       tls:
+#         certResolver: cloudflare
+#
+#     sonarr:
+#       rule: "Host(`sonarr.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: sonarr
+#       tls:
+#         certResolver: cloudflare
+#
+#     radarr:
+#       rule: "Host(`radarr.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: radarr
+#       tls:
+#         certResolver: cloudflare
+#
+#     bazarr:
+#       rule: "Host(`bazarr.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: bazarr
+#       tls:
+#         certResolver: cloudflare
+#
+#     sabnzbd:
+#       rule: "Host(`sabnzbd.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: sabnzbd
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     overseerr:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.22:5055"
+#
+#     prowlarr:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.22:9696"
+#
+#     sonarr:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.22:8989"
+#
+#     radarr:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.22:7878"
+#
+#     bazarr:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.22:6767"
+#
+#     sabnzbd:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.22:8080"
