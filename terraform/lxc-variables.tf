@@ -47,6 +47,37 @@ variable "recipe_site_ip" {
   default     = "10.0.0.21"
 }
 
+# --- ARR Stack LXC ---
+variable "arr_vmid" {
+  description = "VM ID for the ARR media management stack LXC"
+  type        = number
+  default     = 202
+}
+
+variable "arr_ip" {
+  description = "Static IP for the ARR stack LXC"
+  type        = string
+  default     = "10.0.0.22"
+}
+
+variable "arr_cores" {
+  description = "CPU cores for the ARR stack (runs multiple Docker containers)"
+  type        = number
+  default     = 2
+}
+
+variable "arr_memory" {
+  description = "Memory in MB for the ARR stack"
+  type        = number
+  default     = 4096
+}
+
+variable "arr_disk_size" {
+  description = "Disk size in GB for the ARR stack (configs + temp downloads, media on NAS)"
+  type        = number
+  default     = 20
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

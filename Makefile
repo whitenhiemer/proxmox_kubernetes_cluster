@@ -11,13 +11,14 @@
 #   make apply          - Create all VMs + LXC containers
 #   make traefik        - Configure Traefik reverse proxy
 #   make recipe-site    - Deploy recipe site
+#   make arr-stack      - Deploy ARR media stack
 #   make bootstrap      - Bootstrap Talos K8s cluster
 #   make k8s-base       - Apply base K8s manifests
 #   make harden         - Security hardening
 
 .PHONY: setup prepare prepare-opnsense ddns init plan apply \
         apply-opnsense apply-lxc plan-lxc \
-        traefik recipe-site bootstrap kubeconfig health \
+        traefik recipe-site arr-stack bootstrap kubeconfig health \
         k8s-base harden destroy clean help
 
 TERRAFORM_DIR := terraform
@@ -68,12 +69,14 @@ apply-opnsense: ## Create OPNsense firewall VM only
 plan-lxc: ## Preview LXC container changes only
 	cd $(TERRAFORM_DIR) && terraform plan \
 		-target=proxmox_virtual_environment_container.traefik \
-		-target=proxmox_virtual_environment_container.recipe_site
+		-target=proxmox_virtual_environment_container.recipe_site \
+		-target=proxmox_virtual_environment_container.arr
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
 		-target=proxmox_virtual_environment_container.traefik \
-		-target=proxmox_virtual_environment_container.recipe_site
+		-target=proxmox_virtual_environment_container.recipe_site \
+		-target=proxmox_virtual_environment_container.arr
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -82,6 +85,9 @@ traefik: ## Configure Traefik reverse proxy in its LXC
 
 recipe-site: ## Deploy recipe site into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-recipe-site.yml
+
+arr-stack: ## Deploy ARR media stack (Sonarr, Radarr, Prowlarr, etc.) into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-arr-stack.yml
 
 # ===== Phase 4: Talos K8s Cluster =====
 

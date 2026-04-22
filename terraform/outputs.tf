@@ -62,6 +62,16 @@ output "recipe_site_vmid" {
   value       = proxmox_virtual_environment_container.recipe_site.vm_id
 }
 
+output "arr_ip" {
+  description = "ARR stack LXC IP"
+  value       = var.arr_ip
+}
+
+output "arr_vmid" {
+  description = "ARR stack LXC VM ID"
+  value       = proxmox_virtual_environment_container.arr.vm_id
+}
+
 output "domain" {
   description = "Base domain for services"
   value       = var.domain

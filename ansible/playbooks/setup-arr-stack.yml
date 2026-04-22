@@ -1,0 +1,250 @@
+# setup-arr-stack.yml - Install Docker and deploy the ARR media stack
+#
+# This playbook configures the ARR stack LXC container:
+#   1. Installs Docker CE and Docker Compose plugin
+#   2. Creates directory structure for service configs and media
+#   3. Deploys the Docker Compose file
+#   4. Optionally mounts NFS share from TrueNAS (if available)
+#   5. Starts the stack
+#
+# Prerequisites:
+#   - ARR stack LXC created via Terraform (make apply-lxc)
+#   - SSH access to the LXC (key injected by Terraform)
+#   - Internet access for Docker image pulls
+#
+# Usage:
+#   ansible-playbook playbooks/setup-arr-stack.yml
+#
+# With NFS mount (after TrueNAS is deployed):
+#   ansible-playbook playbooks/setup-arr-stack.yml \
+#     --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+---
+- name: Deploy ARR media management stack
+  hosts: lxc_services:&arr
+  vars:
+    arr_user: arrstack
+    arr_uid: 1000
+    arr_gid: 1000
+    arr_base_dir: /opt/arr
+    compose_src: "{{ playbook_dir }}/../files/arr-stack/docker-compose.yml"
+    # NFS mount for media storage (optional, set via --extra-vars)
+    nfs_server: ""
+    nfs_share: ""
+    media_mount: /media
+
+  tasks:
+    # --- System Setup ---
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - nfs-common       # For NFS mounts from TrueNAS
+        state: present
+
+    # --- Docker Installation ---
+    # Following official Docker CE install for Debian
+    - name: Create Docker keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Set permissions on Docker GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/docker.gpg
+        mode: "0644"
+
+    - name: Add Docker repository
+      ansible.builtin.copy:
+        content: |
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable
+        dest: /etc/apt/sources.list.d/docker.list
+        mode: "0644"
+
+    - name: Install Docker CE and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # --- ARR User ---
+    # All containers run as this user (PUID/PGID in compose file)
+    - name: Create ARR stack group
+      ansible.builtin.group:
+        name: "{{ arr_user }}"
+        gid: "{{ arr_gid }}"
+
+    - name: Create ARR stack user
+      ansible.builtin.user:
+        name: "{{ arr_user }}"
+        uid: "{{ arr_uid }}"
+        group: "{{ arr_user }}"
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Add ARR user to docker group
+      ansible.builtin.user:
+        name: "{{ arr_user }}"
+        groups: docker
+        append: true
+
+    # --- Directory Structure ---
+    - name: Create ARR base directory
+      ansible.builtin.file:
+        path: "{{ arr_base_dir }}"
+        state: directory
+        owner: "{{ arr_user }}"
+        group: "{{ arr_user }}"
+        mode: "0755"
+
+    - name: Create service config directories
+      ansible.builtin.file:
+        path: "{{ arr_base_dir }}/{{ item }}/config"
+        state: directory
+        owner: "{{ arr_user }}"
+        group: "{{ arr_user }}"
+        mode: "0755"
+      loop:
+        - prowlarr
+        - sonarr
+        - radarr
+        - bazarr
+        - overseerr
+        - sabnzbd
+        - gluetun
+
+    # --- Media Mount ---
+    # Local directory as fallback when NAS isn't available yet
+    - name: Create media directory structure
+      ansible.builtin.file:
+        path: "{{ media_mount }}/{{ item }}"
+        state: directory
+        owner: "{{ arr_user }}"
+        group: "{{ arr_user }}"
+        mode: "0775"
+      loop:
+        - downloads/complete
+        - downloads/incomplete
+        - movies
+        - tv
+        - music
+        - books
+
+    # NFS mount from TrueNAS (only when nfs_server is provided)
+    - name: Mount NFS media share from TrueNAS
+      ansible.posix.mount:
+        src: "{{ nfs_server }}:{{ nfs_share }}"
+        path: "{{ media_mount }}"
+        fstype: nfs
+        opts: "rw,soft,intr,rsize=8192,wsize=8192"
+        state: mounted
+      when: nfs_server != "" and nfs_share != ""
+
+    - name: Add NFS mount to fstab
+      ansible.posix.mount:
+        src: "{{ nfs_server }}:{{ nfs_share }}"
+        path: "{{ media_mount }}"
+        fstype: nfs
+        opts: "rw,soft,intr,rsize=8192,wsize=8192"
+        state: present
+      when: nfs_server != "" and nfs_share != ""
+
+    - name: Note about NFS
+      ansible.builtin.debug:
+        msg: >
+          NFS not configured. Using local /media directory.
+          After TrueNAS is deployed, re-run with:
+          ansible-playbook playbooks/setup-arr-stack.yml
+            --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+      when: nfs_server == ""
+
+    # --- Deploy Docker Compose ---
+    - name: Copy Docker Compose file
+      ansible.builtin.copy:
+        src: "{{ compose_src }}"
+        dest: "{{ arr_base_dir }}/docker-compose.yml"
+        owner: "{{ arr_user }}"
+        group: "{{ arr_user }}"
+        mode: "0644"
+      notify: Restart ARR stack
+
+    # --- Start Stack ---
+    - name: Pull latest images
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: "{{ arr_base_dir }}"
+      changed_when: true
+
+    - name: Start ARR stack
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ arr_base_dir }}"
+      changed_when: true
+
+    # --- Verify ---
+    - name: Wait for services to start
+      ansible.builtin.pause:
+        seconds: 15
+
+    - name: Check running containers
+      ansible.builtin.command:
+        cmd: docker compose ps --format json
+        chdir: "{{ arr_base_dir }}"
+      register: compose_status
+      changed_when: false
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "ARR stack deployed to {{ arr_base_dir }}"
+          - "Compose file: {{ arr_base_dir }}/docker-compose.yml"
+          - "Media mount: {{ media_mount }} (NFS: {{ 'yes' if nfs_server != '' else 'no - local' }})"
+          - ""
+          - "Service URLs (internal):"
+          - "  Prowlarr:  http://{{ ansible_host }}:9696"
+          - "  Sonarr:    http://{{ ansible_host }}:8989"
+          - "  Radarr:    http://{{ ansible_host }}:7878"
+          - "  Bazarr:    http://{{ ansible_host }}:6767"
+          - "  Overseerr: http://{{ ansible_host }}:5055"
+          - "  SABnzbd:   http://{{ ansible_host }}:8080"
+          - ""
+          - "After Traefik is configured:"
+          - "  Overseerr: https://requests.woodhead.tech"
+          - "  Sonarr:    https://sonarr.woodhead.tech"
+          - "  Radarr:    https://radarr.woodhead.tech"
+          - ""
+          - "NEXT STEPS:"
+          - "  1. Open Prowlarr and add indexers"
+          - "  2. Open SABnzbd and configure Usenet server"
+          - "  3. Connect Sonarr/Radarr to Prowlarr + SABnzbd"
+          - "  4. Connect Bazarr to Sonarr + Radarr"
+          - "  5. Connect Overseerr to Sonarr + Radarr"
+          - "  6. Configure Gluetun VPN credentials in docker-compose.yml"
+
+  handlers:
+    - name: Restart ARR stack
+      ansible.builtin.command:
+        cmd: docker compose up -d --force-recreate
+        chdir: "{{ arr_base_dir }}"

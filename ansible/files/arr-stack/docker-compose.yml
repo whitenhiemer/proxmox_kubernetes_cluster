@@ -1,0 +1,151 @@
+# docker-compose.yml - ARR media management stack
+#
+# All services share the same Docker network and communicate via
+# container names (e.g., sonarr can reach prowlarr at http://prowlarr:9696).
+#
+# Media storage is mounted from the host at /media, which should be
+# an NFS mount from TrueNAS. Until the NAS is deployed, /media is a
+# local directory on the LXC disk.
+#
+# Download clients (SABnzbd) route through Gluetun VPN container.
+# To disable VPN, remove the gluetun service and change sabnzbd's
+# network_mode back to the default.
+#
+# Data persistence: Each service stores its config in /opt/arr/<service>/config.
+# These survive container rebuilds. Back up /opt/arr/ to preserve settings.
+#
+# After starting, configure each service via its web UI:
+#   Prowlarr:  http://<ip>:9696  (set up indexers first)
+#   Sonarr:    http://<ip>:8989  (connect to Prowlarr + SABnzbd)
+#   Radarr:    http://<ip>:7878  (connect to Prowlarr + SABnzbd)
+#   Bazarr:    http://<ip>:6767  (connect to Sonarr + Radarr)
+#   Overseerr: http://<ip>:5055  (connect to Sonarr + Radarr)
+#   SABnzbd:   http://<ip>:8080  (set up Usenet server)
+
+services:
+
+  # --- Prowlarr: Indexer Manager ---
+  # Central indexer management. Sonarr/Radarr pull indexer configs from here.
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /opt/arr/prowlarr/config:/config
+    ports:
+      - "9696:9696"
+    restart: unless-stopped
+
+  # --- Sonarr: TV Show Management ---
+  # Monitors RSS feeds, searches indexers, manages TV library.
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /opt/arr/sonarr/config:/config
+      - /media:/media          # NFS mount from TrueNAS
+    ports:
+      - "8989:8989"
+    restart: unless-stopped
+
+  # --- Radarr: Movie Management ---
+  # Same as Sonarr but for movies.
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /opt/arr/radarr/config:/config
+      - /media:/media
+    ports:
+      - "7878:7878"
+    restart: unless-stopped
+
+  # --- Bazarr: Subtitle Management ---
+  # Automatically downloads subtitles for Sonarr/Radarr media.
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /opt/arr/bazarr/config:/config
+      - /media:/media
+    ports:
+      - "6767:6767"
+    restart: unless-stopped
+
+  # --- Overseerr: Request Management ---
+  # User-facing portal for requesting movies/TV shows.
+  # Integrates with Sonarr/Radarr to automatically fulfill requests.
+  # This is the only service you'd typically share with family/friends.
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:latest
+    container_name: overseerr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /opt/arr/overseerr/config:/config
+    ports:
+      - "5055:5055"
+    restart: unless-stopped
+
+  # --- Gluetun: VPN Container ---
+  # Routes download client traffic through a VPN tunnel.
+  # SABnzbd uses this container's network stack.
+  # Configure your VPN provider credentials in the environment variables below.
+  # See https://github.com/qdm12/gluetun-wiki for provider-specific config.
+  #
+  # IMPORTANT: Update VPN_SERVICE_PROVIDER and credentials before starting.
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_SERVICE_PROVIDER=custom    # Change to your provider (mullvad, nordvpn, etc.)
+      - VPN_TYPE=wireguard             # or openvpn
+      # Provider-specific credentials -- see gluetun docs
+      # - WIREGUARD_PRIVATE_KEY=
+      # - WIREGUARD_ADDRESSES=
+      # - SERVER_COUNTRIES=
+      - TZ=America/Chicago
+    volumes:
+      - /opt/arr/gluetun/config:/gluetun
+    ports:
+      # SABnzbd port exposed through gluetun's network
+      - "8080:8080"
+    restart: unless-stopped
+
+  # --- SABnzbd: Usenet Downloader ---
+  # Downloads via Usenet, routed through Gluetun VPN.
+  # Uses gluetun's network stack so all download traffic goes through VPN.
+  sabnzbd:
+    image: lscr.io/linuxserver/sabnzbd:latest
+    container_name: sabnzbd
+    # Route all traffic through the VPN container
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - /opt/arr/sabnzbd/config:/config
+      - /media/downloads:/downloads    # Download location on NAS
+    restart: unless-stopped
