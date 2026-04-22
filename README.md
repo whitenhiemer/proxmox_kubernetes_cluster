@@ -102,6 +102,8 @@ make harden
 | `traefik`           | 2     | Configure Traefik reverse proxy                |
 | `recipe-site`       | 3     | Deploy recipe site into its LXC                |
 | `arr-stack`         | 3     | Deploy ARR media stack into its LXC            |
+| `plex`              | 3     | Deploy Plex Media Server with iGPU passthrough |
+| `jellyfin`          | 3     | Deploy Jellyfin Media Server with iGPU         |
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
@@ -131,6 +133,8 @@ make harden
 │   ├── lxc-traefik.tf                    # Traefik reverse proxy LXC
 │   ├── lxc-recipe-site.tf               # Recipe site LXC
 │   ├── lxc-arr.tf                        # ARR media stack LXC (Docker)
+│   ├── lxc-plex.tf                       # Plex Media Server LXC
+│   ├── lxc-jellyfin.tf                   # Jellyfin Media Server LXC
 │   ├── vm-opnsense.tf                    # OPNsense firewall/router VM
 │   ├── vm-opnsense-variables.tf          # OPNsense variables
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
@@ -156,6 +160,8 @@ make harden
 │   │   ├── setup-traefik.yml             # Configure Traefik
 │   │   ├── setup-recipe-site.yml         # Deploy recipe site
 │   │   ├── setup-arr-stack.yml           # Deploy ARR media stack (Docker)
+│   │   ├── setup-plex.yml               # Deploy Plex + iGPU passthrough
+│   │   ├── setup-jellyfin.yml           # Deploy Jellyfin + iGPU passthrough
 │   │   └── harden-proxmox.yml            # Security hardening
 │   └── files/
 │       ├── arr-stack/
@@ -225,8 +231,8 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | OPNsense Router  | VM   | Ready       | `firewall.woodhead.tech`   |
 | TrueNAS Scale    | VM   | Ready       | `nas.woodhead.tech`        |
 | ARR Stack        | LXC  | Ready       | `sonarr/radarr/prowlarr.*` |
-| Plex             | LXC  | Planned     | `plex.woodhead.tech`       |
-| Jellyfin         | LXC  | Planned     | `jellyfin.woodhead.tech`   |
+| Plex             | LXC  | Ready       | `plex.woodhead.tech`       |
+| Jellyfin         | LXC  | Ready       | `jellyfin.woodhead.tech`   |
 | Home Assistant   | VM   | Ready       | `home.woodhead.tech`       |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.

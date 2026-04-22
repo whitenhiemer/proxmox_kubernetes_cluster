@@ -431,11 +431,71 @@ make traefik
 
 ---
 
-## Phase 8: Home Assistant
+## Phase 8: Plex and Jellyfin
+
+Both media servers share the TrueNAS NFS media library. They use Intel
+Quick Sync (iGPU) for hardware transcoding via `/dev/dri` passthrough.
+
+### 8.1 Deploy Plex
+
+```bash
+make plex
+```
+
+With NFS media:
+```bash
+cd ansible && ansible-playbook playbooks/setup-plex.yml \
+  --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+```
+
+Without GPU passthrough (software transcoding only):
+```bash
+cd ansible && ansible-playbook playbooks/setup-plex.yml \
+  --extra-vars "gpu_passthrough=false"
+```
+
+Configure at `http://10.0.0.23:32400/web`:
+1. Sign in with your Plex account
+2. Add libraries: `/media/movies`, `/media/tv`, `/media/music`
+3. Enable hardware transcoding (Settings > Transcoder, requires Plex Pass)
+
+### 8.2 Deploy Jellyfin
+
+```bash
+make jellyfin
+```
+
+With NFS media:
+```bash
+cd ansible && ansible-playbook playbooks/setup-jellyfin.yml \
+  --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+```
+
+Configure at `http://10.0.0.24:8096`:
+1. Create admin account
+2. Add libraries: `/media/movies`, `/media/tv`, `/media/music`
+3. Enable VAAPI transcoding (Dashboard > Playback > Transcoding > `/dev/dri/renderD128`)
+
+### 8.3 Enable Traefik Routes (Optional)
+
+Uncomment routes in `ansible/files/traefik/dynamic/media-stack.yml` and:
+```bash
+make traefik
+```
+
+### 8.4 GPU Sharing Note
+
+Both Plex and Jellyfin can share the same iGPU (`/dev/dri`). Intel Quick
+Sync handles multiple transcoding sessions concurrently. Both LXCs must
+run on the same Proxmox node that has the iGPU.
+
+---
+
+## Phase 9: Home Assistant
 
 See [docs/HOMEASSISTANT-SETUP.md](HOMEASSISTANT-SETUP.md) for the full setup guide.
 
-### 8.1 Create the VM
+### 9.1 Create the VM
 
 Unlike other VMs, HAOS uses a pre-built disk image instead of an ISO installer.
 Terraform handles the image download and VM creation in one step:
@@ -447,20 +507,20 @@ make apply-homeassistant
 This downloads the HAOS qcow2 image to Proxmox, decompresses it, and creates the
 VM with the image imported as the boot disk. No separate ISO download needed.
 
-### 8.2 First Boot
+### 9.2 First Boot
 
 1. Open Proxmox web UI -> VM 301 (homeassistant) -> Console
 2. HAOS boots automatically (no install wizard)
 3. Wait 2-3 minutes for initial setup
 4. The console shows the web UI URL
 
-### 8.3 Configure
+### 9.3 Configure
 
 1. Access web UI at `http://10.0.0.31:8123`
 2. Complete the onboarding wizard (create admin account, set location)
 3. Set static IP: Settings -> System -> Network -> `10.0.0.31/24`
 
-### 8.4 USB Passthrough (Optional)
+### 9.4 USB Passthrough (Optional)
 
 For Zigbee/Z-Wave dongles:
 ```bash
@@ -473,7 +533,7 @@ qm set 301 -usb0 host=<vendor>:<product>
 
 Then in HA: Settings -> Devices & Services -> Add ZHA or Z-Wave JS integration.
 
-### 8.5 Enable Traefik Route (Optional)
+### 9.5 Enable Traefik Route (Optional)
 
 Uncomment the route in `ansible/files/traefik/dynamic/homeassistant.yml` and redeploy:
 ```bash
@@ -482,15 +542,15 @@ make traefik
 
 ---
 
-## Phase 9: Kubernetes Cluster
+## Phase 10: Kubernetes Cluster
 
-### 9.1 Download Talos ISO
+### 10.1 Download Talos ISO
 
 ```bash
 make prepare
 ```
 
-### 9.2 Bootstrap
+### 10.2 Bootstrap
 
 ```bash
 export CLUSTER_VIP="10.0.0.100"
@@ -499,7 +559,7 @@ export WORKER_IPS="10.0.0.111,10.0.0.112"
 make bootstrap
 ```
 
-### 9.3 Verify
+### 10.3 Verify
 
 ```bash
 export KUBECONFIG=talos/_out/kubeconfig
@@ -507,7 +567,7 @@ kubectl get nodes
 # Should show 3 nodes in Ready state
 ```
 
-### 9.4 Apply Base Manifests
+### 10.4 Apply Base Manifests
 
 ```bash
 # Without MetalLB
@@ -517,7 +577,7 @@ make k8s-base
 make k8s-base-metallb
 ```
 
-### 9.5 Enable K8s Routing in Traefik
+### 10.5 Enable K8s Routing in Traefik
 
 Once K8s has an ingress controller, uncomment the routes in `ansible/files/traefik/dynamic/k8s-ingress.yml` and redeploy:
 ```bash
@@ -526,16 +586,16 @@ make traefik
 
 ---
 
-## Phase 10: Security Hardening
+## Phase 11: Security Hardening
 
-### 10.1 Verify SSH Key Access
+### 11.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@10.0.0.10  # Should work without password
 ```
 
-### 10.2 Apply Hardening
+### 11.2 Apply Hardening
 
 ```bash
 make harden

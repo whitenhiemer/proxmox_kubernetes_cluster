@@ -18,7 +18,7 @@
 
 .PHONY: setup prepare prepare-opnsense prepare-truenas ddns init plan apply \
         apply-opnsense apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack bootstrap kubeconfig health \
+        traefik recipe-site arr-stack plex jellyfin bootstrap kubeconfig health \
         k8s-base harden destroy clean help
 
 TERRAFORM_DIR := terraform
@@ -82,13 +82,17 @@ plan-lxc: ## Preview LXC container changes only
 	cd $(TERRAFORM_DIR) && terraform plan \
 		-target=proxmox_virtual_environment_container.traefik \
 		-target=proxmox_virtual_environment_container.recipe_site \
-		-target=proxmox_virtual_environment_container.arr
+		-target=proxmox_virtual_environment_container.arr \
+		-target=proxmox_virtual_environment_container.plex \
+		-target=proxmox_virtual_environment_container.jellyfin
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
 		-target=proxmox_virtual_environment_container.traefik \
 		-target=proxmox_virtual_environment_container.recipe_site \
-		-target=proxmox_virtual_environment_container.arr
+		-target=proxmox_virtual_environment_container.arr \
+		-target=proxmox_virtual_environment_container.plex \
+		-target=proxmox_virtual_environment_container.jellyfin
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -100,6 +104,12 @@ recipe-site: ## Deploy recipe site into its LXC
 
 arr-stack: ## Deploy ARR media stack (Sonarr, Radarr, Prowlarr, etc.) into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-arr-stack.yml
+
+plex: ## Deploy Plex Media Server into its LXC (with iGPU passthrough)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-plex.yml
+
+jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-jellyfin.yml
 
 # ===== Phase 4: Talos K8s Cluster =====
 

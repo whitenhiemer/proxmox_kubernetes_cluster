@@ -67,6 +67,20 @@ truenas_memory    = 8192
 truenas_disk_size = 16    # OS disk only; data goes on passthrough ZFS disks
 truenas_ip        = "10.0.0.30"
 
+# Plex Media Server (requires Plex Pass for hardware transcoding)
+plex_vmid     = 203
+plex_ip       = "10.0.0.23"
+plex_cores    = 2
+plex_memory   = 2048
+plex_disk_size = 8    # Metadata only; media on TrueNAS NFS
+
+# Jellyfin Media Server (open source, free hardware transcoding)
+jellyfin_vmid     = 204
+jellyfin_ip       = "10.0.0.24"
+jellyfin_cores    = 2
+jellyfin_memory   = 2048
+jellyfin_disk_size = 8
+
 # --- Home Assistant OS ---
 # Pre-built disk image (no ISO install). Terraform downloads + imports automatically.
 # Update the image URL when new HAOS versions are released.

@@ -1,0 +1,183 @@
+# setup-plex.yml - Install Plex Media Server in its LXC
+#
+# This playbook:
+#   1. Configures iGPU passthrough on the Proxmox host (for hardware transcoding)
+#   2. Installs Plex Media Server from the official repository
+#   3. Optionally mounts NFS share from TrueNAS for media storage
+#
+# Prerequisites:
+#   - Plex LXC created via Terraform (make apply-lxc)
+#   - SSH access to both Proxmox host and LXC
+#   - Intel CPU with integrated GPU on the Proxmox node (for transcoding)
+#
+# Usage:
+#   ansible-playbook playbooks/setup-plex.yml
+#
+# With NFS mount:
+#   ansible-playbook playbooks/setup-plex.yml \
+#     --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+#
+# Without GPU passthrough:
+#   ansible-playbook playbooks/setup-plex.yml \
+#     --extra-vars "gpu_passthrough=false"
+---
+# --- Play 1: Configure GPU passthrough on the Proxmox host ---
+- name: Configure iGPU passthrough for Plex LXC
+  hosts: proxmox[0]
+  vars:
+    plex_vmid: 203
+    gpu_passthrough: true
+  tasks:
+    - name: Check if /dev/dri exists on Proxmox host
+      ansible.builtin.stat:
+        path: /dev/dri
+      register: dri_device
+      when: gpu_passthrough | bool
+
+    - name: Add GPU passthrough to LXC config
+      ansible.builtin.blockinfile:
+        path: "/etc/pve/lxc/{{ plex_vmid }}.conf"
+        marker: "# {mark} GPU PASSTHROUGH - MANAGED BY ANSIBLE"
+        block: |
+          lxc.cgroup2.devices.allow: c 226:* rwm
+          lxc.mount.entry: /dev/dri dev/dri none bind,optional,create=dir
+      when: gpu_passthrough | bool and dri_device.stat.exists
+      notify: Restart Plex LXC
+
+    - name: Note about GPU
+      ansible.builtin.debug:
+        msg: >
+          GPU passthrough skipped. Either gpu_passthrough=false or /dev/dri
+          not found on this node. Plex will use software transcoding (CPU).
+      when: not (gpu_passthrough | bool) or not dri_device.stat.exists
+
+  handlers:
+    - name: Restart Plex LXC
+      ansible.builtin.command:
+        cmd: "pct restart {{ plex_vmid }}"
+      changed_when: true
+
+# --- Play 2: Install Plex inside the LXC ---
+- name: Install Plex Media Server
+  hosts: lxc_services:&plex
+  vars:
+    # NFS mount for media storage (optional, set via --extra-vars)
+    nfs_server: ""
+    nfs_share: ""
+    media_mount: /media
+
+  tasks:
+    # --- System Setup ---
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - nfs-common       # For NFS mounts from TrueNAS
+        state: present
+
+    # --- Plex Installation ---
+    # Official Plex repository for Debian
+    - name: Add Plex GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://downloads.plex.tv/plex-keys/PlexSign.key | gpg --dearmor -o /etc/apt/keyrings/plex.gpg
+        creates: /etc/apt/keyrings/plex.gpg
+
+    - name: Set permissions on Plex GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/plex.gpg
+        mode: "0644"
+
+    - name: Add Plex repository
+      ansible.builtin.copy:
+        content: |
+          deb [signed-by=/etc/apt/keyrings/plex.gpg] https://downloads.plex.tv/repo/deb public main
+        dest: /etc/apt/sources.list.d/plexmediaserver.list
+        mode: "0644"
+
+    - name: Install Plex Media Server
+      ansible.builtin.apt:
+        name: plexmediaserver
+        state: present
+        update_cache: true
+
+    - name: Enable and start Plex
+      ansible.builtin.systemd:
+        name: plexmediaserver
+        enabled: true
+        state: started
+
+    # --- Media Mount ---
+    - name: Create media mount point
+      ansible.builtin.file:
+        path: "{{ media_mount }}"
+        state: directory
+        mode: "0755"
+
+    # NFS mount from TrueNAS (only when nfs_server is provided)
+    - name: Mount NFS media share from TrueNAS
+      ansible.posix.mount:
+        src: "{{ nfs_server }}:{{ nfs_share }}"
+        path: "{{ media_mount }}"
+        fstype: nfs
+        opts: "ro,soft,intr,rsize=8192,wsize=8192"
+        state: mounted
+      when: nfs_server != "" and nfs_share != ""
+
+    - name: Add NFS mount to fstab
+      ansible.posix.mount:
+        src: "{{ nfs_server }}:{{ nfs_share }}"
+        path: "{{ media_mount }}"
+        fstype: nfs
+        opts: "ro,soft,intr,rsize=8192,wsize=8192"
+        state: present
+      when: nfs_server != "" and nfs_share != ""
+
+    - name: Note about NFS
+      ansible.builtin.debug:
+        msg: >
+          NFS not configured. Add media later with:
+          ansible-playbook playbooks/setup-plex.yml
+            --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+      when: nfs_server == ""
+
+    # --- Verify GPU access (if passthrough was configured) ---
+    - name: Check for GPU device inside container
+      ansible.builtin.stat:
+        path: /dev/dri/renderD128
+      register: gpu_device
+
+    - name: GPU status
+      ansible.builtin.debug:
+        msg: "{{ 'iGPU detected at /dev/dri/renderD128 -- hardware transcoding available' if gpu_device.stat.exists else 'No GPU detected -- using software transcoding (CPU)' }}"
+
+    # --- Verify ---
+    - name: Wait for Plex to start
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Check Plex is running
+      ansible.builtin.command:
+        cmd: systemctl is-active plexmediaserver
+      register: plex_status
+      changed_when: false
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Plex Media Server deployed"
+          - "Service status: {{ plex_status.stdout }}"
+          - "Web UI: http://{{ ansible_host }}:32400/web"
+          - "Media mount: {{ media_mount }} (NFS: {{ 'yes' if nfs_server != '' else 'no - not configured' }})"
+          - "GPU: {{ 'available' if gpu_device.stat.exists else 'not detected' }}"
+          - ""
+          - "NEXT STEPS:"
+          - "  1. Open http://{{ ansible_host }}:32400/web"
+          - "  2. Sign in with your Plex account"
+          - "  3. Add media libraries pointing to /media/movies, /media/tv, etc."
+          - "  4. Enable hardware transcoding in Settings > Transcoder (requires Plex Pass)"

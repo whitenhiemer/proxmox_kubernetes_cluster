@@ -78,6 +78,68 @@ variable "arr_disk_size" {
   default     = 20
 }
 
+# --- Plex LXC ---
+variable "plex_vmid" {
+  description = "VM ID for the Plex Media Server LXC"
+  type        = number
+  default     = 203
+}
+
+variable "plex_ip" {
+  description = "Static IP for the Plex LXC"
+  type        = string
+  default     = "10.0.0.23"
+}
+
+variable "plex_cores" {
+  description = "CPU cores for Plex (iGPU handles transcoding, CPU for metadata/scanning)"
+  type        = number
+  default     = 2
+}
+
+variable "plex_memory" {
+  description = "Memory in MB for Plex"
+  type        = number
+  default     = 2048
+}
+
+variable "plex_disk_size" {
+  description = "Disk size in GB for Plex (metadata + thumbnails, media on NAS)"
+  type        = number
+  default     = 8
+}
+
+# --- Jellyfin LXC ---
+variable "jellyfin_vmid" {
+  description = "VM ID for the Jellyfin Media Server LXC"
+  type        = number
+  default     = 204
+}
+
+variable "jellyfin_ip" {
+  description = "Static IP for the Jellyfin LXC"
+  type        = string
+  default     = "10.0.0.24"
+}
+
+variable "jellyfin_cores" {
+  description = "CPU cores for Jellyfin (iGPU handles transcoding)"
+  type        = number
+  default     = 2
+}
+
+variable "jellyfin_memory" {
+  description = "Memory in MB for Jellyfin"
+  type        = number
+  default     = 2048
+}
+
+variable "jellyfin_disk_size" {
+  description = "Disk size in GB for Jellyfin (metadata + cache, media on NAS)"
+  type        = number
+  default     = 8
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

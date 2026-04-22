@@ -72,6 +72,26 @@ output "arr_vmid" {
   value       = proxmox_virtual_environment_container.arr.vm_id
 }
 
+output "plex_ip" {
+  description = "Plex Media Server LXC IP"
+  value       = var.plex_ip
+}
+
+output "plex_vmid" {
+  description = "Plex LXC VM ID"
+  value       = proxmox_virtual_environment_container.plex.vm_id
+}
+
+output "jellyfin_ip" {
+  description = "Jellyfin Media Server LXC IP"
+  value       = var.jellyfin_ip
+}
+
+output "jellyfin_vmid" {
+  description = "Jellyfin LXC VM ID"
+  value       = proxmox_virtual_environment_container.jellyfin.vm_id
+}
+
 output "domain" {
   description = "Base domain for services"
   value       = var.domain
