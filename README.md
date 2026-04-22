@@ -186,11 +186,12 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 
 | Service          | Type | Priority | Subdomain                  |
 |------------------|------|----------|----------------------------|
-| TrueNAS Scale    | VM   | 1        | `nas.woodhead.tech`        |
-| ARR Stack        | LXC  | 2        | `sonarr/radarr/prowlarr.*` |
-| Plex             | LXC  | 3        | `plex.woodhead.tech`       |
-| Jellyfin         | LXC  | 3        | `jellyfin.woodhead.tech`   |
-| Home Assistant   | VM   | 4        | `home.woodhead.tech`       |
+| OPNsense Router  | VM   | 1        | `firewall.woodhead.tech`   |
+| TrueNAS Scale    | VM   | 2        | `nas.woodhead.tech`        |
+| ARR Stack        | LXC  | 3        | `sonarr/radarr/prowlarr.*` |
+| Plex             | LXC  | 4        | `plex.woodhead.tech`       |
+| Jellyfin         | LXC  | 4        | `jellyfin.woodhead.tech`   |
+| Home Assistant   | VM   | 5        | `home.woodhead.tech`       |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 
