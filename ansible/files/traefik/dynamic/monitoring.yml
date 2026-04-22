@@ -1,0 +1,50 @@
+# monitoring.yml - Traefik route for the monitoring stack
+#
+# Routes grafana.woodhead.tech to the Grafana instance in the monitoring LXC.
+# Grafana runs on port 3000 inside the LXC (VM ID 205, IP 10.0.0.25).
+#
+# Uncomment after deploying monitoring stack (make monitoring)
+
+# http:
+#   routers:
+#     grafana:
+#       rule: "Host(`grafana.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: grafana
+#       tls:
+#         certResolver: cloudflare
+#
+#     # Prometheus UI (admin access only -- consider adding auth middleware)
+#     prometheus:
+#       rule: "Host(`prometheus.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: prometheus
+#       tls:
+#         certResolver: cloudflare
+#
+#     # Alertmanager UI (admin access only)
+#     alertmanager:
+#       rule: "Host(`alertmanager.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: alertmanager
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     grafana:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.25:3000"
+#
+#     prometheus:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.25:9090"
+#
+#     alertmanager:
+#       loadBalancer:
+#         servers:
+#           - url: "http://10.0.0.25:9093"

@@ -1,0 +1,25 @@
+# dashboards.yml - Auto-load Grafana dashboards from a directory
+#
+# Grafana watches this directory and imports any .json dashboard files.
+# To add a dashboard: export from Grafana UI or download from grafana.com
+# and place the JSON file in /var/lib/grafana/dashboards/.
+#
+# Recommended community dashboards (import by ID in Grafana UI):
+#   10347 - Proxmox VE (via PVE Exporter)
+#   14282 - Docker containers (cAdvisor)
+#   17346 - Traefik 3.x
+#    7587 - Blackbox exporter (service probes)
+#     315 - Kubernetes cluster overview
+
+apiVersion: 1
+
+providers:
+  - name: "default"
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

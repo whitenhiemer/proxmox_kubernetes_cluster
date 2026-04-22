@@ -92,6 +92,16 @@ output "jellyfin_vmid" {
   value       = proxmox_virtual_environment_container.jellyfin.vm_id
 }
 
+output "monitoring_ip" {
+  description = "Monitoring stack LXC IP"
+  value       = var.monitoring_ip
+}
+
+output "monitoring_vmid" {
+  description = "Monitoring stack LXC VM ID"
+  value       = proxmox_virtual_environment_container.monitoring.vm_id
+}
+
 output "domain" {
   description = "Base domain for services"
   value       = var.domain

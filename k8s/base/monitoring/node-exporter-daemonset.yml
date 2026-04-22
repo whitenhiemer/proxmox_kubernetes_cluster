@@ -1,0 +1,66 @@
+# node-exporter-daemonset.yml - Host metrics for Talos K8s nodes
+#
+# Talos Linux is immutable with no SSH or package manager, so node-exporter
+# must run as a DaemonSet. Uses hostNetwork and hostPID to expose real
+# host-level metrics (CPU, RAM, disk, network) instead of container metrics.
+#
+# Mounts the host root filesystem at /host (read-only) for accurate disk
+# and filesystem metrics.
+#
+# Prometheus scrapes each node at <node-ip>:9100 (hostNetwork mode).
+# Uncomment the k8s-nodes scrape config in prometheus.yml after applying.
+#
+# Apply after K8s bootstrap:
+#   kubectl apply -f k8s/base/monitoring/node-exporter-daemonset.yml
+---
+# DaemonSet: runs node-exporter on every K8s node
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: node-exporter
+    app.kubernetes.io/component: exporter
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: node-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: node-exporter
+    spec:
+      # Host networking: expose on the node's real IP at port 9100
+      hostNetwork: true
+      hostPID: true
+      containers:
+        - name: node-exporter
+          image: prom/node-exporter:latest
+          args:
+            - "--path.rootfs=/host"
+            # Exclude virtual/container filesystems for cleaner metrics
+            - "--collector.filesystem.mount-points-exclude=^/(dev|proc|sys|var/lib/docker/.+|var/lib/kubelet/.+)($|/)"
+          ports:
+            - name: metrics
+              containerPort: 9100
+              hostPort: 9100
+          volumeMounts:
+            - name: rootfs
+              mountPath: /host
+              readOnly: true
+              mountPropagation: HostToContainer
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+      tolerations:
+        # Run on control plane nodes too
+        - effect: NoSchedule
+          operator: Exists
+      volumes:
+        - name: rootfs
+          hostPath:
+            path: /

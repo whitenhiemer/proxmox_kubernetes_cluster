@@ -140,6 +140,37 @@ variable "jellyfin_disk_size" {
   default     = 8
 }
 
+# --- Monitoring Stack LXC ---
+variable "monitoring_vmid" {
+  description = "VM ID for the monitoring stack LXC (Prometheus, Grafana, Alertmanager)"
+  type        = number
+  default     = 205
+}
+
+variable "monitoring_ip" {
+  description = "Static IP for the monitoring stack LXC"
+  type        = string
+  default     = "10.0.0.25"
+}
+
+variable "monitoring_cores" {
+  description = "CPU cores for the monitoring stack (Prometheus query engine + Grafana rendering)"
+  type        = number
+  default     = 2
+}
+
+variable "monitoring_memory" {
+  description = "Memory in MB for the monitoring stack (Prometheus TSDB + Grafana + exporters)"
+  type        = number
+  default     = 2048
+}
+
+variable "monitoring_disk_size" {
+  description = "Disk size in GB for the monitoring stack (Prometheus TSDB, 30-day retention)"
+  type        = number
+  default     = 20
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

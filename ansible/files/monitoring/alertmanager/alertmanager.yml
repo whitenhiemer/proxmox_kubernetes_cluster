@@ -1,0 +1,69 @@
+# alertmanager.yml - Alert routing configuration
+#
+# Routes Prometheus alerts to Discord (or Slack) via webhooks.
+# Webhook URLs are injected at deploy time via --extra-vars, not stored in git.
+#
+# Alert severity routing:
+#   critical: immediate notification, 1h repeat
+#   warning:  notification, 4h repeat
+#   info:     silenced (dashboard only)
+#
+# To configure Discord:
+#   1. Create a Discord server (or use existing)
+#   2. Create a #homelab-alerts channel
+#   3. Channel Settings > Integrations > Webhooks > New Webhook
+#   4. Copy the webhook URL
+#   5. Pass to Ansible: --extra-vars "discord_webhook=https://discord.com/api/webhooks/..."
+
+global:
+  resolve_timeout: 5m
+
+# --- Routing ---
+route:
+  # Group alerts by name and instance to avoid notification spam
+  group_by: ["alertname", "instance"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: "discord"
+
+  routes:
+    # Critical alerts: more frequent repeat
+    - match:
+        severity: critical
+      receiver: "discord"
+      repeat_interval: 1h
+
+    # Info alerts: no notification (visible in Grafana/Alertmanager UI only)
+    - match:
+        severity: info
+      receiver: "null"
+
+# --- Receivers ---
+receivers:
+  # Discord webhook (replace URL at deploy time)
+  - name: "discord"
+    webhook_configs:
+      - url: "DISCORD_WEBHOOK_URL"
+        send_resolved: true
+
+  # Null receiver (swallows alerts -- used for info severity)
+  - name: "null"
+
+  # Uncomment for Slack
+  # - name: "slack"
+  #   slack_configs:
+  #     - api_url: "SLACK_WEBHOOK_URL"
+  #       channel: "#homelab-alerts"
+  #       send_resolved: true
+  #       title: '{{ template "slack.default.title" . }}'
+  #       text: '{{ template "slack.default.text" . }}'
+
+# --- Inhibition Rules ---
+# Suppress warning alerts when a critical alert fires for the same instance
+inhibit_rules:
+  - source_match:
+      severity: "critical"
+    target_match:
+      severity: "warning"
+    equal: ["alertname", "instance"]

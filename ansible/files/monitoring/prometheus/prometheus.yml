@@ -1,0 +1,155 @@
+# prometheus.yml - Prometheus scrape configuration
+#
+# Scrapes all homelab infrastructure: Proxmox hosts, LXC containers, VMs,
+# K8s cluster, Docker containers, and service health probes.
+#
+# Most targets are scraped remotely (no agent install required on target hosts).
+# PVE Exporter handles Proxmox metrics via API. Blackbox Exporter handles
+# HTTP/ICMP probes. K8s targets require kube-state-metrics + node-exporter
+# DaemonSet deployed to the cluster (see k8s/base/monitoring/).
+#
+# Uncomment targets as services are deployed.
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+# --- Alert Rules ---
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+# --- Alertmanager ---
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+# --- Scrape Targets ---
+scrape_configs:
+
+  # ===== Local (inside monitoring LXC) =====
+
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Node Exporter: monitoring LXC host metrics
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          instance: "monitoring"
+
+  # cAdvisor: Docker container metrics (local)
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["cadvisor:8080"]
+
+  # ===== Proxmox Hosts =====
+
+  # PVE Exporter: queries Proxmox API for host, VM, and LXC metrics.
+  # No agent needed on Proxmox nodes -- exporter runs locally.
+  - job_name: "proxmox-pve"
+    metrics_path: /pve
+    params:
+      module: [default]
+    static_configs:
+      - targets:
+          - 10.0.0.10    # pve1
+          # - 10.0.0.11  # pve2 (uncomment for multi-node)
+          # - 10.0.0.12  # pve3 (uncomment for 3-node cluster)
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: pve-exporter:9221
+
+  # ===== Traefik =====
+
+  # Built-in Prometheus metrics endpoint (requires metrics entrypoint in traefik.yml)
+  - job_name: "traefik"
+    static_configs:
+      - targets: ["10.0.0.20:8082"]
+        labels:
+          instance: "traefik"
+
+  # ===== Kubernetes Cluster =====
+  # Uncomment after deploying kube-state-metrics and node-exporter DaemonSet
+  # (see k8s/base/monitoring/)
+
+  # kube-state-metrics: pod status, deployment health, resource usage
+  # - job_name: "kube-state-metrics"
+  #   static_configs:
+  #     - targets: ["10.0.0.100:30080"]
+  #       labels:
+  #         cluster: "talos-proxmox"
+
+  # K8s node exporters (DaemonSet, hostNetwork mode)
+  # - job_name: "k8s-nodes"
+  #   static_configs:
+  #     - targets:
+  #         - 10.0.0.101:9100    # control plane
+  #         - 10.0.0.111:9100    # worker 0
+  #         - 10.0.0.112:9100    # worker 1
+  #       labels:
+  #         cluster: "talos-proxmox"
+
+  # ===== Service Health Probes =====
+
+  # HTTP probes: checks that services respond with 2xx
+  - job_name: "blackbox-http"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - http://10.0.0.21:80       # Recipe site
+          - http://10.0.0.22:5055     # Overseerr
+          - http://10.0.0.23:32400    # Plex
+          - http://10.0.0.24:8096     # Jellyfin
+          - http://10.0.0.31:8123     # Home Assistant
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # HTTPS probes: services with self-signed certs (skip TLS verify)
+  - job_name: "blackbox-https"
+    metrics_path: /probe
+    params:
+      module: [https_insecure]
+    static_configs:
+      - targets:
+          - https://10.0.0.30:443    # TrueNAS web UI
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # ICMP probes: ping latency and reachability
+  - job_name: "blackbox-icmp"
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets:
+          - 10.0.0.1     # OPNsense gateway
+          - 10.0.0.10    # Proxmox node 1
+          - 10.0.0.30    # TrueNAS
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

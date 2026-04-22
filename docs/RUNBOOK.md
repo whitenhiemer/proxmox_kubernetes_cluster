@@ -586,16 +586,112 @@ make traefik
 
 ---
 
-## Phase 11: Security Hardening
+## Phase 11: Monitoring Stack
 
-### 11.1 Verify SSH Key Access
+### 11.1 Create the LXC
+
+```bash
+make apply-lxc
+```
+
+This creates the monitoring LXC (VM ID 205, 10.0.0.25) along with any other LXCs.
+
+### 11.2 Create Proxmox API Token for PVE Exporter
+
+Via Proxmox web UI:
+1. Datacenter > Permissions > Users > Add
+   - User: `monitoring@pve`, Realm: `Proxmox VE authentication server`
+2. Datacenter > Permissions > Roles > Add
+   - Select `PVEAuditor` (read-only access)
+3. Datacenter > Permissions > Add > User Permission
+   - Path: `/`, User: `monitoring@pve`, Role: `PVEAuditor`
+4. Datacenter > Permissions > API Tokens > Add
+   - User: `monitoring@pve`, Token ID: `prometheus`
+   - Uncheck "Privilege Separation"
+5. Save the token value
+
+### 11.3 Deploy Monitoring Stack
+
+Basic deployment (configure credentials later):
+```bash
+make monitoring
+```
+
+With all credentials:
+```bash
+cd ansible && ansible-playbook playbooks/setup-monitoring.yml \
+  --extra-vars "pve_user=monitoring@pve pve_token_name=prometheus pve_token_value=YOUR_TOKEN" \
+  --extra-vars "grafana_password=your-secure-password" \
+  --extra-vars "discord_webhook=https://discord.com/api/webhooks/..."
+```
+
+### 11.4 Enable Traefik Metrics
+
+Redeploy Traefik to add the Prometheus metrics entrypoint:
+```bash
+make traefik
+```
+
+This adds a `:8082` metrics endpoint that Prometheus scrapes for request data.
+
+### 11.5 Import Grafana Dashboards
+
+Access Grafana at `http://10.0.0.25:3000` (default: admin/admin).
+
+Import community dashboards by ID:
+1. Dashboards > New > Import
+2. Enter dashboard ID and select Prometheus datasource:
+   - `10347` -- Proxmox VE (via PVE Exporter)
+   - `14282` -- Docker containers (cAdvisor)
+   - `17346` -- Traefik 3.x
+   - `7587` -- Blackbox exporter (service probes)
+   - `315` -- Kubernetes cluster overview
+
+### 11.6 Enable Traefik Route (Optional)
+
+Uncomment routes in `ansible/files/traefik/dynamic/monitoring.yml` and:
+```bash
+make traefik
+```
+
+### 11.7 Deploy K8s Exporters (Optional)
+
+After the K8s cluster is bootstrapped:
+```bash
+kubectl apply -f k8s/base/monitoring/kube-state-metrics.yml
+kubectl apply -f k8s/base/monitoring/node-exporter-daemonset.yml
+```
+
+Then uncomment the K8s scrape configs in `ansible/files/monitoring/prometheus/prometheus.yml` and restart the stack:
+```bash
+ssh root@10.0.0.25 "cd /opt/monitoring && docker compose restart prometheus"
+```
+
+### 11.8 Verify
+
+```bash
+# Prometheus healthy
+curl http://10.0.0.25:9090/-/healthy
+
+# Grafana healthy
+curl http://10.0.0.25:3000/api/health
+
+# Check scrape targets
+curl -s http://10.0.0.25:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+```
+
+---
+
+## Phase 12: Security Hardening
+
+### 12.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@10.0.0.10  # Should work without password
 ```
 
-### 11.2 Apply Hardening
+### 12.2 Apply Hardening
 
 ```bash
 make harden

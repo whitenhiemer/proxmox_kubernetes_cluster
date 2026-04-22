@@ -1,0 +1,145 @@
+# docker-compose.yml - Monitoring stack
+#
+# Full observability stack: Prometheus for metrics collection, Grafana for
+# dashboards, Alertmanager for notifications, plus exporters for scraping
+# Proxmox hosts, Docker containers, and service health.
+#
+# Data persistence: Prometheus TSDB stored at /opt/monitoring/prometheus/data.
+# Grafana state stored at /opt/monitoring/grafana/data. Back up these dirs
+# to preserve dashboards, alert history, and metric data.
+#
+# Scrape targets are configured in prometheus/prometheus.yml. Most targets
+# are scraped remotely (no agent install required on target hosts).
+#
+# After starting, access Grafana at http://<ip>:3000 (default: admin/admin).
+# Prometheus UI at http://<ip>:9090. Alertmanager UI at http://<ip>:9093.
+#
+# PVE Exporter requires a read-only Proxmox API token. Create one via:
+#   Datacenter > Permissions > API Tokens > Add (user: monitoring@pve)
+#   Pass credentials via environment file at /opt/monitoring/pve-exporter/pve.env
+
+services:
+
+  # --- Prometheus: Metrics Storage + Scrape Engine ---
+  # Central time-series database. Scrapes all targets at 15s intervals.
+  # 30-day retention (~8-12 GB at this scale).
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    user: "1000:1000"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - /opt/monitoring/prometheus/config:/etc/prometheus:ro
+      - /opt/monitoring/prometheus/data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  # --- Grafana: Dashboards + Visualization ---
+  # Datasources and dashboard providers are auto-provisioned from config files.
+  # Community dashboards can be imported by ID from grafana.com.
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    user: "1000:1000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://grafana.woodhead.tech
+    volumes:
+      - /opt/monitoring/grafana/data:/var/lib/grafana
+      - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+  # --- Alertmanager: Alert Routing ---
+  # Routes alerts from Prometheus to Discord/Slack webhooks.
+  # Webhook URL is configured in alertmanager/alertmanager.yml.
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    user: "1000:1000"
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - /opt/monitoring/alertmanager/config:/etc/alertmanager:ro
+      - /opt/monitoring/alertmanager/data:/alertmanager
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+
+  # --- Node Exporter: Host Metrics ---
+  # Exposes CPU, RAM, disk, network metrics for the monitoring LXC itself.
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - "--path.rootfs=/host"
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+
+  # --- cAdvisor: Docker Container Metrics ---
+  # Exposes per-container CPU, memory, network, and disk I/O metrics.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # --- Blackbox Exporter: Service Health Probes ---
+  # HTTP and ICMP probes for checking service availability and response time.
+  # Probe targets are configured in Prometheus scrape configs, not here.
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox-exporter
+    volumes:
+      - /opt/monitoring/blackbox/blackbox.yml:/config/blackbox.yml:ro
+    command:
+      - "--config.file=/config/blackbox.yml"
+    ports:
+      - "9115:9115"
+    restart: unless-stopped
+
+  # --- PVE Exporter: Proxmox Metrics ---
+  # Queries the Proxmox VE API remotely to expose per-host, per-VM,
+  # and per-LXC resource metrics. No agent installation needed on Proxmox nodes.
+  # Requires a read-only PVE API token (see docs/RUNBOOK.md).
+  pve-exporter:
+    image: prompve/prometheus-pve-exporter:latest
+    container_name: pve-exporter
+    env_file:
+      - /opt/monitoring/pve-exporter/pve.env
+    ports:
+      - "9221:9221"
+    restart: unless-stopped
+
+  # --- Loki: Log Aggregation (v2 -- uncomment when ready) ---
+  # Centralized log storage. Requires Promtail agents on each LXC/VM.
+  # Deferred to reduce initial complexity.
+  # loki:
+  #   image: grafana/loki:latest
+  #   container_name: loki
+  #   volumes:
+  #     - /opt/monitoring/loki/data:/loki
+  #     - /opt/monitoring/loki/config:/etc/loki:ro
+  #   ports:
+  #     - "3100:3100"
+  #   restart: unless-stopped

@@ -12,14 +12,15 @@
 #   make traefik        - Configure Traefik reverse proxy
 #   make recipe-site    - Deploy recipe site
 #   make arr-stack      - Deploy ARR media stack
+#   make monitoring     - Deploy monitoring stack
 #   make bootstrap      - Bootstrap Talos K8s cluster
 #   make k8s-base       - Apply base K8s manifests
 #   make harden         - Security hardening
 
 .PHONY: setup prepare prepare-opnsense prepare-truenas ddns init plan apply \
         apply-opnsense apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin bootstrap kubeconfig health \
-        k8s-base harden destroy clean help
+        traefik recipe-site arr-stack plex jellyfin monitoring \
+        bootstrap kubeconfig health k8s-base harden destroy clean help
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -84,7 +85,8 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.recipe_site \
 		-target=proxmox_virtual_environment_container.arr \
 		-target=proxmox_virtual_environment_container.plex \
-		-target=proxmox_virtual_environment_container.jellyfin
+		-target=proxmox_virtual_environment_container.jellyfin \
+		-target=proxmox_virtual_environment_container.monitoring
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -92,7 +94,8 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.recipe_site \
 		-target=proxmox_virtual_environment_container.arr \
 		-target=proxmox_virtual_environment_container.plex \
-		-target=proxmox_virtual_environment_container.jellyfin
+		-target=proxmox_virtual_environment_container.jellyfin \
+		-target=proxmox_virtual_environment_container.monitoring
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -110,6 +113,9 @@ plex: ## Deploy Plex Media Server into its LXC (with iGPU passthrough)
 
 jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-jellyfin.yml
+
+monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager) into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml
 
 # ===== Phase 4: Talos K8s Cluster =====
 

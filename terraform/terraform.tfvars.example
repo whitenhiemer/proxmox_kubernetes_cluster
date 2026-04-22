@@ -57,6 +57,13 @@ arr_cores    = 2
 arr_memory   = 4096
 arr_disk_size = 20
 
+# Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+monitoring_vmid     = 205
+monitoring_ip       = "10.0.0.25"
+monitoring_cores    = 2
+monitoring_memory   = 2048
+monitoring_disk_size = 20    # Prometheus TSDB, 30-day retention
+
 # --- TrueNAS Scale NAS ---
 # Centralized storage for media, backups, ISOs
 # Data disks are passed through manually after VM creation (see docs/TRUENAS-SETUP.md)

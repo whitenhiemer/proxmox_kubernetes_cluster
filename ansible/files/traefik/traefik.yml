@@ -23,6 +23,17 @@ entryPoints:
   websecure:
     address: ":443"
 
+  # Prometheus metrics endpoint (internal only, not port-forwarded)
+  # Scraped by Prometheus at http://10.0.0.20:8082/metrics
+  metrics:
+    address: ":8082"
+
+# --- Prometheus Metrics ---
+# Expose request counts, duration histograms, TLS cert expiry, and retry metrics.
+metrics:
+  prometheus:
+    entryPoint: metrics
+
 # --- TLS Certificate Resolver ---
 # Uses Let's Encrypt with Cloudflare DNS-01 challenges.
 # DNS-01 works even when the server is behind NAT or ports aren't forwarded yet.

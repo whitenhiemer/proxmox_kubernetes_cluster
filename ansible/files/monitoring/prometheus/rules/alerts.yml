@@ -1,0 +1,182 @@
+# alerts.yml - Prometheus alert rules
+#
+# Alert severity tiers:
+#   critical: immediate Discord notification, 1h repeat
+#   warning:  Discord notification, 4h repeat
+#   info:     dashboard only, no notification
+#
+# Alerts fire to Alertmanager, which routes them to Discord/Slack
+# based on severity labels (see alertmanager/alertmanager.yml).
+
+groups:
+  # --- Service Health ---
+  - name: service_health
+    rules:
+      # Service HTTP probe has failed for 2+ minutes
+      - alert: ServiceDown
+        expr: probe_success{job=~"blackbox-http|blackbox-https"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service down: {{ $labels.instance }}"
+          description: "HTTP probe to {{ $labels.instance }} has been failing for over 2 minutes."
+
+      # ICMP probe has failed for 2+ minutes (host unreachable)
+      - alert: HostUnreachable
+        expr: probe_success{job="blackbox-icmp"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host unreachable: {{ $labels.instance }}"
+          description: "ICMP probe to {{ $labels.instance }} has been failing for over 2 minutes."
+
+      # Service responding slowly (>3s response time)
+      - alert: ServiceSlowResponse
+        expr: probe_duration_seconds{job=~"blackbox-http|blackbox-https"} > 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response: {{ $labels.instance }}"
+          description: "Response time from {{ $labels.instance }} has been over 3s for 5 minutes."
+
+  # --- Host Resources (via PVE Exporter or Node Exporter) ---
+  - name: host_resources
+    rules:
+      # CPU usage above 85% for 5 minutes
+      - alert: HighCpuUsage
+        expr: (1 - avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU: {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)"
+          description: "CPU usage on {{ $labels.instance }} has been above 85% for 5 minutes."
+
+      # Memory usage above 90% for 5 minutes
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory: {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}%)"
+          description: "Memory usage on {{ $labels.instance }} has been above 90% for 5 minutes."
+
+      # Disk space below 15% free
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space: {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}% free)"
+          description: "Root filesystem on {{ $labels.instance }} has less than 15% free space."
+
+      # Disk space below 5% free (critical)
+      - alert: DiskSpaceCritical
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 5
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CRITICAL disk space: {{ $labels.instance }} ({{ $value | printf \"%.1f\" }}% free)"
+          description: "Root filesystem on {{ $labels.instance }} has less than 5% free space."
+
+  # --- Docker Containers ---
+  - name: container_health
+    rules:
+      # Container restarted more than 3 times in 10 minutes
+      - alert: ContainerRestartLoop
+        expr: increase(container_restart_count[10m]) > 3
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restart loop: {{ $labels.name }}"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in the last 10 minutes."
+
+      # Container using >90% of its memory limit
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High container memory: {{ $labels.name }} ({{ $value | printf \"%.1f\" }}%)"
+
+  # --- Traefik ---
+  - name: traefik
+    rules:
+      # High 5xx error rate (>5% of requests)
+      - alert: TraefikHighErrorRate
+        expr: sum(rate(traefik_service_requests_total{code=~"5.."}[5m])) / sum(rate(traefik_service_requests_total[5m])) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Traefik high error rate ({{ $value | printf \"%.1f\" }}% 5xx)"
+          description: "More than 5% of Traefik requests are returning 5xx errors."
+
+      # TLS certificate expiring within 14 days
+      - alert: TlsCertExpiringSoon
+        expr: (traefik_tls_certs_not_after - time()) / 86400 < 14
+        labels:
+          severity: warning
+        annotations:
+          summary: "TLS cert expiring in {{ $value | printf \"%.0f\" }} days"
+          description: "A Traefik TLS certificate will expire within 14 days. Check ACME renewal."
+
+  # --- Kubernetes (uncomment after deploying kube-state-metrics) ---
+  # - name: kubernetes
+  #   rules:
+  #     # K8s node not ready for 5+ minutes
+  #     - alert: KubeNodeNotReady
+  #       expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+  #       for: 5m
+  #       labels:
+  #         severity: critical
+  #       annotations:
+  #         summary: "K8s node not ready: {{ $labels.node }}"
+  #
+  #     # Pod in CrashLoopBackOff
+  #     - alert: KubePodCrashLooping
+  #       expr: rate(kube_pod_container_status_restarts_total[15m]) * 60 * 5 > 0
+  #       for: 5m
+  #       labels:
+  #         severity: warning
+  #       annotations:
+  #         summary: "Pod crash looping: {{ $labels.namespace }}/{{ $labels.pod }}"
+  #
+  #     # Pod stuck in pending for 15+ minutes
+  #     - alert: KubePodPending
+  #       expr: kube_pod_status_phase{phase="Pending"} > 0
+  #       for: 15m
+  #       labels:
+  #         severity: warning
+  #       annotations:
+  #         summary: "Pod stuck pending: {{ $labels.namespace }}/{{ $labels.pod }}"
+
+  # --- Prometheus Self-Monitoring ---
+  - name: prometheus
+    rules:
+      # Prometheus scrape target is down
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scrape target down: {{ $labels.job }} / {{ $labels.instance }}"
+          description: "Prometheus cannot reach {{ $labels.instance }} (job: {{ $labels.job }}) for 5 minutes."
+
+      # Alertmanager unreachable
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alertmanager is down"
+          description: "Prometheus cannot reach Alertmanager. Alerts will not be delivered."

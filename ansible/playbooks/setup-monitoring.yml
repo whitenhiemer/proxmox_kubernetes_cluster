@@ -1,0 +1,342 @@
+# setup-monitoring.yml - Install Docker and deploy the monitoring stack
+#
+# This playbook configures the monitoring stack LXC container:
+#   1. Installs Docker CE and Docker Compose plugin
+#   2. Creates directory structure for all services
+#   3. Deploys Docker Compose, Prometheus, Grafana, Alertmanager configs
+#   4. Creates PVE Exporter env file for Proxmox API access
+#   5. Starts the stack and verifies health
+#
+# Prerequisites:
+#   - Monitoring LXC created via Terraform (make apply-lxc)
+#   - SSH access to the LXC (key injected by Terraform)
+#   - Internet access for Docker image pulls
+#   - Proxmox read-only API token for PVE Exporter
+#
+# Usage:
+#   ansible-playbook playbooks/setup-monitoring.yml
+#
+# With Grafana admin password (recommended):
+#   ansible-playbook playbooks/setup-monitoring.yml \
+#     --extra-vars "grafana_password=your-secure-password"
+#
+# With Discord alerting:
+#   ansible-playbook playbooks/setup-monitoring.yml \
+#     --extra-vars "discord_webhook=https://discord.com/api/webhooks/..."
+#
+# With PVE Exporter credentials:
+#   ansible-playbook playbooks/setup-monitoring.yml \
+#     --extra-vars "pve_user=monitoring@pve pve_token_name=prometheus pve_token_value=xxxx"
+---
+- name: Deploy monitoring stack (Prometheus, Grafana, Alertmanager)
+  hosts: lxc_services:&monitoring
+  vars:
+    mon_user: monitoring
+    mon_uid: 1000
+    mon_gid: 1000
+    mon_base_dir: /opt/monitoring
+    compose_src: "{{ playbook_dir }}/../files/monitoring/docker-compose.yml"
+    prometheus_src: "{{ playbook_dir }}/../files/monitoring/prometheus"
+    alertmanager_src: "{{ playbook_dir }}/../files/monitoring/alertmanager"
+    blackbox_src: "{{ playbook_dir }}/../files/monitoring/blackbox"
+    grafana_src: "{{ playbook_dir }}/../files/monitoring/grafana"
+    # Optional: set via --extra-vars
+    grafana_password: "admin"
+    discord_webhook: ""
+    # PVE Exporter credentials (set via --extra-vars)
+    pve_user: ""
+    pve_token_name: ""
+    pve_token_value: ""
+    pve_host: "10.0.0.10"
+
+  tasks:
+    # --- System Setup ---
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+        state: present
+
+    # --- Docker Installation ---
+    # Following official Docker CE install for Debian
+    - name: Create Docker keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Set permissions on Docker GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/docker.gpg
+        mode: "0644"
+
+    - name: Add Docker repository
+      ansible.builtin.copy:
+        content: |
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable
+        dest: /etc/apt/sources.list.d/docker.list
+        mode: "0644"
+
+    - name: Install Docker CE and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # --- Monitoring User ---
+    # All containers run as this user (user: "1000:1000" in compose file)
+    - name: Create monitoring group
+      ansible.builtin.group:
+        name: "{{ mon_user }}"
+        gid: "{{ mon_gid }}"
+
+    - name: Create monitoring user
+      ansible.builtin.user:
+        name: "{{ mon_user }}"
+        uid: "{{ mon_uid }}"
+        group: "{{ mon_user }}"
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Add monitoring user to docker group
+      ansible.builtin.user:
+        name: "{{ mon_user }}"
+        groups: docker
+        append: true
+
+    # --- Directory Structure ---
+    - name: Create monitoring base directory
+      ansible.builtin.file:
+        path: "{{ mon_base_dir }}"
+        state: directory
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0755"
+
+    - name: Create service directories
+      ansible.builtin.file:
+        path: "{{ mon_base_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0755"
+      loop:
+        - prometheus/config
+        - prometheus/config/rules
+        - prometheus/data
+        - grafana/data
+        - grafana/data/dashboards
+        - grafana/provisioning/datasources
+        - grafana/provisioning/dashboards
+        - alertmanager/config
+        - alertmanager/data
+        - blackbox
+        - pve-exporter
+
+    # --- Deploy Config Files ---
+    - name: Copy Docker Compose file
+      ansible.builtin.copy:
+        src: "{{ compose_src }}"
+        dest: "{{ mon_base_dir }}/docker-compose.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    - name: Copy Prometheus config
+      ansible.builtin.copy:
+        src: "{{ prometheus_src }}/prometheus.yml"
+        dest: "{{ mon_base_dir }}/prometheus/config/prometheus.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    - name: Copy Prometheus alert rules
+      ansible.builtin.copy:
+        src: "{{ prometheus_src }}/rules/alerts.yml"
+        dest: "{{ mon_base_dir }}/prometheus/config/rules/alerts.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    - name: Copy Alertmanager config
+      ansible.builtin.copy:
+        src: "{{ alertmanager_src }}/alertmanager.yml"
+        dest: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    - name: Copy Blackbox exporter config
+      ansible.builtin.copy:
+        src: "{{ blackbox_src }}/blackbox.yml"
+        dest: "{{ mon_base_dir }}/blackbox/blackbox.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    - name: Copy Grafana datasource provisioning
+      ansible.builtin.copy:
+        src: "{{ grafana_src }}/provisioning/datasources/prometheus.yml"
+        dest: "{{ mon_base_dir }}/grafana/provisioning/datasources/prometheus.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    - name: Copy Grafana dashboard provisioning
+      ansible.builtin.copy:
+        src: "{{ grafana_src }}/provisioning/dashboards/dashboards.yml"
+        dest: "{{ mon_base_dir }}/grafana/provisioning/dashboards/dashboards.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    # --- Credential Injection ---
+    # Grafana admin password (set via environment in compose)
+    - name: Create Grafana environment file
+      ansible.builtin.copy:
+        content: |
+          GRAFANA_ADMIN_PASSWORD={{ grafana_password }}
+        dest: "{{ mon_base_dir }}/grafana.env"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0600"
+
+    # PVE Exporter credentials (Proxmox API token)
+    - name: Create PVE Exporter environment file
+      ansible.builtin.copy:
+        content: |
+          PVE_USER={{ pve_user }}
+          PVE_TOKEN_NAME={{ pve_token_name }}
+          PVE_TOKEN_VALUE={{ pve_token_value }}
+          PVE_VERIFY_SSL=false
+        dest: "{{ mon_base_dir }}/pve-exporter/pve.env"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0600"
+      when: pve_user != "" and pve_token_name != "" and pve_token_value != ""
+
+    - name: Create placeholder PVE Exporter env file
+      ansible.builtin.copy:
+        content: |
+          # PVE Exporter credentials
+          # Re-run playbook with --extra-vars to configure:
+          #   --extra-vars "pve_user=monitoring@pve pve_token_name=prometheus pve_token_value=xxxx"
+          PVE_USER=monitoring@pve
+          PVE_TOKEN_NAME=prometheus
+          PVE_TOKEN_VALUE=REPLACE_ME
+          PVE_VERIFY_SSL=false
+        dest: "{{ mon_base_dir }}/pve-exporter/pve.env"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0600"
+      when: pve_user == "" or pve_token_name == "" or pve_token_value == ""
+
+    # Discord webhook URL in Alertmanager config
+    - name: Configure Discord webhook in Alertmanager
+      ansible.builtin.replace:
+        path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        regexp: 'DISCORD_WEBHOOK_URL'
+        replace: "{{ discord_webhook }}"
+      when: discord_webhook != ""
+      notify: Restart monitoring stack
+
+    # --- Start Stack ---
+    - name: Pull latest images
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: "{{ mon_base_dir }}"
+      changed_when: true
+
+    - name: Start monitoring stack
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ mon_base_dir }}"
+      changed_when: true
+
+    # --- Verify ---
+    - name: Wait for services to start
+      ansible.builtin.pause:
+        seconds: 20
+
+    - name: Check Prometheus health
+      ansible.builtin.uri:
+        url: "http://localhost:9090/-/healthy"
+        return_content: true
+      register: prometheus_health
+      failed_when: prometheus_health.status != 200
+
+    - name: Check Grafana health
+      ansible.builtin.uri:
+        url: "http://localhost:3000/api/health"
+        return_content: true
+      register: grafana_health
+      failed_when: grafana_health.status != 200
+
+    - name: Check running containers
+      ansible.builtin.command:
+        cmd: docker compose ps --format json
+        chdir: "{{ mon_base_dir }}"
+      register: compose_status
+      changed_when: false
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Monitoring stack deployed to {{ mon_base_dir }}"
+          - "Compose file: {{ mon_base_dir }}/docker-compose.yml"
+          - ""
+          - "Service URLs (internal):"
+          - "  Grafana:      http://{{ ansible_host }}:3000 (admin / {{ grafana_password }})"
+          - "  Prometheus:   http://{{ ansible_host }}:9090"
+          - "  Alertmanager: http://{{ ansible_host }}:9093"
+          - ""
+          - "After Traefik route is enabled:"
+          - "  Grafana: https://grafana.woodhead.tech"
+          - ""
+          - "Alerting: {{ 'Discord webhook configured' if discord_webhook != '' else 'Not configured (pass --extra-vars discord_webhook=...)' }}"
+          - "PVE Exporter: {{ 'Credentials configured' if pve_user != '' else 'Placeholder -- update /opt/monitoring/pve-exporter/pve.env' }}"
+          - ""
+          - "NEXT STEPS:"
+          - "  1. Create a read-only Proxmox API token for PVE Exporter"
+          - "     Datacenter > Permissions > Users > Add (monitoring@pve, PVEAuditor role)"
+          - "     Datacenter > Permissions > API Tokens > Add (user: monitoring@pve)"
+          - "  2. Import Grafana dashboards by ID: 10347 (Proxmox), 14282 (Docker),"
+          - "     17346 (Traefik), 7587 (Blackbox), 315 (K8s)"
+          - "  3. Enable Traefik route: uncomment ansible/files/traefik/dynamic/monitoring.yml"
+          - "  4. Redeploy Traefik with metrics: make traefik"
+          - "  5. Optional: configure Discord webhook for alerting"
+
+  handlers:
+    - name: Restart monitoring stack
+      ansible.builtin.command:
+        cmd: docker compose up -d --force-recreate
+        chdir: "{{ mon_base_dir }}"

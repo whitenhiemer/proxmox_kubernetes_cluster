@@ -1,0 +1,14 @@
+# prometheus.yml - Auto-provision Prometheus as a Grafana datasource
+#
+# Grafana reads this file on startup and creates the Prometheus datasource
+# automatically. No manual configuration needed in the Grafana UI.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
