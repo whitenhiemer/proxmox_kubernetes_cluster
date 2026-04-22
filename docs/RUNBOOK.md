@@ -196,7 +196,6 @@ Key values to update:
 Download service ISOs before creating VMs:
 ```bash
 make prepare           # Talos ISO
-make prepare-opnsense  # OPNsense ISO
 make prepare-truenas   # TrueNAS Scale ISO
 ```
 
@@ -214,19 +213,20 @@ make apply
 ```
 
 This creates:
-- 1 OPNsense firewall VM (ID 100)
 - 1 TrueNAS NAS VM (ID 300)
+- 1 Home Assistant VM (ID 301)
 - 1 control plane VM (ID 400)
 - 2 worker VMs (IDs 410, 411)
 - 1 Traefik LXC (ID 200)
 - 1 Recipe site LXC (ID 201)
 - 1 ARR stack LXC (ID 202)
+- 1 Monitoring LXC (ID 205)
+- 1 OpenClaw LXC (ID 206)
 
 Or create infrastructure piecemeal:
 ```bash
-make apply-opnsense  # OPNsense VM only
 make apply-truenas   # TrueNAS VM only
-make apply-lxc       # LXC containers only (Traefik, recipe site, ARR)
+make apply-lxc       # LXC containers only
 ```
 
 ---
@@ -255,11 +255,11 @@ cd ansible && ansible-playbook playbooks/setup-traefik.yml \
   --extra-vars "cf_api_token=your-cloudflare-api-token"
 ```
 
-### 3.3 Configure Router Port Forwarding
+### 3.3 Configure Port Forwarding
 
-On your home router, forward:
-- External port 80 -> `10.0.0.20:80`
-- External port 443 -> `10.0.0.20:443`
+In the Google Home app (WiFi > Settings > Advanced Networking > Port Management):
+- Forward port 80 -> `10.0.0.20:80`
+- Forward port 443 -> `10.0.0.20:443`
 
 ### 3.4 Verify
 
@@ -303,58 +303,23 @@ In the recipes repo on GitHub (Settings > Webhooks > Add webhook):
 
 ---
 
-## Phase 5: OPNsense Firewall/Router
-
-See [docs/OPNSENSE-SETUP.md](OPNSENSE-SETUP.md) for the full setup guide.
-
-### 5.1 Download OPNsense ISO
-
-```bash
-make prepare-opnsense
-```
-
-### 5.2 Create the VM
-
-```bash
-make apply-opnsense
-```
-
-### 5.3 Install OPNsense
-
-1. Open Proxmox web UI -> VM 100 (opnsense) -> Console
-2. Boot from ISO, run the installer
-3. Assign interfaces: WAN = vtnet0 (vmbr1), LAN = vtnet1 (vmbr0)
-4. Set LAN IP to `10.0.0.1/24`
-5. Access web UI at `https://10.0.0.1` (default: root / opnsense)
-
-### 5.4 Configure OPNsense
-
-Key steps (detailed in OPNSENSE-SETUP.md):
-- Port forward 80/443 -> Traefik LXC (10.0.0.20)
-- DNS overrides for `*.woodhead.tech` -> internal IPs
-- Enable Cloudflare DDNS plugin (replaces custom script)
-- Configure WireGuard VPN for remote access
-- Optional: Suricata IDS/IPS
-
----
-
-## Phase 6: TrueNAS Scale NAS
+## Phase 5: TrueNAS Scale NAS
 
 See [docs/TRUENAS-SETUP.md](TRUENAS-SETUP.md) for the full setup guide.
 
-### 6.1 Download TrueNAS ISO
+### 5.1 Download TrueNAS ISO
 
 ```bash
 make prepare-truenas
 ```
 
-### 6.2 Create the VM
+### 5.2 Create the VM
 
 ```bash
 make apply-truenas
 ```
 
-### 6.3 Pass Through Data Disks
+### 5.3 Pass Through Data Disks
 
 From the Proxmox host, attach physical disks for the ZFS pool:
 ```bash
@@ -366,13 +331,13 @@ qm set 300 -scsi1 /dev/disk/by-id/<disk-id-1>
 qm set 300 -scsi2 /dev/disk/by-id/<disk-id-2>
 ```
 
-### 6.4 Install TrueNAS
+### 5.4 Install TrueNAS
 
 1. Open Proxmox web UI -> VM 300 (truenas) -> Console
 2. Boot from ISO, install to the 16GB OS disk (NOT the data disks)
 3. Set admin password, reboot
 
-### 6.5 Configure TrueNAS
+### 5.5 Configure TrueNAS
 
 1. Set static IP: `10.0.0.30/24`, gateway `10.0.0.1`
 2. Create ZFS pool from passthrough disks (mirror or RAIDZ1)
@@ -382,16 +347,16 @@ qm set 300 -scsi2 /dev/disk/by-id/<disk-id-2>
 
 ---
 
-## Phase 7: ARR Media Stack
+## Phase 6: ARR Media Stack
 
-### 7.1 Deploy (Without NFS)
+### 6.1 Deploy (Without NFS)
 
 If TrueNAS isn't ready yet, the ARR stack uses local `/media` as a fallback:
 ```bash
 make arr-stack
 ```
 
-### 7.2 Deploy (With NFS from TrueNAS)
+### 6.2 Deploy (With NFS from TrueNAS)
 
 After TrueNAS is configured with NFS shares:
 ```bash
@@ -399,7 +364,7 @@ cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
   --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
 ```
 
-### 7.3 Configure Services
+### 6.3 Configure Services
 
 Access each service via its web UI:
 | Service   | URL                        | First step                           |
@@ -411,7 +376,7 @@ Access each service via its web UI:
 | Bazarr    | `http://10.0.0.22:6767`    | Connect to Sonarr + Radarr          |
 | Overseerr | `http://10.0.0.22:5055`    | Connect to Sonarr + Radarr          |
 
-### 7.4 Configure Gluetun VPN
+### 6.4 Configure Gluetun VPN
 
 Edit the Docker Compose file on the ARR LXC to add your VPN credentials:
 ```bash
@@ -421,7 +386,7 @@ vim /opt/arr/docker-compose.yml
 docker compose -f /opt/arr/docker-compose.yml up -d gluetun
 ```
 
-### 7.5 Enable Traefik Routes (Optional)
+### 6.5 Enable Traefik Routes (Optional)
 
 To expose ARR services externally, uncomment the routes in
 `ansible/files/traefik/dynamic/arr-stack.yml` and redeploy:
@@ -431,12 +396,12 @@ make traefik
 
 ---
 
-## Phase 8: Plex and Jellyfin
+## Phase 7: Plex and Jellyfin
 
 Both media servers share the TrueNAS NFS media library. They use Intel
 Quick Sync (iGPU) for hardware transcoding via `/dev/dri` passthrough.
 
-### 8.1 Deploy Plex
+### 7.1 Deploy Plex
 
 ```bash
 make plex
@@ -459,7 +424,7 @@ Configure at `http://10.0.0.23:32400/web`:
 2. Add libraries: `/media/movies`, `/media/tv`, `/media/music`
 3. Enable hardware transcoding (Settings > Transcoder, requires Plex Pass)
 
-### 8.2 Deploy Jellyfin
+### 7.2 Deploy Jellyfin
 
 ```bash
 make jellyfin
@@ -476,14 +441,14 @@ Configure at `http://10.0.0.24:8096`:
 2. Add libraries: `/media/movies`, `/media/tv`, `/media/music`
 3. Enable VAAPI transcoding (Dashboard > Playback > Transcoding > `/dev/dri/renderD128`)
 
-### 8.3 Enable Traefik Routes (Optional)
+### 7.3 Enable Traefik Routes (Optional)
 
 Uncomment routes in `ansible/files/traefik/dynamic/media-stack.yml` and:
 ```bash
 make traefik
 ```
 
-### 8.4 GPU Sharing Note
+### 7.4 GPU Sharing Note
 
 Both Plex and Jellyfin can share the same iGPU (`/dev/dri`). Intel Quick
 Sync handles multiple transcoding sessions concurrently. Both LXCs must
@@ -491,11 +456,11 @@ run on the same Proxmox node that has the iGPU.
 
 ---
 
-## Phase 9: Home Assistant
+## Phase 8: Home Assistant
 
 See [docs/HOMEASSISTANT-SETUP.md](HOMEASSISTANT-SETUP.md) for the full setup guide.
 
-### 9.1 Create the VM
+### 8.1 Create the VM
 
 Unlike other VMs, HAOS uses a pre-built disk image instead of an ISO installer.
 Terraform handles the image download and VM creation in one step:
@@ -507,20 +472,20 @@ make apply-homeassistant
 This downloads the HAOS qcow2 image to Proxmox, decompresses it, and creates the
 VM with the image imported as the boot disk. No separate ISO download needed.
 
-### 9.2 First Boot
+### 8.2 First Boot
 
 1. Open Proxmox web UI -> VM 301 (homeassistant) -> Console
 2. HAOS boots automatically (no install wizard)
 3. Wait 2-3 minutes for initial setup
 4. The console shows the web UI URL
 
-### 9.3 Configure
+### 8.3 Configure
 
 1. Access web UI at `http://10.0.0.31:8123`
 2. Complete the onboarding wizard (create admin account, set location)
 3. Set static IP: Settings -> System -> Network -> `10.0.0.31/24`
 
-### 9.4 USB Passthrough (Optional)
+### 8.4 USB Passthrough (Optional)
 
 For Zigbee/Z-Wave dongles:
 ```bash
@@ -533,7 +498,7 @@ qm set 301 -usb0 host=<vendor>:<product>
 
 Then in HA: Settings -> Devices & Services -> Add ZHA or Z-Wave JS integration.
 
-### 9.5 Enable Traefik Route (Optional)
+### 8.5 Enable Traefik Route (Optional)
 
 Uncomment the route in `ansible/files/traefik/dynamic/homeassistant.yml` and redeploy:
 ```bash
@@ -542,15 +507,15 @@ make traefik
 
 ---
 
-## Phase 10: Kubernetes Cluster
+## Phase 9: Kubernetes Cluster
 
-### 10.1 Download Talos ISO
+### 9.1 Download Talos ISO
 
 ```bash
 make prepare
 ```
 
-### 10.2 Bootstrap
+### 9.2 Bootstrap
 
 ```bash
 export CLUSTER_VIP="10.0.0.100"
@@ -559,7 +524,7 @@ export WORKER_IPS="10.0.0.111,10.0.0.112"
 make bootstrap
 ```
 
-### 10.3 Verify
+### 9.3 Verify
 
 ```bash
 export KUBECONFIG=talos/_out/kubeconfig
@@ -567,7 +532,7 @@ kubectl get nodes
 # Should show 3 nodes in Ready state
 ```
 
-### 10.4 Apply Base Manifests
+### 9.4 Apply Base Manifests
 
 ```bash
 # Without MetalLB
@@ -577,7 +542,7 @@ make k8s-base
 make k8s-base-metallb
 ```
 
-### 10.5 Enable K8s Routing in Traefik
+### 9.5 Enable K8s Routing in Traefik
 
 Once K8s has an ingress controller, uncomment the routes in `ansible/files/traefik/dynamic/k8s-ingress.yml` and redeploy:
 ```bash
@@ -586,9 +551,9 @@ make traefik
 
 ---
 
-## Phase 11: Monitoring Stack
+## Phase 10: Monitoring Stack
 
-### 11.1 Create the LXC
+### 10.1 Create the LXC
 
 ```bash
 make apply-lxc
@@ -596,7 +561,7 @@ make apply-lxc
 
 This creates the monitoring LXC (VM ID 205, 10.0.0.25) along with any other LXCs.
 
-### 11.2 Create Proxmox API Token for PVE Exporter
+### 10.2 Create Proxmox API Token for PVE Exporter
 
 Via Proxmox web UI:
 1. Datacenter > Permissions > Users > Add
@@ -610,7 +575,7 @@ Via Proxmox web UI:
    - Uncheck "Privilege Separation"
 5. Save the token value
 
-### 11.3 Deploy Monitoring Stack
+### 10.3 Deploy Monitoring Stack
 
 Basic deployment (configure credentials later):
 ```bash
@@ -625,7 +590,7 @@ cd ansible && ansible-playbook playbooks/setup-monitoring.yml \
   --extra-vars "discord_webhook=https://discord.com/api/webhooks/..."
 ```
 
-### 11.4 Enable Traefik Metrics
+### 10.4 Enable Traefik Metrics
 
 Redeploy Traefik to add the Prometheus metrics entrypoint:
 ```bash
@@ -634,7 +599,7 @@ make traefik
 
 This adds a `:8082` metrics endpoint that Prometheus scrapes for request data.
 
-### 11.5 Import Grafana Dashboards
+### 10.5 Import Grafana Dashboards
 
 Access Grafana at `http://10.0.0.25:3000` (default: admin/admin).
 
@@ -647,14 +612,14 @@ Import community dashboards by ID:
    - `7587` -- Blackbox exporter (service probes)
    - `315` -- Kubernetes cluster overview
 
-### 11.6 Enable Traefik Route (Optional)
+### 10.6 Enable Traefik Route (Optional)
 
 Uncomment routes in `ansible/files/traefik/dynamic/monitoring.yml` and:
 ```bash
 make traefik
 ```
 
-### 11.7 Deploy K8s Exporters (Optional)
+### 10.7 Deploy K8s Exporters (Optional)
 
 After the K8s cluster is bootstrapped:
 ```bash
@@ -667,7 +632,7 @@ Then uncomment the K8s scrape configs in `ansible/files/monitoring/prometheus/pr
 ssh root@10.0.0.25 "cd /opt/monitoring && docker compose restart prometheus"
 ```
 
-### 11.8 Verify
+### 10.8 Verify
 
 ```bash
 # Prometheus healthy
@@ -682,16 +647,16 @@ curl -s http://10.0.0.25:9090/api/v1/targets | jq '.data.activeTargets[] | {job:
 
 ---
 
-## Phase 12: Security Hardening
+## Phase 11: Security Hardening
 
-### 12.1 Verify SSH Key Access
+### 11.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@10.0.0.10  # Should work without password
 ```
 
-### 12.2 Apply Hardening
+### 11.2 Apply Hardening
 
 ```bash
 make harden

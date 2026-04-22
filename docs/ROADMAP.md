@@ -151,113 +151,6 @@ qm importdisk <vmid> haos_ova-<version>.qcow2 <storage>
 
 ---
 
-### Firewall/Router (OPNsense or pfSense)
-
-**Type**: Proxmox VM
-**Domain**: `firewall.woodhead.tech` (management UI, internal access only)
-**Why VM**: A virtualized firewall/router replaces the consumer home router as the
-network edge device. It handles NAT, firewall rules, VLANs, DHCP, and DNS -- giving
-full control over network segmentation and traffic flow.
-
-**OPNsense vs pfSense**:
-- **OPNsense** (recommended) -- BSD-based, modern UI, frequent updates, fully open source,
-  built-in WireGuard support, Unbound DNS, and a REST API for automation
-- **pfSense** -- more established, larger community, but Netgate restricts CE builds
-  and the UI feels dated. pfSense Plus requires a license for new features.
-
-Both run well as Proxmox VMs. OPNsense is the better fit for a homelab that values
-open source and modern tooling.
-
-**Requirements**:
-- 2 CPU cores, 2-4GB RAM, 8GB disk (minimal footprint)
-- **Two network interfaces** (critical):
-  - WAN: PCI passthrough of a physical NIC, or a dedicated `vmbr1` bridge connected
-    to the ISP modem/ONT
-  - LAN: Virtual NIC on `vmbr0` (the existing internal bridge)
-- If your Proxmox node has only one physical NIC, use VLAN tagging to separate
-  WAN and LAN traffic on the same wire
-
-**Network architecture change**:
-```
-ISP Modem/ONT
-    |
-    | (WAN - public IP via DHCP from ISP)
-    |
-[OPNsense VM] -- handles NAT, firewall, DHCP, DNS, VLANs
-    |
-    | vmbr0 (LAN - 10.0.0.0/24)
-    |
-    +-- Traefik LXC (10.0.0.20)     -- OPNsense port-forwards 80/443 here
-    +-- Recipe Site LXC (10.0.0.21)
-    +-- K8s VMs (10.0.0.100+)
-    +-- TrueNAS VM (10.0.0.30)
-    +-- All other services
-```
-
-This replaces the consumer router entirely. The ISP modem/ONT connects directly to
-the OPNsense VM's WAN interface, and OPNsense becomes the default gateway for the
-entire network.
-
-**WiFi**: Google Nest WiFi Pro mesh in **bridge mode**. Nest handles WiFi only --
-OPNsense handles all routing, DHCP, and DNS. All clients land on the flat
-10.0.0.0/24 network. Setup: Google Home app > WiFi > Settings > Bridge mode.
-
-**VLANs** (deferred -- requires replacing Nest with VLAN-aware APs):
-Google Nest does not support VLANs or multiple SSIDs per VLAN. VLAN segmentation
-is a future upgrade requiring Ubiquiti UniFi or TP-Link Omada APs plus a
-VLAN-aware managed switch. Target segmentation when ready:
-
-| VLAN | Subnet         | Purpose                              |
-|------|----------------|--------------------------------------|
-| 1    | 10.0.0.0/24    | Management (Proxmox, SSH, admin UIs) |
-| 10   | 10.0.10.0/24   | Trusted LAN (workstations, laptops)  |
-| 20   | 10.0.20.0/24   | Servers (K8s, LXCs, NAS)             |
-| 30   | 10.0.30.0/24   | IoT (Home Assistant devices, cameras) |
-| 40   | 10.0.40.0/24   | Guest WiFi (isolated, internet only) |
-
-No services require VLANs to function. The flat network works fine for all
-current and planned services.
-
-**Key features to configure**:
-- **NAT / port forwarding**: 80/443 -> Traefik LXC (replaces router config)
-- **DHCP server**: Static leases for all infrastructure, DHCP pool for clients
-- **DNS resolver**: Unbound with local overrides (*.woodhead.tech -> internal IPs)
-  - This means internal clients resolve `recipes.woodhead.tech` directly to
-    10.0.0.20 without hitting Cloudflare -- faster and works during internet outages
-- **WireGuard VPN**: Remote access to the homelab from anywhere
-- **DDNS client**: OPNsense has built-in Cloudflare DDNS support, replacing the
-  custom `cloudflare-ddns.sh` script
-- **Intrusion detection**: Suricata IDS/IPS (built into OPNsense)
-- **Traffic shaping**: QoS rules to prioritize Plex/Jellyfin streaming
-
-**Terraform**: `terraform/vm-opnsense.tf` (VM ID: 100)
-**Traefik route**: `firewall.woodhead.tech` -> OPNsense web UI (:443) -- internal only
-
-**Installation**:
-```bash
-# Download OPNsense ISO
-# https://opnsense.org/download/ (amd64, DVD image)
-
-# Upload to Proxmox ISO storage
-# Create VM with 2 NICs:
-#   - net0: bridge=vmbr1 (WAN) or PCI passthrough
-#   - net1: bridge=vmbr0 (LAN)
-# Boot from ISO, run the installer
-```
-
-**Notes**:
-- Deploy the router VM BEFORE other services if doing a full rebuild -- it becomes
-  the network gateway, so nothing else gets internet without it
-- If deploying alongside an existing consumer router, run OPNsense in "router on a
-  stick" mode first (single NIC with VLANs) and cut over when ready
-- Google Nest WiFi Pro runs in bridge mode behind OPNsense -- Nest provides WiFi
-  only, OPNsense handles all routing/DHCP/DNS
-- Back up the OPNsense config to TrueNAS (XML export, small file)
-- OPNsense's built-in Cloudflare DDNS plugin replaces our `scripts/ddns/cloudflare-ddns.sh`
-  cron job -- one less thing to maintain
-- UDM (UniFi Dream Machine) available as backup hardware if OPNsense VM approach
-  doesn't work out -- trades flexibility for physical independence from Proxmox
-
 ---
 
 ## IP Address Plan
@@ -266,7 +159,7 @@ Keeping track of allocated IPs to avoid conflicts:
 
 | IP            | Service              | Type | VM ID |
 |---------------|----------------------|------|-------|
-| 10.0.0.1      | OPNsense (gateway)   | VM   | 100   |
+| 10.0.0.1      | Gateway (Nest WiFi)  | Router | --  |
 | 10.0.0.10-12  | Proxmox nodes        | Host | --    |
 | 10.0.0.20     | Traefik              | LXC  | 200   |
 | 10.0.0.21     | Recipe site          | LXC  | 201   |
@@ -329,7 +222,6 @@ Client -> Traefik -> forwardAuth (cookie valid) -> Backend service
 | Bazarr        | No OAuth support             | Protect with forwardAuth middleware     |
 | SABnzbd       | No OAuth support             | Protect with forwardAuth middleware     |
 | TrueNAS       | No OAuth support             | Protect with forwardAuth middleware     |
-| OPNsense      | No OAuth support             | Internal-only, no external exposure     |
 | Plex          | Uses Plex accounts           | No change needed (own auth system)      |
 
 **Authelia vs OAuth2-proxy**:
@@ -406,15 +298,11 @@ container in its own LXC or in the Traefik LXC.
 
 ## Implementation Priority
 
-1. **OPNsense router** -- becomes the network gateway, everything depends on it
-2. **NAS** -- storage dependency for media services
-3. **ARR stack** -- needs NAS media shares
-4. **Plex / Jellyfin** -- needs NAS media shares + iGPU passthrough
-5. **Home Assistant** -- independent, can be done anytime
-6. **Google OAuth / SSO** -- requires Traefik + Cloudflare DNS running first
-
-**Note**: OPNsense can be deployed in parallel with the existing consumer router
-(dual-gateway or router-on-a-stick) to avoid downtime during the transition.
+1. **NAS** -- storage dependency for media services
+2. **ARR stack** -- needs NAS media shares
+3. **Plex / Jellyfin** -- needs NAS media shares + iGPU passthrough
+4. **Home Assistant** -- independent, can be done anytime
+5. **Google OAuth / SSO** -- requires Traefik + Cloudflare DNS running first
 
 ## Hardware Considerations
 

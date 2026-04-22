@@ -92,7 +92,7 @@ Access the web UI at `http://10.0.0.30` (or whatever IP it got via DHCP).
 1. **Network** -> **Global Configuration**
    - Hostname: `truenas`
    - Domain: `woodhead.tech`
-   - Nameserver 1: `10.0.0.1` (OPNsense)
+   - Nameserver 1: `10.0.0.1` (gateway)
    - Default Gateway: `10.0.0.1`
 2. **Network** -> **Interfaces** -> Edit the active interface
    - Uncheck DHCP
@@ -184,14 +184,7 @@ pvesm add nfs truenas-backups \
   --options soft,intr
 ```
 
-## 9. OPNsense DNS Override
-
-Add a local DNS entry in OPNsense so `nas.woodhead.tech` resolves internally:
-
-1. OPNsense -> **Services** -> **Unbound DNS** -> **Overrides** -> **Host Overrides**
-2. Add: `nas` / `woodhead.tech` -> `10.0.0.30`
-
-## 10. Enable QEMU Guest Agent
+## 9. Enable QEMU Guest Agent
 
 TrueNAS Scale supports the QEMU guest agent for clean shutdowns from Proxmox:
 
@@ -225,7 +218,6 @@ showmount -e 10.0.0.30
 ssh root@10.0.0.30 "systemctl status nfs-server"
 
 # Check firewall isn't blocking NFS (ports 111, 2049)
-# If OPNsense is running, ensure NFS traffic is allowed on LAN
 ```
 
 ### Permission denied on media directories

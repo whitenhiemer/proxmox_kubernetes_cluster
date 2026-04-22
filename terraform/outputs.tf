@@ -141,14 +141,3 @@ output "homeassistant_vmid" {
   value       = proxmox_virtual_environment_vm.homeassistant.vm_id
 }
 
-# --- OPNsense Outputs ---
-
-output "opnsense_vmid" {
-  description = "OPNsense firewall VM ID"
-  value       = proxmox_virtual_environment_vm.opnsense.vm_id
-}
-
-output "opnsense_lan_ip" {
-  description = "OPNsense LAN gateway IP (configured inside OPNsense)"
-  value       = var.opnsense_lan_ip
-}

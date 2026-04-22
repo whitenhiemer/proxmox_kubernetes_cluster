@@ -16,7 +16,7 @@ modules:
       follow_redirects: true
       preferred_ip_protocol: ip4
 
-  # HTTPS probe: accepts self-signed certs (TrueNAS, OPNsense)
+  # HTTPS probe: accepts self-signed certs (TrueNAS, etc.)
   https_insecure:
     prober: http
     timeout: 5s

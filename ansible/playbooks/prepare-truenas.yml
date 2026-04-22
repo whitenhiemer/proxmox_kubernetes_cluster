@@ -16,7 +16,7 @@
     truenas_version: "24.10.2"
     iso_storage: "local"
     iso_filename: "TrueNAS-SCALE.iso"
-    # TrueNAS distributes a standard ISO (not compressed like OPNsense)
+    # TrueNAS distributes a standard ISO installer
     truenas_iso_url: "https://download.sys.truenas.net/TrueNAS-SCALE-ElectricEel/{{ truenas_version }}/TrueNAS-SCALE-{{ truenas_version }}.iso"
 
   tasks:

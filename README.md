@@ -7,13 +7,9 @@ Homelab infrastructure for [woodhead.tech](https://woodhead.tech) -- a Talos Lin
 ```
 ISP Modem/ONT
     |
-    | (WAN - vmbr1)
+[Google Nest WiFi Pro] (10.0.0.1) -- NAT, DHCP, DNS, WiFi
     |
-[OPNsense VM] (10.0.0.1) -- NAT, firewall, DHCP, DNS, VPN
-    |
-    | vmbr0 (LAN - 10.0.0.0/24, flat network)
-    |
-    +-- Google Nest WiFi Pro (bridge mode) -- WiFi clients
+    10.0.0.0/24 (flat LAN)
     |
     +-- Traefik LXC (10.0.0.20)  <-- ports 80/443 forwarded here
     |       |
@@ -92,13 +88,11 @@ make harden
 |---------------------|-------|------------------------------------------------|
 | `setup`             | 0     | Verify/configure Proxmox hosts (run once)      |
 | `prepare`           | 0     | Download Talos ISO to Proxmox                  |
-| `prepare-opnsense`  | 0     | Download OPNsense ISO to Proxmox               |
 | `prepare-truenas`   | 0     | Download TrueNAS Scale ISO to Proxmox          |
 | `ddns`              | 1     | Deploy Cloudflare DDNS updater                 |
 | `init`              | --    | Initialize Terraform providers                 |
 | `plan`              | --    | Preview all Terraform changes                  |
 | `apply`             | --    | Create/update all VMs + LXCs                   |
-| `apply-opnsense`    | --    | Create OPNsense firewall VM only               |
 | `apply-truenas`     | --    | Create TrueNAS NAS VM only                     |
 | `apply-homeassistant`| --   | Create Home Assistant VM (downloads HAOS image) |
 | `plan-lxc`          | --    | Preview LXC changes only                       |
@@ -127,7 +121,6 @@ make harden
 ├── docs/
 │   ├── RUNBOOK.md                        # Step-by-step deployment guide
 │   ├── ROADMAP.md                        # Future services + IP plan
-│   ├── OPNSENSE-SETUP.md                 # OPNsense install + config guide
 │   ├── TRUENAS-SETUP.md                  # TrueNAS install + NFS config guide
 │   └── HOMEASSISTANT-SETUP.md            # HAOS install + smart home config guide
 ├── terraform/
@@ -143,8 +136,6 @@ make harden
 │   ├── lxc-jellyfin.tf                   # Jellyfin Media Server LXC
 │   ├── lxc-monitoring.tf                 # Monitoring stack LXC (Docker)
 │   ├── lxc-openclaw.tf                  # OpenClaw AI agent LXC (Docker)
-│   ├── vm-opnsense.tf                    # OPNsense firewall/router VM
-│   ├── vm-opnsense-variables.tf          # OPNsense variables
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
 │   ├── vm-truenas-variables.tf           # TrueNAS variables
 │   ├── vm-homeassistant.tf               # Home Assistant OS VM
@@ -162,7 +153,6 @@ make harden
 │   ├── playbooks/
 │   │   ├── setup-proxmox-base.yml        # Proxmox verification + base config
 │   │   ├── prepare-proxmox.yml           # Download Talos ISO
-│   │   ├── prepare-opnsense.yml          # Download OPNsense ISO
 │   │   ├── prepare-truenas.yml           # Download TrueNAS ISO
 │   │   ├── setup-ddns.yml                # Deploy DDNS updater
 │   │   ├── setup-traefik.yml             # Configure Traefik
@@ -195,7 +185,6 @@ make harden
 │               ├── arr-stack.yml         # Routes: sonarr/radarr/prowlarr.*
 │               ├── media-stack.yml       # Routes: plex/jellyfin/nas.*
 │               ├── homeassistant.yml     # Route: home.woodhead.tech
-│               ├── opnsense.yml          # Route: firewall.woodhead.tech
 │               ├── monitoring.yml         # Routes: grafana/prometheus/alertmanager.*
 │               ├── openclaw.yml          # Route: claw.woodhead.tech
 │               ├── k8s-ingress.yml       # Route: *.woodhead.tech -> K8s
@@ -255,7 +244,6 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 
 | Service          | Type | Status      | Subdomain                  |
 |------------------|------|-------------|----------------------------|
-| OPNsense Router  | VM   | Ready       | `firewall.woodhead.tech`   |
 | TrueNAS Scale    | VM   | Ready       | `nas.woodhead.tech`        |
 | ARR Stack        | LXC  | Ready       | `sonarr/radarr/prowlarr.*` |
 | Plex             | LXC  | Ready       | `plex.woodhead.tech`       |

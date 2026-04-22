@@ -1,7 +1,7 @@
 # vm-homeassistant.tf - Home Assistant OS (HAOS) VM
 #
 # Home Assistant OS is a purpose-built OS for smart home automation.
-# Unlike OPNsense/TrueNAS which boot from ISOs, HAOS ships as a pre-built
+# Unlike TrueNAS which boots from an ISO, HAOS ships as a pre-built
 # disk image (qcow2) that Terraform downloads and imports directly.
 #
 # HAOS manages its own updates, addons, and backups. No Ansible config needed
@@ -85,9 +85,9 @@ resource "proxmox_virtual_environment_vm" "homeassistant" {
   # Start on boot -- smart home should always be running
   on_boot = true
 
-  # Boot after OPNsense (1) and TrueNAS (2)
+  # Boot after TrueNAS (1)
   startup {
-    order    = 3
+    order    = 2
     up_delay = 15
   }
 

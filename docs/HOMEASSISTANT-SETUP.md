@@ -10,7 +10,7 @@ Step-by-step guide for deploying Home Assistant OS (HAOS) on Proxmox.
 
 ## How HAOS Differs from Other VMs
 
-Unlike OPNsense and TrueNAS which boot from ISOs and go through an installer,
+Unlike TrueNAS which boots from an ISO and goes through an installer,
 HAOS ships as a pre-built disk image. There's no install step -- Terraform
 downloads the qcow2 image, imports it as the VM's boot disk, and HAOS boots
 directly. All configuration happens through the web UI.
@@ -133,14 +133,7 @@ Option B: **Auto-backup Addon**
 1. Install the "Home Assistant Google Drive Backup" addon
 2. Or use a network share addon to push backups to TrueNAS NFS
 
-## 7. OPNsense DNS Override
-
-Add a local DNS entry so `home.woodhead.tech` resolves internally:
-
-1. OPNsense -> **Services** -> **Unbound DNS** -> **Overrides** -> **Host Overrides**
-2. Add: `home` / `woodhead.tech` -> `10.0.0.31`
-
-## 8. Enable Traefik Route (Optional)
+## 7. Enable Traefik Route (Optional)
 
 To access Home Assistant via `https://home.woodhead.tech`:
 
@@ -153,17 +146,14 @@ the login page. Consider:
 - Traefik IP whitelist middleware (only allow your public IP)
 - Use HA's built-in Cloudflare integration or Nabu Casa instead
 
-## 9. IoT Network Segmentation (Optional)
+## 8. IoT Network Segmentation (Future)
 
-If running OPNsense with VLANs, put IoT devices on a separate VLAN:
+IoT device isolation requires VLAN-aware APs (not supported by Google Nest
+WiFi Pro). When VLAN infrastructure is in place:
 
-1. OPNsense: Create VLAN 30 (10.0.30.0/24) for IoT devices
+1. Create VLAN 30 (10.0.30.0/24) for IoT devices
 2. Firewall rules: Allow IoT VLAN -> HA (10.0.0.31:8123) only
 3. Block IoT -> LAN (prevent smart devices from reaching your computers)
-4. HA can still communicate with IoT devices because the firewall allows
-   traffic FROM HA TO the IoT VLAN
-
-This prevents compromised IoT devices from accessing your main network.
 
 ## Updating HAOS
 

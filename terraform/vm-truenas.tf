@@ -78,9 +78,9 @@ resource "proxmox_virtual_environment_vm" "truenas" {
   # Start on boot -- other services depend on NFS shares from this VM
   on_boot = true
 
-  # Boot after OPNsense (gateway) but before services that need NFS
+  # Boot early -- other services depend on NFS shares from this VM
   startup {
-    order    = 2
+    order    = 1
     up_delay = 30  # Give TrueNAS time to mount ZFS pools and start NFS
   }
 

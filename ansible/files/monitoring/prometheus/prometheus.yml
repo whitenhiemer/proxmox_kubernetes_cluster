@@ -144,7 +144,7 @@ scrape_configs:
       module: [icmp]
     static_configs:
       - targets:
-          - 10.0.0.1     # OPNsense gateway
+          - 10.0.0.1     # Gateway (Google Nest WiFi Pro)
           - 10.0.0.10    # Proxmox node 1
           - 10.0.0.30    # TrueNAS
     relabel_configs:

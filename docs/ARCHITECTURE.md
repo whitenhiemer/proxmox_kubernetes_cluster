@@ -35,29 +35,20 @@ and resource allocation.
                               |
                         +-----+-----+
                         | ISP Modem |
-                        |  (bridge) |
                         +-----+-----+
                               |
-                         vmbr1 (WAN)
-                              |
                    +----------+----------+
-                   |   OPNsense VM 100   |
+                   | Google Nest WiFi    |
+                   | Pro (router/mesh)   |
                    |     10.0.0.1        |
-                   | NAT / FW / DHCP /   |
-                   | DNS / VPN / IDS     |
+                   | NAT / DHCP / DNS /  |
+                   | WiFi                |
                    +----------+----------+
                               |
-                         vmbr0 (LAN)
-                     10.0.0.0/24 (flat)
+                         10.0.0.0/24 (flat LAN)
                               |
           +-------------------+-------------------+
           |                   |                   |
-    +-----+------+           |                   |
-    | Google     |           |                   |
-    | Nest WiFi  |           |                   |
-    | Pro (mesh) |           |                   |
-    | bridge mode|           |                   |
-    +------------+           |                   |
     +-----+------+    +------+------+    +-------+-------+
     | Proxmox    |    | Proxmox    |    | Proxmox       |
     | Node 1     |    | Node 2     |    | Node 3 (opt.) |
@@ -113,7 +104,6 @@ and resource allocation.
     |  grafana.*    +---> 10.0.0.25:3000
     |  prometheus.* +---> 10.0.0.25:9090
     |  traefik.*    +---> dashboard (local)
-    |  firewall.*   +---> 10.0.0.1:443 (internal only)
     +---------------+
 ```
 
@@ -123,7 +113,7 @@ and resource allocation.
 
 | IP              | Hostname         | Type   | VM ID | Purpose                             |
 |-----------------|------------------|--------|-------|-------------------------------------|
-| 10.0.0.1        | opnsense         | VM     | 100   | Gateway, firewall, DHCP, DNS        |
+| 10.0.0.1        | nest-gateway     | Router | --    | Google Nest WiFi Pro (NAT, DHCP, DNS)|
 | 10.0.0.10       | pve1             | Host   | --    | Proxmox node 1                      |
 | 10.0.0.11       | pve2             | Host   | --    | Proxmox node 2                      |
 | 10.0.0.12       | pve3             | Host   | --    | Proxmox node 3 (optional)           |
@@ -155,11 +145,11 @@ An external request to `https://recipes.woodhead.tech`:
 2. CLOUDFLARE DNS          Returns public IP (WAN) via A record
        |                   (Updated every 5 min by DDNS)
        v
-3. ISP MODEM               Passes traffic to vmbr1 (bridge mode)
+3. ISP MODEM               Passes traffic to Google Nest
        |
        v
-4. OPNSENSE WAN            Receives on public IP :443
-       |                   NAT rule: :443 -> 10.0.0.20:443
+4. GOOGLE NEST             Receives on public IP :443
+       |                   Port forward: :443 -> 10.0.0.20:443
        v
 5. TRAEFIK (10.0.0.20)     Terminates TLS (wildcard *.woodhead.tech cert)
        |                   Matches route: Host(`recipes.woodhead.tech`)
@@ -171,44 +161,51 @@ An external request to `https://recipes.woodhead.tech`:
 7. TRAEFIK                 Wraps response in TLS, sends back
        |
        v
-8. OPNSENSE                Reverse NAT: 10.0.0.20 -> public IP
+8. GOOGLE NEST             Reverse NAT: 10.0.0.20 -> public IP
        |
        v
 9. CLIENT                  Receives HTTPS response with valid cert
 ```
 
-**Port forwarding (OPNsense WAN -> LAN):**
+**Port forwarding (Google Nest -> LAN):**
+
+Configure via Google Home app > WiFi > Settings > Advanced Networking > Port Management.
 
 | WAN Port | Destination        | Protocol | Purpose             |
 |----------|--------------------|----------|---------------------|
 | 80       | 10.0.0.20:80       | TCP      | HTTP -> Traefik     |
 | 443      | 10.0.0.20:443      | TCP      | HTTPS -> Traefik    |
-| 51820    | 10.0.0.1:51820     | UDP      | WireGuard VPN (opt) |
 
 ---
 
 ## Traffic Flow: Internal
 
-Internal clients (laptops, phones on the LAN) follow a shorter path because
-OPNsense's Unbound DNS resolves `*.woodhead.tech` directly to internal IPs.
+Internal clients (laptops, phones on the LAN) resolve `*.woodhead.tech` via
+Cloudflare DNS (upstream from Google Nest). The Nest supports hairpin NAT,
+so traffic loops back to Traefik without leaving the network.
 
 ```
 1. CLIENT (10.0.0.x)       DNS query: recipes.woodhead.tech
        |
        v
-2. OPNSENSE UNBOUND        Local override: recipes.woodhead.tech -> 10.0.0.20
-       |                   (No external DNS lookup, instant response)
+2. GOOGLE NEST DNS          Forwards to upstream (8.8.8.8 / 1.1.1.1)
+       |                   Returns public IP from Cloudflare
        v
-3. TRAEFIK (10.0.0.20)     Terminates TLS, routes to backend
+3. CLIENT                  Connects to public IP :443
        |
        v
-4. RECIPE SITE (10.0.0.21) Responds directly on LAN
+4. GOOGLE NEST             Hairpin NAT: public IP -> 10.0.0.20:443
+       |
+       v
+5. TRAEFIK (10.0.0.20)     Terminates TLS, routes to backend
+       |
+       v
+6. RECIPE SITE (10.0.0.21) Responds directly on LAN
 ```
 
-This means:
-- Internal requests never leave the LAN
-- Services work during internet outages (DNS is local)
-- No NAT hairpin issues
+Note: Unlike a dedicated firewall with local DNS overrides, internal
+requests still depend on external DNS resolution. Services are unreachable
+during internet outages unless clients have static hosts file entries.
 
 ---
 
@@ -230,24 +227,25 @@ This means:
                     +--------+----------+
                              |
                     +--------v----------+
-                    | OPNsense Unbound  |  Local DNS resolver (10.0.0.1:53)
+                    | Google Nest DNS   |  Forwards to upstream resolvers
+                    |   (10.0.0.1:53)  |
                     |                   |
-                    |  1. Local override |  *.woodhead.tech -> 10.0.0.20
-                    |     (instant)     |  nas.woodhead.tech -> 10.0.0.30
-                    |                   |  home.woodhead.tech -> 10.0.0.31
-                    |  2. Cache hit     |
+                    |  1. Cache hit     |
                     |     (instant)     |
                     |                   |
-                    |  3. Forward to    |  1.1.1.1, 8.8.8.8
-                    |     upstream      |  (external domains only)
+                    |  2. Forward to    |  Google DNS (8.8.8.8) or
+                    |     upstream      |  user-configured upstream
+                    |                   |
+                    |  3. Returns       |  Public IP from Cloudflare
+                    |     public IP     |  Hairpin NAT resolves locally
                     +-------------------+
 ```
 
 **DNS record management:**
 - **Registrar:** Squarespace (nameservers pointed to Cloudflare)
 - **Authoritative DNS:** Cloudflare (free tier)
-- **DDNS updates:** OPNsense built-in Cloudflare plugin (every 5 min)
-- **Internal overrides:** OPNsense Unbound (*.woodhead.tech -> local IPs)
+- **DDNS updates:** Cron script on Proxmox node (every 5 min)
+- **Internal resolution:** Google Nest forwards to upstream DNS; hairpin NAT loops traffic back to Traefik
 
 ---
 
@@ -292,43 +290,46 @@ obtained via Cloudflare DNS-01 challenges.
 ## Service Dependency Graph
 
 ```
-                    +-------------------+
-                    |    OPNsense       |  MUST START FIRST
-                    |    (gateway)      |  Everything depends on this
-                    +--------+----------+  for routing and DNS
-                             |
-              +--------------+--------------+
-              |              |              |
-    +---------v--+  +--------v---+  +------v--------+
-    | TrueNAS    |  | Traefik    |  | K8s Cluster   |
-    | (storage)  |  | (routing)  |  | (workloads)   |
-    +-----+------+  +-----+------+  +-------+-------+
-          |              |                   |
-          |    +---------+---------+         |
-          |    |         |         |         |
-    +-----v----v-+ +----v---+ +---v---+ +---v--------+
-    | ARR Stack  | | Recipe | | Home  | | K8s Pods   |
-    | (media)    | | Site   | | Asst  | | (future)   |
-    +-----+------+ +--------+ +-------+ +------------+
-          |
-    +-----v----------+
-    | Monitoring     |  Scrapes all services via
-    | (Prometheus)   |  PVE Exporter, Blackbox,
-    | (observes all) |  Traefik metrics, K8s exporters
-    +----------------+
-          |
-    NFS mount (/media, read-write)
-          |
-    +-----v------+ +------------+
-    | Plex       | | Jellyfin   |
-    | (media)    | | (media)    |
-    +------------+ +------------+
-          |              |
-    NFS mount (/media, read-only)
+    Google Nest WiFi Pro (10.0.0.1)
+    Router, NAT, DHCP, DNS, WiFi
+    (physical device, not managed by Proxmox)
+              |
+              +-- 10.0.0.0/24 (flat LAN)
+              |
+    +---------+---------+--------------+
+    |         |         |              |
+    v         v         v              v
++--------+ +--------+ +----------+ +--------+
+|TrueNAS | |Traefik | |K8s       | |Home    |
+|(storage)| |(routing)| |Cluster  | |Asst    |
++---+----+ +---+----+ +----+-----+ +--------+
+    |          |            |
+    |   +------+------+    |
+    |   |      |      |    |
+    v   v      v      v    v
++-------+-+ +------+ +----------+
+|ARR Stack| |Recipe| |K8s Pods  |
+|(media)  | |Site  | |(future)  |
++----+----+ +------+ +----------+
+     |
++----v-----------+
+| Monitoring     |  Scrapes all services via
+| (Prometheus)   |  PVE Exporter, Blackbox,
+| (observes all) |  Traefik metrics, K8s exporters
++----------------+
+     |
+NFS mount (/media, read-write)
+     |
++----v-------+ +------------+
+| Plex       | | Jellyfin   |
+| (media)    | | (media)    |
++------------+ +------------+
+     |              |
+NFS mount (/media, read-only)
 ```
 
 **Hard dependencies (service won't function without):**
-- All services -> OPNsense (gateway, DNS)
+- All services -> Google Nest gateway (routing, DHCP, DNS)
 - All external access -> Traefik (TLS, routing)
 - ARR stack media storage -> TrueNAS (NFS at `/media`)
 - Plex/Jellyfin media library -> TrueNAS (NFS at `/media`, read-only)
@@ -352,9 +353,8 @@ in parallel after the host is ready.
 
 | Order | Service              | VM ID | Delay  | Why                                        |
 |-------|----------------------|-------|--------|--------------------------------------------|
-| 1     | OPNsense             | 100   | 30s    | Network gateway -- nothing works without it |
-| 2     | TrueNAS              | 300   | 30s    | NFS shares must be ready before consumers   |
-| 3     | Home Assistant       | 301   | 15s    | Smart home should always be running         |
+| 1     | TrueNAS              | 300   | 30s    | NFS shares must be ready before consumers   |
+| 2     | Home Assistant       | 301   | 15s    | Smart home should always be running         |
 | auto  | Traefik LXC          | 200   | --     | Starts on boot, no ordering constraint      |
 | auto  | Recipe Site LXC      | 201   | --     | Starts on boot                              |
 | auto  | ARR Stack LXC        | 202   | --     | Starts on boot, NFS mount may retry         |
@@ -385,8 +385,8 @@ in parallel after the host is ready.
    +----v----+    +----v----+    +----v--------------v----+
    |local-lvm|    |ceph-pool|    |  TrueNAS ZFS Pool     |
    |         |    |         |    |  (mirror or RAIDZ1)    |
-   | OPNsense|    | K8s CP  |    |                        |
-   | TrueNAS |    | K8s     |    |  pool/media            |
+   | TrueNAS |    | K8s CP  |    |                        |
+   |  (OS)   |    | K8s     |    |  pool/media            |
    |   (OS)  |    | Workers |    |   +-- downloads/       |
    | HAOS    |    |         |    |   +-- movies/          |
    | Traefik |    |         |    |   +-- tv/              |
@@ -403,7 +403,7 @@ in parallel after the host is ready.
 
 | Storage      | Type       | Used By                                        |
 |--------------|------------|-------------------------------------------------|
-| local-lvm    | LVM (SSD)  | OPNsense OS, TrueNAS OS, HAOS, all LXC disks   |
+| local-lvm    | LVM (SSD)  | TrueNAS OS, HAOS, all LXC disks                 |
 | ceph-pool    | Ceph (3x)  | K8s control plane, K8s workers                  |
 | Passthrough  | Physical   | TrueNAS ZFS data pool (via `qm set -scsi1`)    |
 
@@ -424,7 +424,6 @@ in parallel after the host is ready.
 
 | Service           | Cores | RAM (MB) | CPU Type | Notes                          |
 |-------------------|-------|----------|----------|--------------------------------|
-| OPNsense          | 2     | 4096     | host     | AES-NI for VPN, Suricata       |
 | TrueNAS           | 4     | 8192     | host     | ZFS ARC cache (~1GB per TB)     |
 | Home Assistant    | 2     | 2048     | host     | USB passthrough support         |
 | K8s Control Plane | 2     | 4096     | x86-64   | Per node, default 1 node        |
@@ -441,7 +440,6 @@ in parallel after the host is ready.
 
 | Service           | Size   | Storage     | Format    | Notes                       |
 |-------------------|--------|-------------|-----------|-----------------------------|
-| OPNsense          | 16 GB  | local-lvm   | raw       | OS only, config is tiny     |
 | TrueNAS (OS)      | 16 GB  | local-lvm   | raw       | OS only                     |
 | TrueNAS (data)    | varies | passthrough | ZFS       | Physical disks for pool     |
 | Home Assistant    | 32 GB  | local-lvm   | qcow2     | HAOS + addons + database    |
@@ -459,9 +457,9 @@ in parallel after the host is ready.
 
 | Resource | Total       | Notes                                      |
 |----------|-------------|--------------------------------------------|
-| CPU      | ~28 cores   | Shared across Proxmox nodes                |
-| RAM      | ~41 GB      | TrueNAS benefits from more (ZFS ARC)       |
-| local-lvm| ~152 GB     | OS disks for VMs + all LXCs                |
+| CPU      | ~26 cores   | Shared across Proxmox nodes                |
+| RAM      | ~37 GB      | TrueNAS benefits from more (ZFS ARC)       |
+| local-lvm| ~136 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
 ---
@@ -470,7 +468,6 @@ in parallel after the host is ready.
 
 | Resource                                          | File                        | Type | ID  |
 |---------------------------------------------------|-----------------------------|------|-----|
-| `proxmox_virtual_environment_vm.opnsense`         | vm-opnsense.tf              | VM   | 100 |
 | `proxmox_virtual_environment_container.traefik`   | lxc-traefik.tf              | LXC  | 200 |
 | `proxmox_virtual_environment_container.recipe_site`| lxc-recipe-site.tf         | LXC  | 201 |
 | `proxmox_virtual_environment_container.arr`       | lxc-arr.tf                  | LXC  | 202 |
@@ -489,7 +486,6 @@ in parallel after the host is ready.
 **Variable files:**
 - `variables.tf` -- Proxmox connection, network, K8s cluster sizing
 - `lxc-variables.tf` -- LXC storage, SSH key, per-service IPs/VMIDs
-- `vm-opnsense-variables.tf` -- OPNsense ISO, WAN bridge, sizing
 - `vm-truenas-variables.tf` -- TrueNAS ISO, sizing
 - `vm-homeassistant-variables.tf` -- HAOS image URL, sizing
 
@@ -513,7 +509,6 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | jellyfin.woodhead.tech | 10.0.0.24            | 8096  | media-stack.yml       | Commented |
 | nas.woodhead.tech      | 10.0.0.30            | 443   | media-stack.yml       | Commented |
 | home.woodhead.tech     | 10.0.0.31            | 8123  | homeassistant.yml     | Commented |
-| firewall.woodhead.tech | 10.0.0.1             | 443   | opnsense.yml          | Commented |
 | grafana.woodhead.tech  | 10.0.0.25            | 3000  | monitoring.yml        | Commented |
 | prometheus.woodhead.tech| 10.0.0.25           | 9090  | monitoring.yml        | Commented |
 | alertmanager.woodhead.tech| 10.0.0.25         | 9093  | monitoring.yml        | Commented |
@@ -623,33 +618,33 @@ all management is through `talosctl` and `kubectl`.
 
 ---
 
-## WiFi Architecture
+## WiFi / Network Architecture
 
-Google Nest WiFi Pro mesh in **bridge mode** provides WiFi coverage. All
-routing, DHCP, and DNS handled by OPNsense. The Nest acts as a pure
-access point -- no routing, no NAT, no DHCP.
+Google Nest WiFi Pro mesh serves as the network router and WiFi access point.
+It handles NAT, DHCP, DNS forwarding, and WiFi for all clients.
 
 ```
-OPNsense VM (10.0.0.1)
+ISP Modem/ONT
     |
-    | vmbr0 (LAN)
-    |
-    +-- [Managed Switch] -- Proxmox nodes, wired devices
-    |
-    +-- Google Nest WiFi Pro (bridge mode)
+    +-- Google Nest WiFi Pro (10.0.0.1)
+            |  Router mode (default)
+            |  NAT, DHCP, DNS forwarding, WiFi
             |
-            +-- Primary unit (wired to switch)
+            +-- Primary unit (wired to ISP modem + switch)
             +-- Satellite(s) (wireless mesh backhaul)
             |
-            WiFi clients get DHCP from OPNsense
-            DNS from OPNsense (10.0.0.1)
+            +-- [Switch] -- Proxmox nodes, wired devices
+            |
+            WiFi + wired clients on 10.0.0.0/24
 ```
 
-**Bridge mode setup**: Google Home app > WiFi > Settings > Networking mode > Bridge.
-Disables Nest routing/DHCP/NAT. Nest becomes a transparent L2 bridge.
+**Port forwarding**: Google Home app > WiFi > Settings > Advanced Networking >
+Port Management. Forward 80/443 to Traefik LXC (10.0.0.20).
+
+**DDNS**: Cloudflare DDNS script runs on a Proxmox node via cron (every 5 min).
 
 **Limitation**: Google Nest does not support VLANs or multiple SSIDs per VLAN.
-All WiFi clients land on the same flat 10.0.0.0/24 network. This is fine
+All clients land on the same flat 10.0.0.0/24 network. This is fine
 for current use -- no services require VLAN segmentation to function.
 
 ---
@@ -663,7 +658,7 @@ until VLAN-aware WiFi APs replace the Google Nest mesh.
 **Prerequisites for VLANs:**
 - Replace Google Nest WiFi with VLAN-aware APs (Ubiquiti UniFi U6 or TP-Link Omada EAP)
 - VLAN-aware managed switch (assigns VLANs to physical ports)
-- OPNsense VLAN interface configuration
+- Dedicated router/firewall with VLAN support (e.g., OPNsense VM or UniFi Dream Machine)
 
 **Target segmentation (when ready):**
 
@@ -691,21 +686,19 @@ Guest (40) -----> ALL internal     DENY    (full isolation)
 
 ## Firewall Rules
 
-### WAN (OPNsense external interface)
+### Port Forwarding (Google Nest WiFi Pro)
 
-| Rule     | Protocol | Source | Dest Port | Action  | Notes                  |
-|----------|----------|--------|-----------|---------|------------------------|
-| Default  | *        | *      | *         | DENY    | Block all inbound      |
-| HTTP     | TCP      | *      | 80        | NAT FWD | -> 10.0.0.20:80        |
-| HTTPS    | TCP      | *      | 443       | NAT FWD | -> 10.0.0.20:443       |
-| WireGuard| UDP      | *      | 51820     | NAT FWD | -> 10.0.0.1:51820 (opt)|
+Configured via Google Home app > WiFi > Advanced Networking > Port Management.
 
-### LAN (default allow, restrict as VLANs are added)
+| WAN Port | Destination        | Protocol | Purpose             |
+|----------|--------------------|----------|---------------------|
+| 80       | 10.0.0.20:80       | TCP      | HTTP -> Traefik     |
+| 443      | 10.0.0.20:443      | TCP      | HTTPS -> Traefik    |
 
-| Rule     | Source        | Dest         | Action | Notes                    |
-|----------|---------------|--------------|--------|--------------------------|
-| Default  | 10.0.0.0/24   | *            | ALLOW  | Trust LAN (pre-VLAN)     |
-| Anti-spoof| != LAN subnet| LAN          | DENY   | Block spoofed sources    |
+Google Nest handles NAT and basic firewall (blocks unsolicited inbound by default).
+No advanced firewall rules, IDS/IPS, or VPN server available on consumer hardware.
+For advanced firewall features, consider adding a dedicated firewall appliance in
+the future (OPNsense VM or UniFi Dream Machine).
 
 ---
 
@@ -714,7 +707,6 @@ Guest (40) -----> ALL internal     DENY    (full isolation)
 | What                | Where                        | Method                          | Frequency  |
 |---------------------|------------------------------|---------------------------------|------------|
 | Proxmox VMs         | TrueNAS /pool/backups        | Proxmox backup job -> NFS       | Weekly     |
-| OPNsense config     | TrueNAS /pool/backups        | XML export (via web UI)         | After changes |
 | Home Assistant      | TrueNAS /pool/backups/ha     | Built-in snapshots -> NFS       | Daily      |
 | ARR stack configs   | TrueNAS /pool/backups        | Backup /opt/arr/ directory      | Weekly     |
 | Traefik certs       | Included in LXC backup       | acme.json auto-renews if lost   | --         |
