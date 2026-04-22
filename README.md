@@ -45,7 +45,8 @@ Default K8s topology: 1 control plane + 2 workers. Configurable via `terraform.t
 
 ## Quick Start
 
-See [docs/RUNBOOK.md](docs/RUNBOOK.md) for the full step-by-step deployment guide.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full system architecture, network flows, and dependency graphs.
+See [docs/RUNBOOK.md](docs/RUNBOOK.md) for the step-by-step deployment guide.
 
 ```bash
 # 1. Configure
