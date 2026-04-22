@@ -5,7 +5,7 @@
 #
 # Deploy order (from fresh Proxmox):
 #   make setup          - Verify Proxmox base config
-#   make prepare        - Download Talos ISO
+#   make prepare        - Download Talos + OPNsense ISOs
 #   make ddns           - Deploy DDNS updater
 #   make init           - Initialize Terraform
 #   make apply          - Create all VMs + LXC containers
@@ -15,7 +15,8 @@
 #   make k8s-base       - Apply base K8s manifests
 #   make harden         - Security hardening
 
-.PHONY: setup prepare ddns init plan apply apply-lxc plan-lxc \
+.PHONY: setup prepare prepare-opnsense ddns init plan apply \
+        apply-opnsense apply-lxc plan-lxc \
         traefik recipe-site bootstrap kubeconfig health \
         k8s-base harden destroy clean help
 
@@ -41,6 +42,9 @@ setup: ## Verify and configure Proxmox hosts (run once after fresh install)
 prepare: ## Download Talos ISO to Proxmox host
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/prepare-proxmox.yml
 
+prepare-opnsense: ## Download OPNsense ISO to Proxmox host
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/prepare-opnsense.yml
+
 # ===== Phase 1: DDNS =====
 
 ddns: ## Deploy Cloudflare DDNS updater to Proxmox host
@@ -56,6 +60,10 @@ plan: ## Preview all Terraform changes (VMs + LXCs)
 
 apply: ## Create/update all infrastructure (VMs + LXCs)
 	cd $(TERRAFORM_DIR) && terraform apply
+
+apply-opnsense: ## Create OPNsense firewall VM only
+	cd $(TERRAFORM_DIR) && terraform apply \
+		-target=proxmox_virtual_environment_vm.opnsense
 
 plan-lxc: ## Preview LXC container changes only
 	cd $(TERRAFORM_DIR) && terraform plan \

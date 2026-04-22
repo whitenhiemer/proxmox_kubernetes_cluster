@@ -50,6 +50,16 @@ traefik_ip   = "10.0.0.20"
 recipe_site_vmid = 201
 recipe_site_ip   = "10.0.0.21"
 
+# --- OPNsense Firewall/Router ---
+# VM ID 100 = highest boot priority
+opnsense_vmid       = 100
+opnsense_iso        = "local:iso/OPNsense-dvd-amd64.iso"
+opnsense_cores      = 2
+opnsense_memory     = 4096
+opnsense_disk_size  = 16
+opnsense_wan_bridge = "vmbr1"   # Separate bridge to ISP modem
+opnsense_lan_ip     = "10.0.0.1"
+
 # --- Domain ---
 domain     = "woodhead.tech"
 acme_email = "admin@woodhead.tech"
