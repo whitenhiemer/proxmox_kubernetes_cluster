@@ -67,6 +67,16 @@ truenas_memory    = 8192
 truenas_disk_size = 16    # OS disk only; data goes on passthrough ZFS disks
 truenas_ip        = "10.0.0.30"
 
+# --- Home Assistant OS ---
+# Pre-built disk image (no ISO install). Terraform downloads + imports automatically.
+# Update the image URL when new HAOS versions are released.
+homeassistant_vmid      = 301
+homeassistant_image_url = "https://github.com/home-assistant/operating-system/releases/download/14.2/haos_ova-14.2.qcow2.xz"
+homeassistant_cores     = 2
+homeassistant_memory    = 2048
+homeassistant_disk_size = 32
+homeassistant_ip        = "10.0.0.31"
+
 # --- OPNsense Firewall/Router ---
 # VM ID 100 = highest boot priority
 opnsense_vmid       = 100

@@ -95,6 +95,7 @@ make harden
 | `apply`             | --    | Create/update all VMs + LXCs                   |
 | `apply-opnsense`    | --    | Create OPNsense firewall VM only               |
 | `apply-truenas`     | --    | Create TrueNAS NAS VM only                     |
+| `apply-homeassistant`| --   | Create Home Assistant VM (downloads HAOS image) |
 | `plan-lxc`          | --    | Preview LXC changes only                       |
 | `apply-lxc`         | --    | Create/update LXC containers only              |
 | `traefik`           | 2     | Configure Traefik reverse proxy                |
@@ -118,7 +119,8 @@ make harden
 │   ├── RUNBOOK.md                        # Step-by-step deployment guide
 │   ├── ROADMAP.md                        # Future services + IP plan
 │   ├── OPNSENSE-SETUP.md                 # OPNsense install + config guide
-│   └── TRUENAS-SETUP.md                  # TrueNAS install + NFS config guide
+│   ├── TRUENAS-SETUP.md                  # TrueNAS install + NFS config guide
+│   └── HOMEASSISTANT-SETUP.md            # HAOS install + smart home config guide
 ├── terraform/
 │   ├── versions.tf                       # Provider config (bpg/proxmox)
 │   ├── variables.tf                      # K8s VM variables
@@ -132,6 +134,8 @@ make harden
 │   ├── vm-opnsense-variables.tf          # OPNsense variables
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
 │   ├── vm-truenas-variables.tf           # TrueNAS variables
+│   ├── vm-homeassistant.tf               # Home Assistant OS VM
+│   ├── vm-homeassistant-variables.tf     # Home Assistant variables
 │   ├── outputs.tf                        # Infrastructure outputs
 │   └── terraform.tfvars.example          # Configuration template
 ├── talos/
@@ -222,7 +226,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | ARR Stack        | LXC  | Ready       | `sonarr/radarr/prowlarr.*` |
 | Plex             | LXC  | Planned     | `plex.woodhead.tech`       |
 | Jellyfin         | LXC  | Planned     | `jellyfin.woodhead.tech`   |
-| Home Assistant   | VM   | Planned     | `home.woodhead.tech`       |
+| Home Assistant   | VM   | Ready       | `home.woodhead.tech`       |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 

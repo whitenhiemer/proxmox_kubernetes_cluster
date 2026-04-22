@@ -89,6 +89,18 @@ output "truenas_vmid" {
   value       = proxmox_virtual_environment_vm.truenas.vm_id
 }
 
+# --- Home Assistant Outputs ---
+
+output "homeassistant_ip" {
+  description = "Home Assistant IP (configured inside HAOS)"
+  value       = var.homeassistant_ip
+}
+
+output "homeassistant_vmid" {
+  description = "Home Assistant VM ID"
+  value       = proxmox_virtual_environment_vm.homeassistant.vm_id
+}
+
 # --- OPNsense Outputs ---
 
 output "opnsense_vmid" {

@@ -17,7 +17,7 @@
 #   make harden         - Security hardening
 
 .PHONY: setup prepare prepare-opnsense prepare-truenas ddns init plan apply \
-        apply-opnsense apply-truenas apply-lxc plan-lxc \
+        apply-opnsense apply-truenas apply-homeassistant apply-lxc plan-lxc \
         traefik recipe-site arr-stack bootstrap kubeconfig health \
         k8s-base harden destroy clean help
 
@@ -72,6 +72,11 @@ apply-opnsense: ## Create OPNsense firewall VM only
 apply-truenas: ## Create TrueNAS NAS VM only (pass through data disks separately)
 	cd $(TERRAFORM_DIR) && terraform apply \
 		-target=proxmox_virtual_environment_vm.truenas
+
+apply-homeassistant: ## Create Home Assistant VM (downloads HAOS image automatically)
+	cd $(TERRAFORM_DIR) && terraform apply \
+		-target=proxmox_virtual_environment_download_file.haos_image \
+		-target=proxmox_virtual_environment_vm.homeassistant
 
 plan-lxc: ## Preview LXC container changes only
 	cd $(TERRAFORM_DIR) && terraform plan \

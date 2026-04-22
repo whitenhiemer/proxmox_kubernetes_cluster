@@ -431,15 +431,66 @@ make traefik
 
 ---
 
-## Phase 8: Kubernetes Cluster
+## Phase 8: Home Assistant
 
-### 8.1 Download Talos ISO
+See [docs/HOMEASSISTANT-SETUP.md](HOMEASSISTANT-SETUP.md) for the full setup guide.
+
+### 8.1 Create the VM
+
+Unlike other VMs, HAOS uses a pre-built disk image instead of an ISO installer.
+Terraform handles the image download and VM creation in one step:
+
+```bash
+make apply-homeassistant
+```
+
+This downloads the HAOS qcow2 image to Proxmox, decompresses it, and creates the
+VM with the image imported as the boot disk. No separate ISO download needed.
+
+### 8.2 First Boot
+
+1. Open Proxmox web UI -> VM 301 (homeassistant) -> Console
+2. HAOS boots automatically (no install wizard)
+3. Wait 2-3 minutes for initial setup
+4. The console shows the web UI URL
+
+### 8.3 Configure
+
+1. Access web UI at `http://10.0.0.31:8123`
+2. Complete the onboarding wizard (create admin account, set location)
+3. Set static IP: Settings -> System -> Network -> `10.0.0.31/24`
+
+### 8.4 USB Passthrough (Optional)
+
+For Zigbee/Z-Wave dongles:
+```bash
+# On Proxmox host, find your dongle's vendor:product ID
+lsusb
+
+# Pass it through to the VM
+qm set 301 -usb0 host=<vendor>:<product>
+```
+
+Then in HA: Settings -> Devices & Services -> Add ZHA or Z-Wave JS integration.
+
+### 8.5 Enable Traefik Route (Optional)
+
+Uncomment the route in `ansible/files/traefik/dynamic/homeassistant.yml` and redeploy:
+```bash
+make traefik
+```
+
+---
+
+## Phase 9: Kubernetes Cluster
+
+### 9.1 Download Talos ISO
 
 ```bash
 make prepare
 ```
 
-### 8.2 Bootstrap
+### 9.2 Bootstrap
 
 ```bash
 export CLUSTER_VIP="10.0.0.100"
@@ -448,7 +499,7 @@ export WORKER_IPS="10.0.0.111,10.0.0.112"
 make bootstrap
 ```
 
-### 8.3 Verify
+### 9.3 Verify
 
 ```bash
 export KUBECONFIG=talos/_out/kubeconfig
@@ -456,7 +507,7 @@ kubectl get nodes
 # Should show 3 nodes in Ready state
 ```
 
-### 8.4 Apply Base Manifests
+### 9.4 Apply Base Manifests
 
 ```bash
 # Without MetalLB
@@ -466,7 +517,7 @@ make k8s-base
 make k8s-base-metallb
 ```
 
-### 8.5 Enable K8s Routing in Traefik
+### 9.5 Enable K8s Routing in Traefik
 
 Once K8s has an ingress controller, uncomment the routes in `ansible/files/traefik/dynamic/k8s-ingress.yml` and redeploy:
 ```bash
@@ -475,16 +526,16 @@ make traefik
 
 ---
 
-## Phase 9: Security Hardening
+## Phase 10: Security Hardening
 
-### 9.1 Verify SSH Key Access
+### 10.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@10.0.0.10  # Should work without password
 ```
 
-### 9.2 Apply Hardening
+### 10.2 Apply Hardening
 
 ```bash
 make harden
