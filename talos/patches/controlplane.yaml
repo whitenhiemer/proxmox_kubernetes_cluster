@@ -1,0 +1,48 @@
+# controlplane.yaml - Talos config patches for control plane nodes on Proxmox
+#
+# Applied via: talosctl gen config ... --config-patch @patches/controlplane.yaml
+# See: https://www.talos.dev/v1.9/talos-guides/configuration/patching/
+
+# Enable VIP for HA API endpoint
+machine:
+  network:
+    interfaces:
+      - deviceSelector:
+          driver: virtio_net
+        vip:
+          ip: ${CLUSTER_VIP}  # Replaced by envsubst or set manually
+
+  # Install to the first virtio disk
+  install:
+    disk: /dev/sda
+    image: ghcr.io/siderolabs/installer:${TALOS_VERSION}
+    wipe: false
+
+  # Proxmox QEMU guest agent support
+  sysctls:
+    net.core.somaxconn: "65535"
+
+  # Kubelet configuration
+  kubelet:
+    extraArgs:
+      rotate-server-certificates: "true"
+
+  # Time sync (use your network's NTP or defaults)
+  time:
+    disabled: false
+    servers:
+      - time.cloudflare.com
+
+# Cluster-level settings
+cluster:
+  # Allow scheduling on control plane (useful for single CP setups)
+  allowSchedulingOnControlPlanes: true
+
+  # Proxy disabled if using Cilium
+  # proxy:
+  #   disabled: true
+
+  # etcd configuration
+  etcd:
+    extraArgs:
+      listen-metrics-urls: "http://0.0.0.0:2381"

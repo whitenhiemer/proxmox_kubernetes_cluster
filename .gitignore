@@ -1,0 +1,27 @@
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/terraform.tfvars
+terraform/*.tfplan
+.terraform/
+
+# Talos generated configs (contain secrets)
+talos/_out/
+
+# Ansible
+ansible/*.retry
+
+# Environment files
+.env
+*.env
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

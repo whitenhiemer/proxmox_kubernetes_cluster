@@ -1,0 +1,46 @@
+# prepare-proxmox.yml - Download Talos ISO to Proxmox storage
+#
+# Downloads the Talos Linux ISO to the Proxmox node so Terraform can
+# reference it when creating VMs.
+#
+# Usage: ansible-playbook playbooks/prepare-proxmox.yml
+---
+- name: Prepare Proxmox for Talos Kubernetes
+  hosts: proxmox
+  vars:
+    talos_version: "v1.9.0"
+    talos_arch: "amd64"
+    iso_storage: "local"  # Proxmox storage ID for ISOs
+    iso_filename: "talos-{{ talos_arch }}.iso"
+    talos_iso_url: "https://github.com/siderolabs/talos/releases/download/{{ talos_version }}/metal-{{ talos_arch }}.iso"
+
+  tasks:
+    - name: Check if Talos ISO already exists
+      ansible.builtin.stat:
+        path: "/var/lib/vz/template/iso/{{ iso_filename }}"
+      register: iso_file
+
+    - name: Download Talos ISO
+      ansible.builtin.get_url:
+        url: "{{ talos_iso_url }}"
+        dest: "/var/lib/vz/template/iso/{{ iso_filename }}"
+        mode: "0644"
+        timeout: 300
+      when: not iso_file.stat.exists
+
+    - name: Verify ISO exists on Proxmox storage
+      ansible.builtin.command:
+        cmd: "pvesm list {{ iso_storage }} --content iso"
+      register: iso_list
+      changed_when: false
+
+    - name: Display available ISOs
+      ansible.builtin.debug:
+        msg: "{{ iso_list.stdout_lines }}"
+
+    - name: Confirm Talos ISO is available
+      ansible.builtin.assert:
+        that:
+          - "iso_filename in iso_list.stdout"
+        fail_msg: "Talos ISO not found in Proxmox storage. Check download."
+        success_msg: "Talos ISO {{ talos_version }} is ready at {{ iso_storage }}:iso/{{ iso_filename }}"
