@@ -77,6 +77,18 @@ output "domain" {
   value       = var.domain
 }
 
+# --- TrueNAS Outputs ---
+
+output "truenas_ip" {
+  description = "TrueNAS NAS IP (configured inside TrueNAS)"
+  value       = var.truenas_ip
+}
+
+output "truenas_vmid" {
+  description = "TrueNAS NAS VM ID"
+  value       = proxmox_virtual_environment_vm.truenas.vm_id
+}
+
 # --- OPNsense Outputs ---
 
 output "opnsense_vmid" {

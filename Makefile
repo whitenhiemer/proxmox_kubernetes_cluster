@@ -5,7 +5,7 @@
 #
 # Deploy order (from fresh Proxmox):
 #   make setup          - Verify Proxmox base config
-#   make prepare        - Download Talos + OPNsense ISOs
+#   make prepare        - Download Talos, OPNsense, TrueNAS ISOs
 #   make ddns           - Deploy DDNS updater
 #   make init           - Initialize Terraform
 #   make apply          - Create all VMs + LXC containers
@@ -16,8 +16,8 @@
 #   make k8s-base       - Apply base K8s manifests
 #   make harden         - Security hardening
 
-.PHONY: setup prepare prepare-opnsense ddns init plan apply \
-        apply-opnsense apply-lxc plan-lxc \
+.PHONY: setup prepare prepare-opnsense prepare-truenas ddns init plan apply \
+        apply-opnsense apply-truenas apply-lxc plan-lxc \
         traefik recipe-site arr-stack bootstrap kubeconfig health \
         k8s-base harden destroy clean help
 
@@ -46,6 +46,9 @@ prepare: ## Download Talos ISO to Proxmox host
 prepare-opnsense: ## Download OPNsense ISO to Proxmox host
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/prepare-opnsense.yml
 
+prepare-truenas: ## Download TrueNAS Scale ISO to Proxmox host
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/prepare-truenas.yml
+
 # ===== Phase 1: DDNS =====
 
 ddns: ## Deploy Cloudflare DDNS updater to Proxmox host
@@ -65,6 +68,10 @@ apply: ## Create/update all infrastructure (VMs + LXCs)
 apply-opnsense: ## Create OPNsense firewall VM only
 	cd $(TERRAFORM_DIR) && terraform apply \
 		-target=proxmox_virtual_environment_vm.opnsense
+
+apply-truenas: ## Create TrueNAS NAS VM only (pass through data disks separately)
+	cd $(TERRAFORM_DIR) && terraform apply \
+		-target=proxmox_virtual_environment_vm.truenas
 
 plan-lxc: ## Preview LXC container changes only
 	cd $(TERRAFORM_DIR) && terraform plan \

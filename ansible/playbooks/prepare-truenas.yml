@@ -1,0 +1,47 @@
+# prepare-truenas.yml - Download TrueNAS Scale ISO to Proxmox storage
+#
+# Downloads the TrueNAS Scale installer ISO to the Proxmox node so Terraform
+# can reference it when creating the NAS VM.
+#
+# TrueNAS Scale is Debian-based and uses ZFS for storage management.
+# The ISO is ~1.5GB and installs via a standard text-mode installer.
+#
+# Usage: ansible-playbook playbooks/prepare-truenas.yml
+---
+- name: Download TrueNAS Scale ISO to Proxmox
+  hosts: proxmox[0]  # Only need it on one node
+  vars:
+    # TrueNAS Scale release -- update as new versions are released
+    # Check https://www.truenas.com/download-truenas-scale/ for the latest
+    truenas_version: "24.10.2"
+    iso_storage: "local"
+    iso_filename: "TrueNAS-SCALE.iso"
+    # TrueNAS distributes a standard ISO (not compressed like OPNsense)
+    truenas_iso_url: "https://download.sys.truenas.net/TrueNAS-SCALE-ElectricEel/{{ truenas_version }}/TrueNAS-SCALE-{{ truenas_version }}.iso"
+
+  tasks:
+    - name: Check if TrueNAS ISO already exists
+      ansible.builtin.stat:
+        path: "/var/lib/vz/template/iso/{{ iso_filename }}"
+      register: iso_file
+
+    - name: Download TrueNAS Scale ISO
+      ansible.builtin.get_url:
+        url: "{{ truenas_iso_url }}"
+        dest: "/var/lib/vz/template/iso/{{ iso_filename }}"
+        mode: "0644"
+        timeout: 900  # ISO is ~1.5GB, allow extra time
+      when: not iso_file.stat.exists
+
+    - name: Verify ISO exists on Proxmox storage
+      ansible.builtin.command:
+        cmd: "pvesm list {{ iso_storage }} --content iso"
+      register: iso_list
+      changed_when: false
+
+    - name: Confirm TrueNAS ISO is available
+      ansible.builtin.assert:
+        that:
+          - "iso_filename in iso_list.stdout"
+        fail_msg: "TrueNAS ISO not found in Proxmox storage"
+        success_msg: "TrueNAS Scale {{ truenas_version }} ISO ready at {{ iso_storage }}:iso/{{ iso_filename }}"

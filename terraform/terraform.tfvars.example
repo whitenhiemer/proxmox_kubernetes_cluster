@@ -57,6 +57,16 @@ arr_cores    = 2
 arr_memory   = 4096
 arr_disk_size = 20
 
+# --- TrueNAS Scale NAS ---
+# Centralized storage for media, backups, ISOs
+# Data disks are passed through manually after VM creation (see docs/TRUENAS-SETUP.md)
+truenas_vmid      = 300
+truenas_iso       = "local:iso/TrueNAS-SCALE.iso"
+truenas_cores     = 4
+truenas_memory    = 8192
+truenas_disk_size = 16    # OS disk only; data goes on passthrough ZFS disks
+truenas_ip        = "10.0.0.30"
+
 # --- OPNsense Firewall/Router ---
 # VM ID 100 = highest boot priority
 opnsense_vmid       = 100
