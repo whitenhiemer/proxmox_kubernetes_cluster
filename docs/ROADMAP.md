@@ -268,6 +268,128 @@ Keeping track of allocated IPs to avoid conflicts:
 | 10.0.0.111-112| K8s workers          | VM   | 410+  |
 | 10.0.0.150-199| MetalLB pool         | K8s  | --    |
 
+---
+
+### Google OAuth / SSO
+
+**Type**: Traefik middleware + per-service configuration
+**Goal**: Single sign-on via Google accounts for all externally-exposed services.
+Eliminates per-service passwords for family/friends and adds a security layer
+in front of services that don't have strong built-in auth.
+
+**Approach**: Deploy [Authelia](https://www.authelia.com/) or
+[OAuth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/) as a Traefik
+`forwardAuth` middleware. Every request to a protected subdomain hits the auth
+proxy first. If the user has a valid session cookie, the request passes through
+to the backend. If not, they're redirected to Google sign-in.
+
+**Architecture**:
+```
+Client -> Traefik -> forwardAuth middleware -> Authelia/OAuth2-proxy
+                                                |
+                                          Google OAuth2
+                                          (consent screen)
+                                                |
+                                          Session cookie set
+                                                |
+Client -> Traefik -> forwardAuth (cookie valid) -> Backend service
+```
+
+**Google Cloud setup required**:
+1. Create a project in Google Cloud Console
+2. Configure OAuth consent screen (External, limited to specific Google accounts)
+3. Create OAuth 2.0 Client ID (Web application)
+4. Authorized redirect URI: `https://auth.woodhead.tech/oauth2/callback`
+5. Note the Client ID and Client Secret
+
+**Service compatibility**:
+
+| Service       | OAuth Support                | Implementation                          |
+|---------------|------------------------------|-----------------------------------------|
+| Overseerr     | Built-in Google OAuth        | Configure in Settings > General         |
+| Jellyfin      | OIDC plugin (SSO-Auth)       | Install plugin, configure OIDC provider |
+| Home Assistant | Google sign-in integration   | Custom integration or auth proxy        |
+| Traefik dash  | No built-in auth             | Protect with forwardAuth middleware     |
+| Sonarr/Radarr | No OAuth support             | Protect with forwardAuth middleware     |
+| Prowlarr      | No OAuth support             | Protect with forwardAuth middleware     |
+| Bazarr        | No OAuth support             | Protect with forwardAuth middleware     |
+| SABnzbd       | No OAuth support             | Protect with forwardAuth middleware     |
+| TrueNAS       | No OAuth support             | Protect with forwardAuth middleware     |
+| OPNsense      | No OAuth support             | Internal-only, no external exposure     |
+| Plex          | Uses Plex accounts           | No change needed (own auth system)      |
+
+**Authelia vs OAuth2-proxy**:
+- **Authelia** -- More features (2FA, access control policies, LDAP), heavier,
+  needs Redis + storage backend. Better if you want per-user access control
+  (e.g., friends can access Overseerr but not Sonarr).
+- **OAuth2-proxy** -- Simpler, stateless, just validates Google identity. Good
+  enough if you only need "is this person in my allowed list?" gating.
+
+**Recommended: Authelia** for the access control policies. Run it as a Docker
+container in its own LXC or in the Traefik LXC.
+
+**Implementation plan**:
+
+1. **Create `auth.woodhead.tech` subdomain** -- points to Traefik (already covered by wildcard)
+2. **Deploy Authelia** in the Traefik LXC (or a dedicated LXC)
+   - Terraform: optionally `terraform/lxc-authelia.tf` (VM ID 205, 10.0.0.25)
+   - Ansible: `ansible/playbooks/setup-authelia.yml`
+   - Config: `ansible/files/authelia/configuration.yml`
+3. **Configure Google OAuth2** in Authelia's identity provider settings
+4. **Add Traefik forwardAuth middleware** to `ansible/files/traefik/traefik.yml`:
+   ```yaml
+   http:
+     middlewares:
+       authelia:
+         forwardAuth:
+           address: "http://10.0.0.20:9091/api/verify?rd=https://auth.woodhead.tech"
+           trustForwardHeader: true
+           authResponseHeaders:
+             - Remote-User
+             - Remote-Groups
+   ```
+5. **Apply middleware to routes** -- add `middlewares: [authelia]` to each
+   service's Traefik dynamic config
+6. **Configure per-service access policies** in Authelia:
+   ```yaml
+   access_control:
+     rules:
+       # Friends/family can access request portal
+       - domain: requests.woodhead.tech
+         policy: one_factor
+         subject: "group:media-users"
+       # Admin-only services
+       - domain:
+           - sonarr.woodhead.tech
+           - radarr.woodhead.tech
+           - prowlarr.woodhead.tech
+         policy: two_factor
+         subject: "group:admins"
+   ```
+7. **Allowlist Google accounts** -- only specific email addresses can sign in
+
+**Files to create (when implementing)**:
+| File | Purpose |
+|------|---------|
+| `terraform/lxc-authelia.tf` | LXC container (optional, can share Traefik LXC) |
+| `ansible/playbooks/setup-authelia.yml` | Install + configure Authelia |
+| `ansible/files/authelia/configuration.yml` | Authelia config (OAuth, policies) |
+| `ansible/files/traefik/dynamic/authelia.yml` | Traefik forwardAuth middleware |
+
+**Prerequisites**:
+- Google Cloud project with OAuth2 credentials
+- Traefik running with valid TLS
+- Cloudflare DNS active (for `auth.woodhead.tech`)
+
+**Security notes**:
+- Authelia session secrets and Google client secret must be stored securely
+  (Ansible vault or environment variables, not committed to git)
+- Enable 2FA in Authelia for admin-level services
+- Rate limit the auth endpoint to prevent brute force
+- Regularly audit the allowed email list
+
+---
+
 ## Implementation Priority
 
 1. **OPNsense router** -- becomes the network gateway, everything depends on it
@@ -275,6 +397,7 @@ Keeping track of allocated IPs to avoid conflicts:
 3. **ARR stack** -- needs NAS media shares
 4. **Plex / Jellyfin** -- needs NAS media shares + iGPU passthrough
 5. **Home Assistant** -- independent, can be done anytime
+6. **Google OAuth / SSO** -- requires Traefik + Cloudflare DNS running first
 
 **Note**: OPNsense can be deployed in parallel with the existing consumer router
 (dual-gateway or router-on-a-stick) to avoid downtime during the transition.
