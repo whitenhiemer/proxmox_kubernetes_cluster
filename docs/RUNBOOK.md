@@ -714,6 +714,8 @@ make traefik
 
 ## Phase 12: WireGuard VPN
 
+See [docs/WIREGUARD-MANGO.md](WIREGUARD-MANGO.md) for connecting a GL-iNet Mango travel router.
+
 ### 12.1 Deploy
 
 ```bash
