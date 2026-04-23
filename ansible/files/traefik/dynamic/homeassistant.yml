@@ -2,20 +2,20 @@
 #
 # Home Assistant runs as a full VM (HAOS) for addon support.
 # VM ID 301, IP 192.168.86.41, web UI on port 8123.
-# Uncomment after deploying the Home Assistant VM.
+# No Authelia -- HA has its own auth system and mobile app needs direct access.
 
-# http:
-#   routers:
-#     homeassistant:
-#       rule: "Host(`home.woodhead.tech`)"
-#       entryPoints:
-#         - websecure
-#       service: homeassistant
-#       tls:
-#         certResolver: cloudflare
-#
-#   services:
-#     homeassistant:
-#       loadBalancer:
-#         servers:
-#           - url: "http://192.168.86.41:8123"
+http:
+  routers:
+    homeassistant:
+      rule: "Host(`home.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: homeassistant
+      tls:
+        certResolver: cloudflare
+
+  services:
+    homeassistant:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.41:8123"

@@ -577,10 +577,10 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | bazarr.woodhead.tech   | 192.168.86.22        | 6767  | arr-stack.yml         | Active (Authelia 2FA) |
 | requests.woodhead.tech | 192.168.86.22        | 5055  | arr-stack.yml         | Active (Authelia 2FA) |
 | sabnzbd.woodhead.tech  | 192.168.86.22        | 8080  | arr-stack.yml         | Active (Authelia 2FA) |
-| plex.woodhead.tech     | 192.168.86.23        | 32400 | media-stack.yml       | Commented |
-| jellyfin.woodhead.tech | 192.168.86.24        | 8096  | media-stack.yml       | Commented |
-| nas.woodhead.tech      | 192.168.86.40        | 443   | media-stack.yml       | Commented |
-| home.woodhead.tech     | 192.168.86.41        | 8123  | homeassistant.yml     | Commented |
+| plex.woodhead.tech     | 192.168.86.23        | 32400 | media-stack.yml       | Active    |
+| jellyfin.woodhead.tech | 192.168.86.24        | 8096  | media-stack.yml       | Active    |
+| nas.woodhead.tech      | 192.168.86.40        | 443   | media-stack.yml       | Active (Authelia 2FA) |
+| home.woodhead.tech     | 192.168.86.41        | 8123  | homeassistant.yml     | Active    |
 | grafana.woodhead.tech  | 192.168.86.25        | 3000  | monitoring.yml        | Active    |
 | prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Active (Authelia 2FA) |
 | alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Active (Authelia 2FA) |

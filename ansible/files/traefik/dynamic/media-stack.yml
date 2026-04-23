@@ -1,66 +1,57 @@
 # media-stack.yml - Traefik routes for media services
 #
 # Routes for Plex, Jellyfin, and TrueNAS web UIs.
-# Uncomment each section as you deploy the corresponding service.
-#
 # All services terminate TLS at Traefik and proxy to internal HTTP.
 
-# --- Plex ---
-# Uncomment after deploying Plex LXC (VM ID 203, IP 192.168.86.23)
-# http:
-#   routers:
-#     plex:
-#       rule: "Host(`plex.woodhead.tech`)"
-#       entryPoints:
-#         - websecure
-#       service: plex
-#       tls:
-#         certResolver: cloudflare
-#
-#   services:
-#     plex:
-#       loadBalancer:
-#         servers:
-#           - url: "http://192.168.86.23:32400"
+http:
+  routers:
+    # Plex web UI -- no Authelia (Plex has its own auth system)
+    plex:
+      rule: "Host(`plex.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: plex
+      tls:
+        certResolver: cloudflare
 
-# --- Jellyfin ---
-# Uncomment after deploying Jellyfin LXC (VM ID 204, IP 192.168.86.24)
-# http:
-#   routers:
-#     jellyfin:
-#       rule: "Host(`jellyfin.woodhead.tech`)"
-#       entryPoints:
-#         - websecure
-#       service: jellyfin
-#       tls:
-#         certResolver: cloudflare
-#
-#   services:
-#     jellyfin:
-#       loadBalancer:
-#         servers:
-#           - url: "http://192.168.86.24:8096"
+    # Jellyfin web UI -- no Authelia (Jellyfin has built-in auth)
+    jellyfin:
+      rule: "Host(`jellyfin.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: jellyfin
+      tls:
+        certResolver: cloudflare
 
-# --- TrueNAS ---
-# Uncomment after deploying TrueNAS VM (VM ID 300, IP 192.168.86.40)
-# Note: TrueNAS uses HTTPS internally, so we proxy to port 443
-# http:
-#   routers:
-#     truenas:
-#       rule: "Host(`nas.woodhead.tech`)"
-#       entryPoints:
-#         - websecure
-#       service: truenas
-#       tls:
-#         certResolver: cloudflare
-#
-#   services:
-#     truenas:
-#       loadBalancer:
-#         servers:
-#           - url: "https://192.168.86.40:443"
-#         serversTransport: truenas-transport
-#
-#   serversTransports:
-#     truenas-transport:
-#       insecureSkipVerify: true  # TrueNAS uses self-signed certs
+    # TrueNAS admin UI -- protected by Authelia 2FA
+    truenas:
+      rule: "Host(`nas.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: truenas
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - authelia@file
+
+  services:
+    plex:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.23:32400"
+
+    jellyfin:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.24:8096"
+
+    truenas:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.86.40:443"
+        serversTransport: truenas-transport
+
+  serversTransports:
+    # TrueNAS uses self-signed certs internally
+    truenas-transport:
+      insecureSkipVerify: true
