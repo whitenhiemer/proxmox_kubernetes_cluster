@@ -112,6 +112,16 @@ output "openclaw_vmid" {
   value       = proxmox_virtual_environment_container.openclaw.vm_id
 }
 
+output "authelia_ip" {
+  description = "Authelia SSO gateway LXC IP"
+  value       = var.authelia_ip
+}
+
+output "authelia_vmid" {
+  description = "Authelia LXC VM ID"
+  value       = proxmox_virtual_environment_container.authelia.vm_id
+}
+
 output "domain" {
   description = "Base domain for services"
   value       = var.domain

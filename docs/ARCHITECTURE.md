@@ -82,12 +82,12 @@ and resource allocation.
             |   | NFS:2049 |   | .31 :8123    |
             |   +----------+   +--------------+
             |
-            |   +----------+
-            |   | OpenClaw |
-            |   | LXC 206  |
-            |   | .26      |
-            |   | :18789   |
-            |   +----------+
+            |   +----------+   +----------+
+            |   | OpenClaw |   | Authelia |
+            |   | LXC 206  |   | LXC 207  |
+            |   | .26      |   | .27      |
+            |   | :18789   |   | :9091    |
+            |   +----------+   +----------+
             |
     +-------+-------+
     | Traefik       |
@@ -102,6 +102,7 @@ and resource allocation.
     |  nas.*        +---> 192.168.86.40:443
     |  home.*       +---> 192.168.86.41:8123
     |  claw.*       +---> 192.168.86.26:18789
+    |  auth.*       +---> 192.168.86.27:9091
     |  grafana.*    +---> 192.168.86.25:3000
     |  prometheus.* +---> 192.168.86.25:9090
     |  traefik.*    +---> dashboard (local)
@@ -125,6 +126,7 @@ and resource allocation.
 | 192.168.86.24      | jellyfin         | LXC    | 204   | Jellyfin Media Server + iGPU        |
 | 192.168.86.25      | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
 | 192.168.86.26      | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
+| 192.168.86.27      | authelia         | LXC    | 207   | SSO gateway (forwardAuth + TOTP)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
@@ -332,6 +334,7 @@ NFS mount (/media, read-only)
 **Hard dependencies (service won't function without):**
 - All services -> Google Nest gateway (routing, DHCP, DNS)
 - All external access -> Traefik (TLS, routing)
+- Protected services -> Authelia (forwardAuth SSO, TOTP 2FA)
 - ARR stack media storage -> TrueNAS (NFS at `/media`)
 - Plex/Jellyfin media library -> TrueNAS (NFS at `/media`, read-only)
 - Plex/Jellyfin transcoding -> iGPU (`/dev/dri` passthrough from Proxmox host)
@@ -340,6 +343,7 @@ NFS mount (/media, read-only)
 - ARR stack without TrueNAS: uses local `/media` directory (no NAS)
 - Plex/Jellyfin without TrueNAS: no media to serve
 - Plex/Jellyfin without iGPU: falls back to software transcoding (CPU-heavy)
+- Protected services without Authelia: accessible via direct IP:port only (Traefik blocks)
 - Services without Traefik: accessible via direct IP:port (no TLS, no subdomain)
 - K8s without MetalLB: ClusterIP services only (no external access)
 - Monitoring without PVE token: Proxmox metrics unavailable (all other scrapes still work)
@@ -363,6 +367,7 @@ in parallel after the host is ready.
 | auto  | Jellyfin LXC         | 204   | --     | Starts on boot, iGPU node pinned            |
 | auto  | Monitoring LXC       | 205   | --     | Starts on boot, scrapes all services        |
 | auto  | OpenClaw LXC         | 206   | --     | Starts on boot, AI agent framework          |
+| auto  | Authelia LXC         | 207   | --     | Starts on boot, SSO gateway                 |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
 
 ---
@@ -435,6 +440,7 @@ in parallel after the host is ready.
 | Jellyfin LXC      | 2     | 2048     | --       | iGPU passthrough for VAAPI      |
 | Monitoring LXC    | 2     | 2048     | --       | Prometheus, Grafana, exporters  |
 | OpenClaw LXC      | 2     | 2048     | --       | AI agent gateway + CLI          |
+| Authelia LXC      | 1     | 512      | --       | SSO gateway (forwardAuth + TOTP)|
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
@@ -452,15 +458,16 @@ in parallel after the host is ready.
 | Jellyfin LXC      | 8 GB   | local-lvm   | --        | Jellyfin binary + DB (media on NAS) |
 | Monitoring LXC    | 20 GB  | local-lvm   | --        | Prometheus TSDB (30-day retention)  |
 | OpenClaw LXC      | 20 GB  | local-lvm   | --        | Source build + Docker images + workspace |
+| Authelia LXC      | 4 GB   | local-lvm   | --        | Docker + config + SQLite session store   |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
 
 ### Total resource budget (all services running)
 
 | Resource | Total       | Notes                                      |
 |----------|-------------|--------------------------------------------|
-| CPU      | ~26 cores   | Shared across Proxmox nodes                |
-| RAM      | ~37 GB      | TrueNAS benefits from more (ZFS ARC)       |
-| local-lvm| ~136 GB     | OS disks for VMs + all LXCs                |
+| CPU      | ~27 cores   | Shared across Proxmox nodes                |
+| RAM      | ~37.5 GB    | TrueNAS benefits from more (ZFS ARC)       |
+| local-lvm| ~140 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
 ---
@@ -476,6 +483,7 @@ in parallel after the host is ready.
 | `proxmox_virtual_environment_container.jellyfin`  | lxc-jellyfin.tf             | LXC  | 204 |
 | `proxmox_virtual_environment_container.monitoring`| lxc-monitoring.tf           | LXC  | 205 |
 | `proxmox_virtual_environment_container.openclaw`  | lxc-openclaw.tf             | LXC  | 206 |
+| `proxmox_virtual_environment_container.authelia`  | lxc-authelia.tf             | LXC  | 207 |
 | `proxmox_virtual_environment_vm.truenas`          | vm-truenas.tf               | VM   | 300 |
 | `proxmox_virtual_environment_vm.homeassistant`    | vm-homeassistant.tf         | VM   | 301 |
 | `proxmox_virtual_environment_download_file.haos_image` | vm-homeassistant.tf    | File | --  |
@@ -514,6 +522,7 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Commented |
 | alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Commented |
 | claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Commented |
+| auth.woodhead.tech     | 192.168.86.27        | 9091  | authelia.yml          | Active    |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Commented |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 

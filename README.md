@@ -17,6 +17,7 @@ ISP Modem/ONT
     |       +-- ARR Stack LXC (192.168.86.22) -- Sonarr, Radarr, Prowlarr, etc.
     |       +-- Monitoring LXC (192.168.86.25) -- Prometheus, Grafana, Alertmanager
     |       +-- OpenClaw LXC (192.168.86.26) -- AI agent gateway
+    |       +-- Authelia LXC (192.168.86.27) -- SSO gateway (forwardAuth + TOTP)
     |       +-- K8s VIP (192.168.86.100)
     |
     +-- TrueNAS VM (192.168.86.40) -- NFS media storage for ARR/Plex/Jellyfin
@@ -104,6 +105,7 @@ make harden
 | `jellyfin`          | 3     | Deploy Jellyfin Media Server with iGPU         |
 | `monitoring`        | 3     | Deploy monitoring stack (Prometheus, Grafana)  |
 | `openclaw`          | 3     | Deploy OpenClaw AI agent framework             |
+| `authelia`          | 3     | Deploy Authelia SSO gateway (requires password)|
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
@@ -140,6 +142,7 @@ make harden
 │   ├── lxc-jellyfin.tf                   # Jellyfin Media Server LXC
 │   ├── lxc-monitoring.tf                 # Monitoring stack LXC (Docker)
 │   ├── lxc-openclaw.tf                  # OpenClaw AI agent LXC (Docker)
+│   ├── lxc-authelia.tf                  # Authelia SSO gateway LXC (Docker)
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
 │   ├── vm-truenas-variables.tf           # TrueNAS variables
 │   ├── vm-homeassistant.tf               # Home Assistant OS VM
@@ -166,6 +169,7 @@ make harden
 │   │   ├── setup-jellyfin.yml           # Deploy Jellyfin + iGPU passthrough
 │   │   ├── setup-monitoring.yml          # Deploy monitoring stack (Docker)
 │   │   ├── setup-openclaw.yml           # Deploy OpenClaw AI agent (Docker)
+│   │   ├── setup-authelia.yml           # Deploy Authelia SSO gateway (Docker)
 │   │   ├── patch-proxmox.yml              # Patch Proxmox VE hosts
 │   │   ├── patch-lxc.yml                 # Patch Debian packages on LXCs
 │   │   ├── patch-docker.yml              # Update Docker images on all stacks
@@ -175,6 +179,10 @@ make harden
 │       │   └── docker-compose.yml        # ARR stack Docker Compose
 │       ├── openclaw/
 │       │   └── docker-compose.yml        # OpenClaw AI agent Docker Compose
+│       ├── authelia/
+│       │   ├── docker-compose.yml        # Authelia SSO Docker Compose
+│       │   ├── configuration.yml         # Authelia server + access control config
+│       │   └── users_database.yml        # File-based user database template
 │       ├── monitoring/
 │       │   ├── docker-compose.yml        # Monitoring stack Docker Compose
 │       │   ├── prometheus/
@@ -194,6 +202,7 @@ make harden
 │               ├── homeassistant.yml     # Route: home.woodhead.tech
 │               ├── monitoring.yml         # Routes: grafana/prometheus/alertmanager.*
 │               ├── openclaw.yml          # Route: claw.woodhead.tech
+│               ├── authelia.yml         # Route: auth.woodhead.tech + forwardAuth middleware
 │               ├── k8s-ingress.yml       # Route: *.woodhead.tech -> K8s
 │               └── dashboard.yml         # Route: traefik.woodhead.tech
 ├── k8s/
@@ -258,6 +267,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | Home Assistant   | VM   | Ready       | `home.woodhead.tech`       |
 | Monitoring       | LXC  | Ready       | `grafana.woodhead.tech`    |
 | OpenClaw         | LXC  | Ready       | `claw.woodhead.tech`       |
+| Authelia SSO     | LXC  | Ready       | `auth.woodhead.tech`       |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 

@@ -11,6 +11,8 @@ http:
       service: openclaw
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
   services:
     openclaw:

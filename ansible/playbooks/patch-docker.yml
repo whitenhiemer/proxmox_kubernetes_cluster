@@ -1,7 +1,7 @@
 # patch-docker.yml - Update Docker Compose stacks
 #
 # Pulls latest images and recreates containers for all Docker-based
-# LXC services (ARR stack, monitoring, OpenClaw).
+# LXC services (ARR stack, monitoring, OpenClaw, Authelia).
 #
 # OpenClaw is built from source, so it gets a git pull + docker build
 # instead of a docker compose pull.
@@ -68,6 +68,38 @@
         chdir: /opt/monitoring
       register: ps_result
       changed_when: false
+
+    - name: Clean up old Docker images
+      ansible.builtin.command:
+        cmd: docker image prune -f
+      changed_when: false
+
+- name: Update Authelia Docker image
+  hosts: lxc_services:&authelia
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Pull latest Authelia image
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: /opt/authelia
+      register: pull_result
+      changed_when: "'Pull complete' in pull_result.stderr or 'Downloaded' in pull_result.stderr"
+
+    - name: Recreate Authelia container with new image
+      ansible.builtin.command:
+        cmd: docker compose up -d --remove-orphans
+        chdir: /opt/authelia
+      when: pull_result.changed
+
+    - name: Verify Authelia health
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:9091/api/health"
+        status_code: 200
+      retries: 5
+      delay: 5
+      when: pull_result.changed
 
     - name: Clean up old Docker images
       ansible.builtin.command:

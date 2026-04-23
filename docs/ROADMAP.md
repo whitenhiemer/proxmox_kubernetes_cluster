@@ -168,6 +168,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.24     | Jellyfin             | LXC  | 204   |
 | 192.168.86.25     | Monitoring           | LXC  | 205   |
 | 192.168.86.26     | OpenClaw             | LXC  | 206   |
+| 192.168.86.27     | Authelia             | LXC  | 207   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
 | 192.168.86.41     | Home Assistant       | VM   | 301   |
 | 192.168.86.100    | K8s API VIP          | VIP  | --    |

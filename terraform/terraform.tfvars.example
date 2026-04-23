@@ -21,6 +21,7 @@ talos_iso    = "local:iso/talos-amd64.iso"
 #   monitoring  = "pve2"
 #   jellyfin    = "pve3"
 #   openclaw    = "pve3"
+#   authelia    = "pve1"
 # }
 
 # --- Network ---
@@ -83,6 +84,10 @@ openclaw_ip       = "192.168.86.26"
 openclaw_cores    = 2
 openclaw_memory   = 2048
 openclaw_disk_size = 20    # Source build + Docker images + workspace
+
+# Authelia SSO gateway (centralized auth for all web services)
+authelia_vmid = 207
+authelia_ip   = "192.168.86.27"
 
 # --- TrueNAS Scale NAS ---
 # Centralized storage for media, backups, ISOs

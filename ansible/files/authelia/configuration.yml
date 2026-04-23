@@ -1,0 +1,96 @@
+# configuration.yml - Authelia server configuration
+#
+# Centralized SSO for woodhead.tech services via Traefik forwardAuth.
+# File-based user database + TOTP 2FA. SQLite session/storage backend.
+#
+# Access control policies:
+#   bypass     - no auth (public sites like recipes.woodhead.tech)
+#   one_factor - password only (family/friends on requests.woodhead.tech)
+#   two_factor - password + TOTP (admin services: sonarr, radarr, etc.)
+#
+# TOTP registration: after first login, check /config/notification.txt
+# for the registration link (filesystem notifier). Scan QR code with
+# Google Authenticator or Authy.
+
+# --- Server ---
+server:
+  address: "tcp://0.0.0.0:9091"
+
+# --- Logging ---
+log:
+  level: info
+
+# --- TOTP ---
+totp:
+  issuer: woodhead.tech
+  period: 30
+  skew: 1
+
+# --- Authentication Backend ---
+# File-based user database with argon2id password hashing.
+# Users are defined in /config/users_database.yml.
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+      iterations: 3
+      memory: 65536
+      parallelism: 4
+      salt_length: 16
+      key_length: 32
+
+# --- Session ---
+# Cookie-based sessions scoped to the woodhead.tech domain.
+# All subdomains share the same session cookie.
+session:
+  cookies:
+    - name: authelia_session
+      domain: woodhead.tech
+      authelia_url: https://auth.woodhead.tech
+      expiration: 12h
+      inactivity: 1h
+
+# --- Storage ---
+# Local SQLite database for session data, TOTP secrets, etc.
+storage:
+  local:
+    path: /config/db.sqlite3
+
+# --- Notifier ---
+# Filesystem notifier writes TOTP registration links to a file.
+# Replace with SMTP notifier when email is available.
+notifier:
+  filesystem:
+    filename: /config/notification.txt
+
+# --- Access Control ---
+# Default deny: only explicitly listed domains are accessible.
+# Rules are evaluated top-to-bottom; first match wins.
+access_control:
+  default_policy: deny
+  rules:
+    # Public -- no auth required
+    - domain: recipes.woodhead.tech
+      policy: bypass
+
+    # Family/friends -- password only (one_factor)
+    - domain: requests.woodhead.tech
+      policy: one_factor
+      subject:
+        - "group:users"
+        - "group:admins"
+
+    # Admin services -- password + TOTP (two_factor)
+    - domain:
+        - sonarr.woodhead.tech
+        - radarr.woodhead.tech
+        - prowlarr.woodhead.tech
+        - bazarr.woodhead.tech
+        - sabnzbd.woodhead.tech
+        - prometheus.woodhead.tech
+        - alertmanager.woodhead.tech
+        - traefik.woodhead.tech
+        - claw.woodhead.tech
+      policy: two_factor
+      subject: "group:admins"

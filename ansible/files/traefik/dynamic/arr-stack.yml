@@ -12,6 +12,8 @@ http:
       service: overseerr
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
     prowlarr:
       rule: "Host(`prowlarr.woodhead.tech`)"
@@ -20,6 +22,8 @@ http:
       service: prowlarr
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
     sonarr:
       rule: "Host(`sonarr.woodhead.tech`)"
@@ -28,6 +32,8 @@ http:
       service: sonarr
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
     radarr:
       rule: "Host(`radarr.woodhead.tech`)"
@@ -36,6 +42,8 @@ http:
       service: radarr
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
     bazarr:
       rule: "Host(`bazarr.woodhead.tech`)"
@@ -44,6 +52,8 @@ http:
       service: bazarr
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
     sabnzbd:
       rule: "Host(`sabnzbd.woodhead.tech`)"
@@ -52,6 +62,8 @@ http:
       service: sabnzbd
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
   services:
     overseerr:

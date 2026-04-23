@@ -1,0 +1,36 @@
+# docker-compose.yml - Authelia SSO gateway
+#
+# Single-container authentication and authorization server.
+# Integrates with Traefik via forwardAuth middleware to protect
+# all admin-facing services behind password + TOTP 2FA.
+#
+# Secrets are stored as files in /opt/authelia/secrets/ (mode 0600)
+# and loaded via _FILE suffixed environment variables.
+#
+# After starting, access the login portal at https://auth.woodhead.tech.
+# TOTP registration links are written to /opt/authelia/config/notification.txt
+# (read via SSH until SMTP notifier is configured).
+
+services:
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    volumes:
+      # Main config + user database + SQLite session store
+      - /opt/authelia/config:/config
+      # Secret files (jwt, session, storage_encryption) -- read-only
+      - /opt/authelia/secrets:/secrets:ro
+    environment:
+      - TZ=America/Chicago
+      # Secrets loaded from files (never passed as plain env vars)
+      - AUTHELIA_JWT_SECRET_FILE=/secrets/jwt
+      - AUTHELIA_SESSION_SECRET_FILE=/secrets/session
+      - AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE=/secrets/storage_encryption
+    ports:
+      - "9091:9091"
+    healthcheck:
+      test: ["CMD", "authelia", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped

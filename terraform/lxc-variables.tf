@@ -211,6 +211,19 @@ variable "openclaw_disk_size" {
   default     = 20
 }
 
+# --- Authelia SSO LXC ---
+variable "authelia_vmid" {
+  description = "VM ID for the Authelia SSO gateway LXC"
+  type        = number
+  default     = 207
+}
+
+variable "authelia_ip" {
+  description = "Static IP for the Authelia LXC"
+  type        = string
+  default     = "192.168.86.27"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

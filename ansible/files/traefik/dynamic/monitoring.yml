@@ -13,7 +13,7 @@ http:
       tls:
         certResolver: cloudflare
 
-    # Prometheus UI (admin access only -- consider adding auth middleware)
+    # Prometheus UI (admin access only -- protected by Authelia 2FA)
     prometheus:
       rule: "Host(`prometheus.woodhead.tech`)"
       entryPoints:
@@ -21,8 +21,10 @@ http:
       service: prometheus
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
-    # Alertmanager UI (admin access only)
+    # Alertmanager UI (admin access only -- protected by Authelia 2FA)
     alertmanager:
       rule: "Host(`alertmanager.woodhead.tech`)"
       entryPoints:
@@ -30,6 +32,8 @@ http:
       service: alertmanager
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authelia@file
 
   services:
     grafana:
