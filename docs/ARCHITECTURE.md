@@ -494,6 +494,11 @@ don't support ballooning -- their memory is hard-limited by cgroups.
 | K8s Workers | 8192 MB | 4096 MB | 1000 | Pod workloads vary |
 | Home Assistant | 2048 MB | 1024 MB | 800 | Mostly idle automations |
 
+> **Note:** The Shares column reflects target priority weights. Proxmox `shares`
+> maps to the `ivshmem` parameter which requires `root@pam` authentication -- it
+> cannot be set via Terraform with API token auth. Set manually if desired:
+> `qm set <vmid> -shares <value>`
+
 **CPU units (VMs + LXCs):** CFS scheduler weight for CPU time distribution under
 contention. Higher weight = more CPU time when cores are contested. Idle services
 consume no CPU regardless of weight.

@@ -228,13 +228,14 @@ set DNS to a Pi-hole/AdGuard instance in the future.
 - Consider AllowedIPs restrictions per client (e.g., phone only gets
   media services, not admin tools)
 
-**Files to create (when implementing)**:
+**Files**:
 | File | Purpose |
 |------|---------|
-| `terraform/lxc-wireguard.tf` | LXC container |
+| `terraform/lxc-wireguard.tf` | LXC container (deployed) |
 | `terraform/lxc-wireguard-variables.tf` | VM ID, IP variables |
 | `ansible/playbooks/setup-wireguard.yml` | Install + configure WireGuard |
 | `ansible/files/wireguard/wg0.conf.j2` | Server config template |
+| `ansible/files/wireguard/client.conf.j2` | Client config template |
 
 ---
 
@@ -325,7 +326,7 @@ container in its own LXC or in the Traefik LXC.
 
 1. **Create `auth.woodhead.tech` subdomain** -- points to Traefik (already covered by wildcard)
 2. **Deploy Authelia** in the Traefik LXC (or a dedicated LXC)
-   - Terraform: optionally `terraform/lxc-authelia.tf` (VM ID 205, 192.168.86.25)
+   - Terraform: `terraform/lxc-authelia.tf` (VM ID 207, 192.168.86.28)
    - Ansible: `ansible/playbooks/setup-authelia.yml`
    - Config: `ansible/files/authelia/configuration.yml`
 3. **Configure Google OAuth2** in Authelia's identity provider settings
@@ -385,12 +386,13 @@ container in its own LXC or in the Traefik LXC.
 
 ## Implementation Priority
 
-1. **NAS** -- storage dependency for media services
-2. **ARR stack** -- needs NAS media shares
-3. **Plex / Jellyfin** -- needs NAS media shares + iGPU passthrough
-4. **Home Assistant** -- independent, can be done anytime
+1. **NAS** -- DONE (TrueNAS Scale VM, ZFS on passthrough disks)
+2. **ARR stack** -- DONE (LXC with Docker Compose, NFS media mount)
+3. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough for hardware transcoding)
+4. **Home Assistant** -- DONE (HAOS VM, UEFI boot, qcow2 import)
 5. **Authelia SSO** -- DONE (deployed at auth.woodhead.tech)
-6. **WireGuard VPN** -- remote access to LAN from anywhere
+6. **WireGuard VPN** -- DONE (LXC, UDP 51820, split tunnel to LAN)
+7. **Resource Balancing** -- DONE (memory ballooning for VMs, CPU units for all)
 
 ## Hardware Considerations
 
