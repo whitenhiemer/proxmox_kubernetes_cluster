@@ -1,7 +1,7 @@
 # arr-stack.yml - Traefik routes for the ARR media management stack
 #
 # Routes for Sonarr, Radarr, Prowlarr, Bazarr, Overseerr, and SABnzbd.
-# All services run in a single LXC (VM ID 202, IP 10.0.0.22) via Docker Compose.
+# All services run in a single LXC (VM ID 202, IP 192.168.86.22) via Docker Compose.
 # Uncomment each section as you deploy the corresponding service.
 
 # --- Overseerr (user-facing request portal) ---
@@ -60,29 +60,29 @@
 #     overseerr:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.22:5055"
+#           - url: "http://192.168.86.22:5055"
 #
 #     prowlarr:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.22:9696"
+#           - url: "http://192.168.86.22:9696"
 #
 #     sonarr:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.22:8989"
+#           - url: "http://192.168.86.22:8989"
 #
 #     radarr:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.22:7878"
+#           - url: "http://192.168.86.22:7878"
 #
 #     bazarr:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.22:6767"
+#           - url: "http://192.168.86.22:6767"
 #
 #     sabnzbd:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.22:8080"
+#           - url: "http://192.168.86.22:8080"

@@ -17,4 +17,4 @@
 #     openclaw:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.26:18789"
+#           - url: "http://192.168.86.26:18789"

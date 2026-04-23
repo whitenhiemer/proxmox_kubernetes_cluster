@@ -40,19 +40,20 @@ and resource allocation.
                    +----------+----------+
                    | Google Nest WiFi    |
                    | Pro (router/mesh)   |
-                   |     10.0.0.1        |
+                   |     192.168.86.1    |
                    | NAT / DHCP / DNS /  |
                    | WiFi                |
                    +----------+----------+
                               |
-                         10.0.0.0/24 (flat LAN)
+                         192.168.86.0/24 (flat LAN)
                               |
           +-------------------+-------------------+
           |                   |                   |
     +-----+------+    +------+------+    +-------+-------+
     | Proxmox    |    | Proxmox    |    | Proxmox       |
     | Node 1     |    | Node 2     |    | Node 3 (opt.) |
-    | 10.0.0.10  |    | 10.0.0.11  |    | 10.0.0.12     |
+    | 192.168.86 |    | 192.168.86 |    | 192.168.86    |
+    | .29        |    | .30        |    | .31           |
     +-----+------+    +------+------+    +-------+-------+
           |                   |                   |
           +------- Ceph Storage Mesh (3-way replication) ------+
@@ -62,7 +63,7 @@ and resource allocation.
      +----+---+----+   +----------+   +----------+   +--------+---+
      | Traefik     |   | Recipe   |   | ARR      |   | K8s Cluster|
      | LXC 200     |   | Site     |   | Stack    |   |            |
-     | 10.0.0.20   |   | LXC 201  |   | LXC 202  |   | CP: .101   |
+     | .86.20      |   | LXC 201  |   | LXC 202  |   | CP: .101   |
      | :80 :443    |   | .21 :80  |   | .22      |   | W1: .111   |
      +------+------+   +----------+   +----------+   | W2: .112   |
             |                                         | VIP: .100  |
@@ -91,18 +92,18 @@ and resource allocation.
     +-------+-------+
     | Traefik       |
     | Routes:       |
-    |  recipes.*    +---> 10.0.0.21:80
-    |  sonarr.*     +---> 10.0.0.22:8989
-    |  radarr.*     +---> 10.0.0.22:7878
-    |  prowlarr.*   +---> 10.0.0.22:9696
-    |  bazarr.*     +---> 10.0.0.22:6767
-    |  requests.*   +---> 10.0.0.22:5055
-    |  sabnzbd.*    +---> 10.0.0.22:8080
-    |  nas.*        +---> 10.0.0.30:443
-    |  home.*       +---> 10.0.0.31:8123
-    |  claw.*       +---> 10.0.0.26:18789
-    |  grafana.*    +---> 10.0.0.25:3000
-    |  prometheus.* +---> 10.0.0.25:9090
+    |  recipes.*    +---> 192.168.86.21:80
+    |  sonarr.*     +---> 192.168.86.22:8989
+    |  radarr.*     +---> 192.168.86.22:7878
+    |  prowlarr.*   +---> 192.168.86.22:9696
+    |  bazarr.*     +---> 192.168.86.22:6767
+    |  requests.*   +---> 192.168.86.22:5055
+    |  sabnzbd.*    +---> 192.168.86.22:8080
+    |  nas.*        +---> 192.168.86.40:443
+    |  home.*       +---> 192.168.86.41:8123
+    |  claw.*       +---> 192.168.86.26:18789
+    |  grafana.*    +---> 192.168.86.25:3000
+    |  prometheus.* +---> 192.168.86.25:9090
     |  traefik.*    +---> dashboard (local)
     +---------------+
 ```
@@ -113,24 +114,24 @@ and resource allocation.
 
 | IP              | Hostname         | Type   | VM ID | Purpose                             |
 |-----------------|------------------|--------|-------|-------------------------------------|
-| 10.0.0.1        | nest-gateway     | Router | --    | Google Nest WiFi Pro (NAT, DHCP, DNS)|
-| 10.0.0.10       | pve1             | Host   | --    | Proxmox node 1                      |
-| 10.0.0.11       | pve2             | Host   | --    | Proxmox node 2                      |
-| 10.0.0.12       | pve3             | Host   | --    | Proxmox node 3 (optional)           |
-| 10.0.0.20       | traefik          | LXC    | 200   | Reverse proxy, TLS termination      |
-| 10.0.0.21       | recipe-site      | LXC    | 201   | Go + SQLite recipe app              |
-| 10.0.0.22       | arr-stack        | LXC    | 202   | Docker: Sonarr, Radarr, etc.        |
-| 10.0.0.23       | plex             | LXC    | 203   | Plex Media Server + iGPU            |
-| 10.0.0.24       | jellyfin         | LXC    | 204   | Jellyfin Media Server + iGPU        |
-| 10.0.0.25       | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
-| 10.0.0.26       | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
-| 10.0.0.30       | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
-| 10.0.0.31       | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
-| 10.0.0.100      | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
-| 10.0.0.101      | talos-cp-0       | VM     | 400   | K8s control plane (Talos Linux)     |
-| 10.0.0.111-112  | talos-worker-*   | VM     | 410+  | K8s workers (Talos Linux)           |
-| 10.0.0.150-199  | metallb-pool     | K8s    | --    | MetalLB LoadBalancer IPs            |
-| 10.0.0.200-254  | dhcp-pool        | DHCP   | --    | Dynamic client addresses            |
+| 192.168.86.1        | nest-gateway     | Router | --    | Google Nest WiFi Pro (NAT, DHCP, DNS)|
+| 192.168.86.29      | pve1             | Host   | --    | Proxmox node 1                      |
+| 192.168.86.30      | pve2             | Host   | --    | Proxmox node 2                      |
+| 192.168.86.31      | pve3             | Host   | --    | Proxmox node 3 (optional)           |
+| 192.168.86.20      | traefik          | LXC    | 200   | Reverse proxy, TLS termination      |
+| 192.168.86.21      | recipe-site      | LXC    | 201   | Go + SQLite recipe app              |
+| 192.168.86.22      | arr-stack        | LXC    | 202   | Docker: Sonarr, Radarr, etc.        |
+| 192.168.86.23      | plex             | LXC    | 203   | Plex Media Server + iGPU            |
+| 192.168.86.24      | jellyfin         | LXC    | 204   | Jellyfin Media Server + iGPU        |
+| 192.168.86.25      | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
+| 192.168.86.26      | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
+| 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
+| 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
+| 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
+| 192.168.86.101     | talos-cp-0       | VM     | 400   | K8s control plane (Talos Linux)     |
+| 192.168.86.111-112 | talos-worker-*   | VM     | 410+  | K8s workers (Talos Linux)           |
+| 192.168.86.150-199 | metallb-pool     | K8s    | --    | MetalLB LoadBalancer IPs            |
+| 192.168.86.200-254 | dhcp-pool        | DHCP   | --    | Dynamic client addresses            |
 
 ---
 
@@ -149,19 +150,19 @@ An external request to `https://recipes.woodhead.tech`:
        |
        v
 4. GOOGLE NEST             Receives on public IP :443
-       |                   Port forward: :443 -> 10.0.0.20:443
+       |                   Port forward: :443 -> 192.168.86.20:443
        v
-5. TRAEFIK (10.0.0.20)     Terminates TLS (wildcard *.woodhead.tech cert)
+5. TRAEFIK (192.168.86.20) Terminates TLS (wildcard *.woodhead.tech cert)
        |                   Matches route: Host(`recipes.woodhead.tech`)
-       |                   Proxies to backend: http://10.0.0.21:80
+       |                   Proxies to backend: http://192.168.86.21:80
        v
-6. RECIPE SITE (10.0.0.21) Nginx :80 -> Go app :8080
+6. RECIPE SITE (192.168.86.21) Nginx :80 -> Go app :8080
        |                   Returns HTML response
        v
 7. TRAEFIK                 Wraps response in TLS, sends back
        |
        v
-8. GOOGLE NEST             Reverse NAT: 10.0.0.20 -> public IP
+8. GOOGLE NEST             Reverse NAT: 192.168.86.20 -> public IP
        |
        v
 9. CLIENT                  Receives HTTPS response with valid cert
@@ -173,8 +174,8 @@ Configure via Google Home app > WiFi > Settings > Advanced Networking > Port Man
 
 | WAN Port | Destination        | Protocol | Purpose             |
 |----------|--------------------|----------|---------------------|
-| 80       | 10.0.0.20:80       | TCP      | HTTP -> Traefik     |
-| 443      | 10.0.0.20:443      | TCP      | HTTPS -> Traefik    |
+| 80       | 192.168.86.20:80   | TCP      | HTTP -> Traefik     |
+| 443      | 192.168.86.20:443  | TCP      | HTTPS -> Traefik    |
 
 ---
 
@@ -185,7 +186,7 @@ Cloudflare DNS (upstream from Google Nest). The Nest supports hairpin NAT,
 so traffic loops back to Traefik without leaving the network.
 
 ```
-1. CLIENT (10.0.0.x)       DNS query: recipes.woodhead.tech
+1. CLIENT (192.168.86.x)   DNS query: recipes.woodhead.tech
        |
        v
 2. GOOGLE NEST DNS          Forwards to upstream (8.8.8.8 / 1.1.1.1)
@@ -194,13 +195,13 @@ so traffic loops back to Traefik without leaving the network.
 3. CLIENT                  Connects to public IP :443
        |
        v
-4. GOOGLE NEST             Hairpin NAT: public IP -> 10.0.0.20:443
+4. GOOGLE NEST             Hairpin NAT: public IP -> 192.168.86.20:443
        |
        v
-5. TRAEFIK (10.0.0.20)     Terminates TLS, routes to backend
+5. TRAEFIK (192.168.86.20) Terminates TLS, routes to backend
        |
        v
-6. RECIPE SITE (10.0.0.21) Responds directly on LAN
+6. RECIPE SITE (192.168.86.21) Responds directly on LAN
 ```
 
 Note: Unlike a dedicated firewall with local DNS overrides, internal
@@ -228,7 +229,7 @@ during internet outages unless clients have static hosts file entries.
                              |
                     +--------v----------+
                     | Google Nest DNS   |  Forwards to upstream resolvers
-                    |   (10.0.0.1:53)  |
+                    |  (192.168.86.1:53)|
                     |                   |
                     |  1. Cache hit     |
                     |     (instant)     |
@@ -290,11 +291,11 @@ obtained via Cloudflare DNS-01 challenges.
 ## Service Dependency Graph
 
 ```
-    Google Nest WiFi Pro (10.0.0.1)
+    Google Nest WiFi Pro (192.168.86.1)
     Router, NAT, DHCP, DNS, WiFi
     (physical device, not managed by Proxmox)
               |
-              +-- 10.0.0.0/24 (flat LAN)
+              +-- 192.168.86.0/24 (flat LAN)
               |
     +---------+---------+--------------+
     |         |         |              |
@@ -498,23 +499,23 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 
 | Subdomain              | Backend              | Port  | Config File           | Status    |
 |------------------------|----------------------|-------|-----------------------|-----------|
-| recipes.woodhead.tech  | 10.0.0.21            | 80    | recipe-site.yml       | Active    |
-| prowlarr.woodhead.tech | 10.0.0.22            | 9696  | arr-stack.yml         | Commented |
-| sonarr.woodhead.tech   | 10.0.0.22            | 8989  | arr-stack.yml         | Commented |
-| radarr.woodhead.tech   | 10.0.0.22            | 7878  | arr-stack.yml         | Commented |
-| bazarr.woodhead.tech   | 10.0.0.22            | 6767  | arr-stack.yml         | Commented |
-| requests.woodhead.tech | 10.0.0.22            | 5055  | arr-stack.yml         | Commented |
-| sabnzbd.woodhead.tech  | 10.0.0.22            | 8080  | arr-stack.yml         | Commented |
-| plex.woodhead.tech     | 10.0.0.23            | 32400 | media-stack.yml       | Commented |
-| jellyfin.woodhead.tech | 10.0.0.24            | 8096  | media-stack.yml       | Commented |
-| nas.woodhead.tech      | 10.0.0.30            | 443   | media-stack.yml       | Commented |
-| home.woodhead.tech     | 10.0.0.31            | 8123  | homeassistant.yml     | Commented |
-| grafana.woodhead.tech  | 10.0.0.25            | 3000  | monitoring.yml        | Commented |
-| prometheus.woodhead.tech| 10.0.0.25           | 9090  | monitoring.yml        | Commented |
-| alertmanager.woodhead.tech| 10.0.0.25         | 9093  | monitoring.yml        | Commented |
-| claw.woodhead.tech     | 10.0.0.26            | 18789 | openclaw.yml          | Commented |
+| recipes.woodhead.tech  | 192.168.86.21        | 80    | recipe-site.yml       | Active    |
+| prowlarr.woodhead.tech | 192.168.86.22        | 9696  | arr-stack.yml         | Commented |
+| sonarr.woodhead.tech   | 192.168.86.22        | 8989  | arr-stack.yml         | Commented |
+| radarr.woodhead.tech   | 192.168.86.22        | 7878  | arr-stack.yml         | Commented |
+| bazarr.woodhead.tech   | 192.168.86.22        | 6767  | arr-stack.yml         | Commented |
+| requests.woodhead.tech | 192.168.86.22        | 5055  | arr-stack.yml         | Commented |
+| sabnzbd.woodhead.tech  | 192.168.86.22        | 8080  | arr-stack.yml         | Commented |
+| plex.woodhead.tech     | 192.168.86.23        | 32400 | media-stack.yml       | Commented |
+| jellyfin.woodhead.tech | 192.168.86.24        | 8096  | media-stack.yml       | Commented |
+| nas.woodhead.tech      | 192.168.86.40        | 443   | media-stack.yml       | Commented |
+| home.woodhead.tech     | 192.168.86.41        | 8123  | homeassistant.yml     | Commented |
+| grafana.woodhead.tech  | 192.168.86.25        | 3000  | monitoring.yml        | Commented |
+| prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Commented |
+| alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Commented |
+| claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Commented |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Commented |
-| *.woodhead.tech        | K8s VIP (10.0.0.100) | 80    | k8s-ingress.yml       | Commented |
+| *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 
 Routes are in `ansible/files/traefik/dynamic/`. Uncomment as you deploy each service.
 Traefik watches the directory and hot-reloads -- no restart needed.
@@ -523,11 +524,11 @@ Traefik watches the directory and hot-reloads -- no restart needed.
 
 ## ARR Stack Internal Architecture
 
-All ARR services run as Docker containers inside a single LXC (10.0.0.22).
+All ARR services run as Docker containers inside a single LXC (192.168.86.22).
 They communicate via Docker's internal DNS (container names).
 
 ```
-+-- ARR Stack LXC (10.0.0.22) ----------------------------------+
++-- ARR Stack LXC (192.168.86.22) -------------------------------+
 |                                                                 |
 |  Docker Compose Network (bridge)                                |
 |                                                                 |
@@ -552,7 +553,7 @@ They communicate via Docker's internal DNS (container names).
 |       |                |                                        |
 |       +--- VPN tunnel to provider (Mullvad, NordVPN, etc.)      |
 |                                                                 |
-|  Shared volume: /media (NFS from TrueNAS 10.0.0.30)            |
+|  Shared volume: /media (NFS from TrueNAS 192.168.86.40)        |
 |  +------------------------------------------------------+      |
 |  | /media/downloads/complete    <-- SABnzbd output       |      |
 |  | /media/downloads/incomplete  <-- SABnzbd temp         |      |
@@ -586,22 +587,22 @@ all management is through `talosctl` and `kubectl`.
 ```
 +-- Kubernetes Cluster (talos-proxmox) ---+
 |                                          |
-|  API VIP: 10.0.0.100:6443               |
+|  API VIP: 192.168.86.100:6443            |
 |                                          |
-|  +-- Control Plane (10.0.0.101) ------+ |
+|  +-- Control Plane (192.168.86.101) --+ |
 |  |   Talos Linux v1.9.0               | |
 |  |   etcd, kube-apiserver              | |
 |  |   kube-scheduler, kube-controller   | |
 |  |   2 cores, 4GB RAM, 50GB (Ceph)    | |
 |  +------------------------------------+ |
 |                                          |
-|  +-- Worker 0 (10.0.0.111) -----------+ |
+|  +-- Worker 0 (192.168.86.111) -------+ |
 |  |   Talos Linux v1.9.0               | |
 |  |   kubelet, kube-proxy              | |
 |  |   4 cores, 8GB RAM, 100GB (Ceph)   | |
 |  +------------------------------------+ |
 |                                          |
-|  +-- Worker 1 (10.0.0.112) -----------+ |
+|  +-- Worker 1 (192.168.86.112) -------+ |
 |  |   (same as Worker 0)               | |
 |  +------------------------------------+ |
 |                                          |
@@ -609,7 +610,7 @@ all management is through `talosctl` and `kubectl`.
 |              monitoring, metallb-system   |
 |                                          |
 |  MetalLB: L2 mode                        |
-|  IP Pool: 10.0.0.150 - 10.0.0.199       |
+|  IP Pool: 192.168.86.150 - 192.168.86.199|
 |                                          |
 +------------------------------------------+
 ```
@@ -626,7 +627,7 @@ It handles NAT, DHCP, DNS forwarding, and WiFi for all clients.
 ```
 ISP Modem/ONT
     |
-    +-- Google Nest WiFi Pro (10.0.0.1)
+    +-- Google Nest WiFi Pro (192.168.86.1)
             |  Router mode (default)
             |  NAT, DHCP, DNS forwarding, WiFi
             |
@@ -635,23 +636,23 @@ ISP Modem/ONT
             |
             +-- [Switch] -- Proxmox nodes, wired devices
             |
-            WiFi + wired clients on 10.0.0.0/24
+            WiFi + wired clients on 192.168.86.0/24
 ```
 
 **Port forwarding**: Google Home app > WiFi > Settings > Advanced Networking >
-Port Management. Forward 80/443 to Traefik LXC (10.0.0.20).
+Port Management. Forward 80/443 to Traefik LXC (192.168.86.20).
 
 **DDNS**: Cloudflare DDNS script runs on a Proxmox node via cron (every 5 min).
 
 **Limitation**: Google Nest does not support VLANs or multiple SSIDs per VLAN.
-All clients land on the same flat 10.0.0.0/24 network. This is fine
+All clients land on the same flat 192.168.86.0/24 network. This is fine
 for current use -- no services require VLAN segmentation to function.
 
 ---
 
 ## VLAN Segmentation Plan (Deferred)
 
-All services currently run on a flat 10.0.0.0/24 network. This works --
+All services currently run on a flat 192.168.86.0/24 network. This works --
 no services require VLAN segmentation to function. VLAN support is deferred
 until VLAN-aware WiFi APs replace the Google Nest mesh.
 
@@ -664,7 +665,7 @@ until VLAN-aware WiFi APs replace the Google Nest mesh.
 
 | VLAN | Subnet         | Purpose           | Example Devices                    |
 |------|----------------|-------------------|------------------------------------|
-| 1    | 10.0.0.0/24    | Management        | Proxmox nodes, SSH, admin UIs      |
+| 1    | 192.168.86.0/24| Management        | Proxmox nodes, SSH, admin UIs      |
 | 10   | 10.0.10.0/24   | Trusted LAN       | Workstations, laptops              |
 | 20   | 10.0.20.0/24   | Servers           | K8s, LXCs, NAS, Traefik           |
 | 30   | 10.0.30.0/24   | IoT               | Zigbee, Z-Wave, cameras, sensors   |
@@ -675,7 +676,7 @@ until VLAN-aware WiFi APs replace the Google Nest mesh.
 ```
 Trusted (10) ---> Servers (20)     ALLOW   (access services)
 Trusted (10) ---> IoT (30)         ALLOW   (manage devices)
-IoT (30) -------> HA (10.0.0.31)   ALLOW   (smart home control)
+IoT (30) -------> HA (192.168.86.41)ALLOW   (smart home control)
 IoT (30) -------> Servers (20)     DENY    (isolate compromised devices)
 IoT (30) -------> Trusted (10)     DENY    (protect workstations)
 Guest (40) -----> Internet         ALLOW   (internet only)
@@ -692,8 +693,8 @@ Configured via Google Home app > WiFi > Advanced Networking > Port Management.
 
 | WAN Port | Destination        | Protocol | Purpose             |
 |----------|--------------------|----------|---------------------|
-| 80       | 10.0.0.20:80       | TCP      | HTTP -> Traefik     |
-| 443      | 10.0.0.20:443      | TCP      | HTTPS -> Traefik    |
+| 80       | 192.168.86.20:80   | TCP      | HTTP -> Traefik     |
+| 443      | 192.168.86.20:443  | TCP      | HTTPS -> Traefik    |
 
 Google Nest handles NAT and basic firewall (blocks unsolicited inbound by default).
 No advanced firewall rules, IDS/IPS, or VPN server available on consumer hardware.

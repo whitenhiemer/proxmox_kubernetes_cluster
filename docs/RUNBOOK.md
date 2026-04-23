@@ -31,10 +31,10 @@ brew install httpd  # Provides htpasswd
 2. Flash to USB with `dd` or Balena Etcher
 3. Install on each node (2-3 nodes)
 4. Set static IPs during install:
-   - Node 1: `10.0.0.10`
-   - Node 2: `10.0.0.11`
-   - Node 3: `10.0.0.12` (optional)
-5. Access web UI at `https://10.0.0.10:8006`
+   - Node 1: `192.168.86.29`
+   - Node 2: `192.168.86.30`
+   - Node 3: `192.168.86.31` (optional)
+5. Access web UI at `https://192.168.86.29:8006`
 
 ### 0.2 Create Proxmox Cluster
 
@@ -45,7 +45,7 @@ pvecm create homelab
 
 On node 2 (and 3):
 ```bash
-pvecm add 10.0.0.10
+pvecm add 192.168.86.29
 ```
 
 ### 0.3 Repository Setup (Handled by Ansible)
@@ -169,7 +169,7 @@ make ddns
 
 This installs the script on the first Proxmox node and sets up a cron job every 5 minutes. Verify in syslog:
 ```bash
-ssh root@10.0.0.10 "journalctl -t cloudflare-ddns --no-pager -n 20"
+ssh root@192.168.86.29 "journalctl -t cloudflare-ddns --no-pager -n 20"
 ```
 
 ---
@@ -184,7 +184,7 @@ vim terraform/terraform.tfvars
 ```
 
 Key values to update:
-- `proxmox_endpoint` - your Proxmox URL (e.g., `https://10.0.0.10:8006`)
+- `proxmox_endpoint` - your Proxmox URL (e.g., `https://192.168.86.29:8006`)
 - `proxmox_api_token` - from Phase 0.4
 - `proxmox_node` - node name (usually `pve` or `pve1`)
 - `ssh_public_key` - your SSH public key (cat `~/.ssh/id_ed25519.pub`)
@@ -258,14 +258,14 @@ cd ansible && ansible-playbook playbooks/setup-traefik.yml \
 ### 3.3 Configure Port Forwarding
 
 In the Google Home app (WiFi > Settings > Advanced Networking > Port Management):
-- Forward port 80 -> `10.0.0.20:80`
-- Forward port 443 -> `10.0.0.20:443`
+- Forward port 80 -> `192.168.86.20:80`
+- Forward port 443 -> `192.168.86.20:443`
 
 ### 3.4 Verify
 
 ```bash
 # Should get Traefik 404 (no routes matched yet for this host)
-curl -k https://10.0.0.20
+curl -k https://192.168.86.20
 
 # After recipe site is deployed, should work:
 curl https://recipes.woodhead.tech
@@ -287,7 +287,7 @@ This copies and runs the install script from `~/WORKSPACE/recipes/site/deploy/in
 
 ```bash
 # Direct access (internal)
-curl http://10.0.0.21:80
+curl http://192.168.86.21:80
 
 # Via Traefik (external)
 curl https://recipes.woodhead.tech
@@ -339,10 +339,10 @@ qm set 300 -scsi2 /dev/disk/by-id/<disk-id-2>
 
 ### 5.5 Configure TrueNAS
 
-1. Set static IP: `10.0.0.30/24`, gateway `10.0.0.1`
+1. Set static IP: `192.168.86.40/24`, gateway `192.168.86.1`
 2. Create ZFS pool from passthrough disks (mirror or RAIDZ1)
 3. Create dataset: `pool/media`
-4. Create NFS share: `/mnt/pool/media` -> authorized network `10.0.0.0/24`
+4. Create NFS share: `/mnt/pool/media` -> authorized network `192.168.86.0/24`
 5. Set permissions: `chown -R 1000:1000 /mnt/pool/media`
 
 ---
@@ -361,7 +361,7 @@ make arr-stack
 After TrueNAS is configured with NFS shares:
 ```bash
 cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
-  --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+  --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
 ```
 
 ### 6.3 Configure Services
@@ -369,18 +369,18 @@ cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
 Access each service via its web UI:
 | Service   | URL                        | First step                           |
 |-----------|----------------------------|--------------------------------------|
-| Prowlarr  | `http://10.0.0.22:9696`    | Add indexers                         |
-| SABnzbd   | `http://10.0.0.22:8080`    | Configure Usenet server              |
-| Sonarr    | `http://10.0.0.22:8989`    | Connect to Prowlarr + SABnzbd       |
-| Radarr    | `http://10.0.0.22:7878`    | Connect to Prowlarr + SABnzbd       |
-| Bazarr    | `http://10.0.0.22:6767`    | Connect to Sonarr + Radarr          |
-| Overseerr | `http://10.0.0.22:5055`    | Connect to Sonarr + Radarr          |
+| Prowlarr  | `http://192.168.86.22:9696`    | Add indexers                         |
+| SABnzbd   | `http://192.168.86.22:8080`    | Configure Usenet server              |
+| Sonarr    | `http://192.168.86.22:8989`    | Connect to Prowlarr + SABnzbd       |
+| Radarr    | `http://192.168.86.22:7878`    | Connect to Prowlarr + SABnzbd       |
+| Bazarr    | `http://192.168.86.22:6767`    | Connect to Sonarr + Radarr          |
+| Overseerr | `http://192.168.86.22:5055`    | Connect to Sonarr + Radarr          |
 
 ### 6.4 Configure Gluetun VPN
 
 Edit the Docker Compose file on the ARR LXC to add your VPN credentials:
 ```bash
-ssh root@10.0.0.22
+ssh root@192.168.86.22
 vim /opt/arr/docker-compose.yml
 # Update gluetun environment: VPN_SERVICE_PROVIDER, WIREGUARD_PRIVATE_KEY, etc.
 docker compose -f /opt/arr/docker-compose.yml up -d gluetun
@@ -410,7 +410,7 @@ make plex
 With NFS media:
 ```bash
 cd ansible && ansible-playbook playbooks/setup-plex.yml \
-  --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+  --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
 ```
 
 Without GPU passthrough (software transcoding only):
@@ -419,7 +419,7 @@ cd ansible && ansible-playbook playbooks/setup-plex.yml \
   --extra-vars "gpu_passthrough=false"
 ```
 
-Configure at `http://10.0.0.23:32400/web`:
+Configure at `http://192.168.86.23:32400/web`:
 1. Sign in with your Plex account
 2. Add libraries: `/media/movies`, `/media/tv`, `/media/music`
 3. Enable hardware transcoding (Settings > Transcoder, requires Plex Pass)
@@ -433,10 +433,10 @@ make jellyfin
 With NFS media:
 ```bash
 cd ansible && ansible-playbook playbooks/setup-jellyfin.yml \
-  --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+  --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
 ```
 
-Configure at `http://10.0.0.24:8096`:
+Configure at `http://192.168.86.24:8096`:
 1. Create admin account
 2. Add libraries: `/media/movies`, `/media/tv`, `/media/music`
 3. Enable VAAPI transcoding (Dashboard > Playback > Transcoding > `/dev/dri/renderD128`)
@@ -481,9 +481,9 @@ VM with the image imported as the boot disk. No separate ISO download needed.
 
 ### 8.3 Configure
 
-1. Access web UI at `http://10.0.0.31:8123`
+1. Access web UI at `http://192.168.86.41:8123`
 2. Complete the onboarding wizard (create admin account, set location)
-3. Set static IP: Settings -> System -> Network -> `10.0.0.31/24`
+3. Set static IP: Settings -> System -> Network -> `192.168.86.41/24`
 
 ### 8.4 USB Passthrough (Optional)
 
@@ -518,9 +518,9 @@ make prepare
 ### 9.2 Bootstrap
 
 ```bash
-export CLUSTER_VIP="10.0.0.100"
-export CONTROLPLANE_IPS="10.0.0.101"
-export WORKER_IPS="10.0.0.111,10.0.0.112"
+export CLUSTER_VIP="192.168.86.100"
+export CONTROLPLANE_IPS="192.168.86.101"
+export WORKER_IPS="192.168.86.111,192.168.86.112"
 make bootstrap
 ```
 
@@ -559,7 +559,7 @@ make traefik
 make apply-lxc
 ```
 
-This creates the monitoring LXC (VM ID 205, 10.0.0.25) along with any other LXCs.
+This creates the monitoring LXC (VM ID 205, 192.168.86.25) along with any other LXCs.
 
 ### 10.2 Create Proxmox API Token for PVE Exporter
 
@@ -601,7 +601,7 @@ This adds a `:8082` metrics endpoint that Prometheus scrapes for request data.
 
 ### 10.5 Import Grafana Dashboards
 
-Access Grafana at `http://10.0.0.25:3000` (default: admin/admin).
+Access Grafana at `http://192.168.86.25:3000` (default: admin/admin).
 
 Import community dashboards by ID:
 1. Dashboards > New > Import
@@ -629,20 +629,20 @@ kubectl apply -f k8s/base/monitoring/node-exporter-daemonset.yml
 
 Then uncomment the K8s scrape configs in `ansible/files/monitoring/prometheus/prometheus.yml` and restart the stack:
 ```bash
-ssh root@10.0.0.25 "cd /opt/monitoring && docker compose restart prometheus"
+ssh root@192.168.86.25 "cd /opt/monitoring && docker compose restart prometheus"
 ```
 
 ### 10.8 Verify
 
 ```bash
 # Prometheus healthy
-curl http://10.0.0.25:9090/-/healthy
+curl http://192.168.86.25:9090/-/healthy
 
 # Grafana healthy
-curl http://10.0.0.25:3000/api/health
+curl http://192.168.86.25:3000/api/health
 
 # Check scrape targets
-curl -s http://10.0.0.25:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+curl -s http://192.168.86.25:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
 ```
 
 ---
@@ -653,7 +653,7 @@ curl -s http://10.0.0.25:9090/api/v1/targets | jq '.data.activeTargets[] | {job:
 
 Before running this, make sure you can SSH with keys:
 ```bash
-ssh root@10.0.0.10  # Should work without password
+ssh root@192.168.86.29  # Should work without password
 ```
 
 ### 11.2 Apply Hardening
@@ -688,8 +688,8 @@ Traefik watches the dynamic config directory, so changes take effect within seco
 ### Checking DDNS Status
 
 ```bash
-ssh root@10.0.0.10 "journalctl -t cloudflare-ddns --no-pager -n 20"
-ssh root@10.0.0.10 "cat /var/lib/ddns/current-ip"
+ssh root@192.168.86.29 "journalctl -t cloudflare-ddns --no-pager -n 20"
+ssh root@192.168.86.29 "cat /var/lib/ddns/current-ip"
 ```
 
 ### Rebuilding K8s Cluster
@@ -706,7 +706,7 @@ make bootstrap # Re-bootstrap cluster
 Update `terraform.tfvars`:
 ```hcl
 controlplane_count = 3
-controlplane_ips   = ["10.0.0.101", "10.0.0.102", "10.0.0.103"]
+controlplane_ips   = ["192.168.86.101", "192.168.86.102", "192.168.86.103"]
 ```
 Then: `make apply` and `make bootstrap`
 
@@ -715,24 +715,24 @@ Then: `make apply` and `make bootstrap`
 ## Troubleshooting
 
 ### Terraform can't connect to Proxmox
-- Verify API token: `curl -k -H "Authorization: PVEAPIToken=root@pam!terraform=TOKEN" https://10.0.0.10:8006/api2/json/version`
+- Verify API token: `curl -k -H "Authorization: PVEAPIToken=root@pam!terraform=TOKEN" https://192.168.86.29:8006/api2/json/version`
 - Check `proxmox_insecure = true` in tfvars if using self-signed certs
 
 ### DDNS not updating
-- Check cron: `ssh root@10.0.0.10 "crontab -l"`
-- Check logs: `ssh root@10.0.0.10 "journalctl -t cloudflare-ddns"`
-- Test manually: `ssh root@10.0.0.10 "/usr/local/bin/cloudflare-ddns -v"`
+- Check cron: `ssh root@192.168.86.29 "crontab -l"`
+- Check logs: `ssh root@192.168.86.29 "journalctl -t cloudflare-ddns"`
+- Test manually: `ssh root@192.168.86.29 "/usr/local/bin/cloudflare-ddns -v"`
 
 ### Traefik not getting certificates
 - Check Cloudflare API token permissions (Zone:DNS:Edit)
-- Check Traefik logs: `ssh root@10.0.0.20 "journalctl -u traefik --no-pager -n 50"`
+- Check Traefik logs: `ssh root@192.168.86.20 "journalctl -u traefik --no-pager -n 50"`
 - Verify DNS propagation: `dig recipes.woodhead.tech`
 
 ### Talos nodes stuck in maintenance
-- Check talosctl: `TALOSCONFIG=talos/_out/talosconfig talosctl dmesg --nodes 10.0.0.101`
+- Check talosctl: `TALOSCONFIG=talos/_out/talosconfig talosctl dmesg --nodes 192.168.86.101`
 - Verify Proxmox console: check the VM serial console in Proxmox web UI
 
 ### Recipe site not reachable
-- Check service: `ssh root@10.0.0.21 "systemctl status recipe-site"`
-- Check nginx: `ssh root@10.0.0.21 "systemctl status nginx"`
+- Check service: `ssh root@192.168.86.21 "systemctl status recipe-site"`
+- Check nginx: `ssh root@192.168.86.21 "systemctl status nginx"`
 - Check Traefik route: `curl -I https://recipes.woodhead.tech`

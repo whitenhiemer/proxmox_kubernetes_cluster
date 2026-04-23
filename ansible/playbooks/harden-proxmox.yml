@@ -15,9 +15,9 @@
   hosts: proxmox
   vars:
     # Subnet allowed to SSH into Proxmox (your LAN)
-    management_subnet: "10.0.0.0/24"
+    management_subnet: "192.168.86.0/24"
     # IP of the Traefik LXC (receives port-forwarded 80/443 from router)
-    traefik_ip: "10.0.0.20"
+    traefik_ip: "192.168.86.20"
 
   tasks:
     # --- SSH Hardening ---

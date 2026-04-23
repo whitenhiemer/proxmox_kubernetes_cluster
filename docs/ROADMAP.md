@@ -159,21 +159,21 @@ Keeping track of allocated IPs to avoid conflicts:
 
 | IP            | Service              | Type | VM ID |
 |---------------|----------------------|------|-------|
-| 10.0.0.1      | Gateway (Nest WiFi)  | Router | --  |
-| 10.0.0.10-12  | Proxmox nodes        | Host | --    |
-| 10.0.0.20     | Traefik              | LXC  | 200   |
-| 10.0.0.21     | Recipe site          | LXC  | 201   |
-| 10.0.0.22     | ARR stack            | LXC  | 202   |
-| 10.0.0.23     | Plex                 | LXC  | 203   |
-| 10.0.0.24     | Jellyfin             | LXC  | 204   |
-| 10.0.0.25     | Monitoring           | LXC  | 205   |
-| 10.0.0.26     | OpenClaw             | LXC  | 206   |
-| 10.0.0.30     | TrueNAS              | VM   | 300   |
-| 10.0.0.31     | Home Assistant       | VM   | 301   |
-| 10.0.0.100    | K8s API VIP          | VIP  | --    |
-| 10.0.0.101    | K8s control plane    | VM   | 400   |
-| 10.0.0.111-112| K8s workers          | VM   | 410+  |
-| 10.0.0.150-199| MetalLB pool         | K8s  | --    |
+| 192.168.86.1      | Gateway (Nest WiFi)  | Router | --  |
+| 192.168.86.29-31  | Proxmox nodes        | Host | --    |
+| 192.168.86.20     | Traefik              | LXC  | 200   |
+| 192.168.86.21     | Recipe site          | LXC  | 201   |
+| 192.168.86.22     | ARR stack            | LXC  | 202   |
+| 192.168.86.23     | Plex                 | LXC  | 203   |
+| 192.168.86.24     | Jellyfin             | LXC  | 204   |
+| 192.168.86.25     | Monitoring           | LXC  | 205   |
+| 192.168.86.26     | OpenClaw             | LXC  | 206   |
+| 192.168.86.40     | TrueNAS              | VM   | 300   |
+| 192.168.86.41     | Home Assistant       | VM   | 301   |
+| 192.168.86.100    | K8s API VIP          | VIP  | --    |
+| 192.168.86.101    | K8s control plane    | VM   | 400   |
+| 192.168.86.111-112| K8s workers          | VM   | 410+  |
+| 192.168.86.150-199| MetalLB pool         | K8s  | --    |
 
 ---
 
@@ -238,7 +238,7 @@ container in its own LXC or in the Traefik LXC.
 
 1. **Create `auth.woodhead.tech` subdomain** -- points to Traefik (already covered by wildcard)
 2. **Deploy Authelia** in the Traefik LXC (or a dedicated LXC)
-   - Terraform: optionally `terraform/lxc-authelia.tf` (VM ID 205, 10.0.0.25)
+   - Terraform: optionally `terraform/lxc-authelia.tf` (VM ID 205, 192.168.86.25)
    - Ansible: `ansible/playbooks/setup-authelia.yml`
    - Config: `ansible/files/authelia/configuration.yml`
 3. **Configure Google OAuth2** in Authelia's identity provider settings
@@ -248,7 +248,7 @@ container in its own LXC or in the Traefik LXC.
      middlewares:
        authelia:
          forwardAuth:
-           address: "http://10.0.0.20:9091/api/verify?rd=https://auth.woodhead.tech"
+           address: "http://192.168.86.20:9091/api/verify?rd=https://auth.woodhead.tech"
            trustForwardHeader: true
            authResponseHeaders:
              - Remote-User

@@ -47,7 +47,7 @@
     pve_user: ""
     pve_token_name: ""
     pve_token_value: ""
-    pve_host: "10.0.0.10"
+    pve_host: "192.168.86.29"
 
   tasks:
     # --- System Setup ---

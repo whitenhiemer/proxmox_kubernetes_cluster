@@ -17,7 +17,7 @@
 #
 # With NFS mount (after TrueNAS is deployed):
 #   ansible-playbook playbooks/setup-arr-stack.yml \
-#     --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+#     --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
 ---
 - name: Deploy ARR media management stack
   hosts: lxc_services:&arr
@@ -177,7 +177,7 @@
           NFS not configured. Using local /media directory.
           After TrueNAS is deployed, re-run with:
           ansible-playbook playbooks/setup-arr-stack.yml
-            --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+            --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
       when: nfs_server == ""
 
     # --- Deploy Docker Compose ---

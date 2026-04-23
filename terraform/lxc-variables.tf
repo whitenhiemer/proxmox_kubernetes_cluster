@@ -40,7 +40,7 @@ variable "traefik_vmid" {
 variable "traefik_ip" {
   description = "Static IP for the Traefik LXC"
   type        = string
-  default     = "10.0.0.20"
+  default     = "192.168.86.20"
 }
 
 # --- Recipe Site LXC ---
@@ -53,7 +53,7 @@ variable "recipe_site_vmid" {
 variable "recipe_site_ip" {
   description = "Static IP for the recipe site LXC"
   type        = string
-  default     = "10.0.0.21"
+  default     = "192.168.86.21"
 }
 
 # --- ARR Stack LXC ---
@@ -66,7 +66,7 @@ variable "arr_vmid" {
 variable "arr_ip" {
   description = "Static IP for the ARR stack LXC"
   type        = string
-  default     = "10.0.0.22"
+  default     = "192.168.86.22"
 }
 
 variable "arr_cores" {
@@ -97,7 +97,7 @@ variable "plex_vmid" {
 variable "plex_ip" {
   description = "Static IP for the Plex LXC"
   type        = string
-  default     = "10.0.0.23"
+  default     = "192.168.86.23"
 }
 
 variable "plex_cores" {
@@ -128,7 +128,7 @@ variable "jellyfin_vmid" {
 variable "jellyfin_ip" {
   description = "Static IP for the Jellyfin LXC"
   type        = string
-  default     = "10.0.0.24"
+  default     = "192.168.86.24"
 }
 
 variable "jellyfin_cores" {
@@ -159,7 +159,7 @@ variable "monitoring_vmid" {
 variable "monitoring_ip" {
   description = "Static IP for the monitoring stack LXC"
   type        = string
-  default     = "10.0.0.25"
+  default     = "192.168.86.25"
 }
 
 variable "monitoring_cores" {
@@ -190,7 +190,7 @@ variable "openclaw_vmid" {
 variable "openclaw_ip" {
   description = "Static IP for the OpenClaw LXC"
   type        = string
-  default     = "10.0.0.26"
+  default     = "192.168.86.26"
 }
 
 variable "openclaw_cores" {

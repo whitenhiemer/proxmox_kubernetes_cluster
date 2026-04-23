@@ -25,27 +25,27 @@ talos_iso    = "local:iso/talos-amd64.iso"
 
 # --- Network ---
 network_bridge  = "vmbr0"
-network_gateway = "10.0.0.1"
+network_gateway = "192.168.86.1"
 network_subnet  = 24
-nameservers     = ["10.0.0.1", "8.8.8.8"]
+nameservers     = ["192.168.86.1", "8.8.8.8"]
 
 # --- Cluster ---
 cluster_name = "talos-proxmox"
-cluster_vip  = "10.0.0.100"
+cluster_vip  = "192.168.86.100"
 
 # --- Control Plane ---
 controlplane_count = 1
 controlplane_cores = 2
 controlplane_memory = 4096
 controlplane_disk_size = 50
-controlplane_ips = ["10.0.0.101"]
+controlplane_ips = ["192.168.86.101"]
 
 # --- Workers ---
 worker_count = 2
 worker_cores = 4
 worker_memory = 8192
 worker_disk_size = 100
-worker_ips = ["10.0.0.111", "10.0.0.112"]
+worker_ips = ["192.168.86.111", "192.168.86.112"]
 
 # --- Talos ---
 talos_version = "v1.9.0"
@@ -57,29 +57,29 @@ ssh_public_key   = "ssh-ed25519 AAAA... your-key-here"
 
 # Traefik reverse proxy (front door for all web traffic)
 traefik_vmid = 200
-traefik_ip   = "10.0.0.20"
+traefik_ip   = "192.168.86.20"
 
 # Recipe site
 recipe_site_vmid = 201
-recipe_site_ip   = "10.0.0.21"
+recipe_site_ip   = "192.168.86.21"
 
 # ARR media management stack (Sonarr, Radarr, Prowlarr, etc.)
 arr_vmid     = 202
-arr_ip       = "10.0.0.22"
+arr_ip       = "192.168.86.22"
 arr_cores    = 2
 arr_memory   = 4096
 arr_disk_size = 20
 
 # Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 monitoring_vmid     = 205
-monitoring_ip       = "10.0.0.25"
+monitoring_ip       = "192.168.86.25"
 monitoring_cores    = 2
 monitoring_memory   = 2048
 monitoring_disk_size = 20    # Prometheus TSDB, 30-day retention
 
 # OpenClaw AI agent framework (built from source, needs LLM API keys)
 openclaw_vmid     = 206
-openclaw_ip       = "10.0.0.26"
+openclaw_ip       = "192.168.86.26"
 openclaw_cores    = 2
 openclaw_memory   = 2048
 openclaw_disk_size = 20    # Source build + Docker images + workspace
@@ -92,18 +92,18 @@ truenas_iso       = "local:iso/TrueNAS-SCALE.iso"
 truenas_cores     = 4
 truenas_memory    = 8192
 truenas_disk_size = 16    # OS disk only; data goes on passthrough ZFS disks
-truenas_ip        = "10.0.0.30"
+truenas_ip        = "192.168.86.40"
 
 # Plex Media Server (requires Plex Pass for hardware transcoding)
 plex_vmid     = 203
-plex_ip       = "10.0.0.23"
+plex_ip       = "192.168.86.23"
 plex_cores    = 2
 plex_memory   = 2048
 plex_disk_size = 8    # Metadata only; media on TrueNAS NFS
 
 # Jellyfin Media Server (open source, free hardware transcoding)
 jellyfin_vmid     = 204
-jellyfin_ip       = "10.0.0.24"
+jellyfin_ip       = "192.168.86.24"
 jellyfin_cores    = 2
 jellyfin_memory   = 2048
 jellyfin_disk_size = 8
@@ -116,7 +116,7 @@ homeassistant_image_url = "https://github.com/home-assistant/operating-system/re
 homeassistant_cores     = 2
 homeassistant_memory    = 2048
 homeassistant_disk_size = 32
-homeassistant_ip        = "10.0.0.31"
+homeassistant_ip        = "192.168.86.41"
 
 # --- Domain ---
 domain     = "woodhead.tech"

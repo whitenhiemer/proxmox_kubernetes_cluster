@@ -33,5 +33,5 @@ variable "truenas_disk_size" {
 variable "truenas_ip" {
   description = "Static IP for TrueNAS (configured inside TrueNAS, not via Terraform)"
   type        = string
-  default     = "10.0.0.30"
+  default     = "192.168.86.40"
 }

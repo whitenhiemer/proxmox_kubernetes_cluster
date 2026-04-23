@@ -24,7 +24,7 @@ entryPoints:
     address: ":443"
 
   # Prometheus metrics endpoint (internal only, not port-forwarded)
-  # Scraped by Prometheus at http://10.0.0.20:8082/metrics
+  # Scraped by Prometheus at http://192.168.86.20:8082/metrics
   metrics:
     address: ":8082"
 

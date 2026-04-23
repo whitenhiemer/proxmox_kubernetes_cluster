@@ -23,4 +23,4 @@ http:
     recipe-site:
       loadBalancer:
         servers:
-          - url: "http://10.0.0.21:80"
+          - url: "http://192.168.86.21:80"

@@ -1,7 +1,7 @@
 # monitoring.yml - Traefik route for the monitoring stack
 #
 # Routes grafana.woodhead.tech to the Grafana instance in the monitoring LXC.
-# Grafana runs on port 3000 inside the LXC (VM ID 205, IP 10.0.0.25).
+# Grafana runs on port 3000 inside the LXC (VM ID 205, IP 192.168.86.25).
 #
 # Uncomment after deploying monitoring stack (make monitoring)
 
@@ -37,14 +37,14 @@
 #     grafana:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.25:3000"
+#           - url: "http://192.168.86.25:3000"
 #
 #     prometheus:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.25:9090"
+#           - url: "http://192.168.86.25:9090"
 #
 #     alertmanager:
 #       loadBalancer:
 #         servers:
-#           - url: "http://10.0.0.25:9093"
+#           - url: "http://192.168.86.25:9093"

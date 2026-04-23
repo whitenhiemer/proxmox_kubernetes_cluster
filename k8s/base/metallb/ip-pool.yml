@@ -4,7 +4,7 @@
 # Uses L2 mode (ARP announcements) which works on any network without
 # BGP router support. IPs must be in the same subnet as the nodes.
 #
-# This pool reserves 10.0.0.150-10.0.0.199 for K8s LoadBalancer services.
+# This pool reserves 192.168.86.150-192.168.86.199 for K8s LoadBalancer services.
 # Adjust the range to match your network layout.
 #
 # Prerequisites: MetalLB must be installed first (see metallb-install.yml)
@@ -19,7 +19,7 @@ spec:
   addresses:
     # Reserved range for K8s LoadBalancer services
     # Make sure these IPs are NOT in your DHCP range
-    - 10.0.0.150-10.0.0.199
+    - 192.168.86.150-192.168.86.199
 ---
 # L2 advertisement - MetalLB responds to ARP requests for assigned IPs
 apiVersion: metallb.io/v1beta1

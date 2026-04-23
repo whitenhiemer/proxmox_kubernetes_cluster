@@ -19,7 +19,7 @@
 #
 # With NFS mount:
 #   ansible-playbook playbooks/setup-jellyfin.yml \
-#     --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+#     --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
 #
 # Without GPU passthrough:
 #   ansible-playbook playbooks/setup-jellyfin.yml \
@@ -166,7 +166,7 @@
         msg: >
           NFS not configured. Add media later with:
           ansible-playbook playbooks/setup-jellyfin.yml
-            --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+            --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
       when: nfs_server == ""
 
     # --- Verify GPU access (if passthrough was configured) ---

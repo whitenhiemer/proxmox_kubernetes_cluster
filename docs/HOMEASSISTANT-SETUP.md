@@ -38,7 +38,7 @@ This does two things:
 
 ## 3. Initial Configuration
 
-Access the web UI at `http://10.0.0.31:8123` (or whatever IP DHCP assigned).
+Access the web UI at `http://192.168.86.41:8123` (or whatever IP DHCP assigned).
 
 ### 3.1 Onboarding Wizard
 
@@ -54,12 +54,12 @@ HAOS defaults to DHCP. Set a static IP so the address doesn't change:
 1. **Settings** -> **System** -> **Network**
 2. Click your network interface (usually `enp0s18`)
 3. IPv4: Switch from DHCP to Static
-   - IP: `10.0.0.31/24`
-   - Gateway: `10.0.0.1`
-   - DNS: `10.0.0.1`
+   - IP: `192.168.86.41/24`
+   - Gateway: `192.168.86.1`
+   - DNS: `192.168.86.1`
 4. Save
 
-The web UI will reconnect at the new IP: `http://10.0.0.31:8123`
+The web UI will reconnect at the new IP: `http://192.168.86.41:8123`
 
 ## 4. USB Passthrough (Zigbee/Z-Wave)
 
@@ -120,7 +120,7 @@ After TrueNAS is configured, set up automatic backups:
 
 1. TrueNAS: Create dataset `pool/backups/homeassistant`
 2. TrueNAS: Create NFS share -> `/mnt/pool/backups/homeassistant`
-3. Authorized network: `10.0.0.0/24`
+3. Authorized network: `192.168.86.0/24`
 
 ### 6.2 Configure HA Backup
 
@@ -152,7 +152,7 @@ IoT device isolation requires VLAN-aware APs (not supported by Google Nest
 WiFi Pro). When VLAN infrastructure is in place:
 
 1. Create VLAN 30 (10.0.30.0/24) for IoT devices
-2. Firewall rules: Allow IoT VLAN -> HA (10.0.0.31:8123) only
+2. Firewall rules: Allow IoT VLAN -> HA (192.168.86.41:8123) only
 3. Block IoT -> LAN (prevent smart devices from reaching your computers)
 
 ## Updating HAOS
@@ -170,7 +170,7 @@ To update the HAOS version in Terraform (for new VM deployments):
 ## Verification Checklist
 
 - [ ] VM 301 boots and shows HAOS login prompt on console
-- [ ] Web UI accessible at `http://10.0.0.31:8123`
+- [ ] Web UI accessible at `http://192.168.86.41:8123`
 - [ ] Static IP configured (survives reboot)
 - [ ] Admin account created via onboarding wizard
 - [ ] USB dongle passed through and working (if applicable)

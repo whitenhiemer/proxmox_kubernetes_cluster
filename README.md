@@ -7,20 +7,20 @@ Homelab infrastructure for [woodhead.tech](https://woodhead.tech) -- a Talos Lin
 ```
 ISP Modem/ONT
     |
-[Google Nest WiFi Pro] (10.0.0.1) -- NAT, DHCP, DNS, WiFi
+[Google Nest WiFi Pro] (192.168.86.1) -- NAT, DHCP, DNS, WiFi
     |
-    10.0.0.0/24 (flat LAN)
+    192.168.86.0/24 (flat LAN)
     |
-    +-- Traefik LXC (10.0.0.20)  <-- ports 80/443 forwarded here
+    +-- Traefik LXC (192.168.86.20)  <-- ports 80/443 forwarded here
     |       |
-    |       +-- Recipe Site LXC (10.0.0.21)
-    |       +-- ARR Stack LXC (10.0.0.22) -- Sonarr, Radarr, Prowlarr, etc.
-    |       +-- Monitoring LXC (10.0.0.25) -- Prometheus, Grafana, Alertmanager
-    |       +-- OpenClaw LXC (10.0.0.26) -- AI agent gateway
-    |       +-- K8s VIP (10.0.0.100)
+    |       +-- Recipe Site LXC (192.168.86.21)
+    |       +-- ARR Stack LXC (192.168.86.22) -- Sonarr, Radarr, Prowlarr, etc.
+    |       +-- Monitoring LXC (192.168.86.25) -- Prometheus, Grafana, Alertmanager
+    |       +-- OpenClaw LXC (192.168.86.26) -- AI agent gateway
+    |       +-- K8s VIP (192.168.86.100)
     |
-    +-- TrueNAS VM (10.0.0.30) -- NFS media storage for ARR/Plex/Jellyfin
-    +-- K8s Cluster (10.0.0.101, 10.0.0.111-112)
+    +-- TrueNAS VM (192.168.86.40) -- NFS media storage for ARR/Plex/Jellyfin
+    +-- K8s Cluster (192.168.86.101, 192.168.86.111-112)
 ```
 
 - **Proxmox VE 8.x** -- 2-3 node cluster with Ceph storage
@@ -68,9 +68,9 @@ make recipe-site
 make arr-stack
 
 # 5. Bootstrap Kubernetes
-export CLUSTER_VIP="10.0.0.100"
-export CONTROLPLANE_IPS="10.0.0.101"
-export WORKER_IPS="10.0.0.111,10.0.0.112"
+export CLUSTER_VIP="192.168.86.100"
+export CONTROLPLANE_IPS="192.168.86.101"
+export WORKER_IPS="192.168.86.111,192.168.86.112"
 make bootstrap
 
 # 6. Verify
@@ -202,7 +202,7 @@ make harden
 │       │   └── node-exporter-daemonset.yml # Host metrics for Talos nodes
 │       └── metallb/                      # MetalLB LoadBalancer support
 │           ├── namespace.yml
-│           ├── ip-pool.yml               # IP range: 10.0.0.150-199
+│           ├── ip-pool.yml               # IP range: 192.168.86.150-199
 │           └── metallb-install.yml       # Installation reference
 └── scripts/
     ├── bootstrap.sh                      # Talos config gen + cluster bootstrap
@@ -235,10 +235,10 @@ make harden
 Update `terraform.tfvars`:
 ```hcl
 controlplane_count = 3
-controlplane_ips   = ["10.0.0.101", "10.0.0.102", "10.0.0.103"]
+controlplane_ips   = ["192.168.86.101", "192.168.86.102", "192.168.86.103"]
 
 worker_count = 5
-worker_ips   = ["10.0.0.111", "10.0.0.112", "10.0.0.113", "10.0.0.114", "10.0.0.115"]
+worker_ips   = ["192.168.86.111", "192.168.86.112", "192.168.86.113", "192.168.86.114", "192.168.86.115"]
 ```
 
 Then `make apply` and `make bootstrap`.

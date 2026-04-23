@@ -36,5 +36,5 @@ variable "homeassistant_disk_size" {
 variable "homeassistant_ip" {
   description = "Static IP for Home Assistant (configured inside HAOS, not via Terraform)"
   type        = string
-  default     = "10.0.0.31"
+  default     = "192.168.86.41"
 }

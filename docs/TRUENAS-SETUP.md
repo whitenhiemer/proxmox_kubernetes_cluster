@@ -59,7 +59,7 @@ reference physical hardware specific to your host.
 
 ```bash
 # SSH into your Proxmox node
-ssh root@10.0.0.10
+ssh root@192.168.86.29
 
 # Pass through disks using their stable by-id path
 # Replace <disk-id> with your actual disk IDs from step 2
@@ -86,17 +86,17 @@ The `/dev/disk/by-id/` path is tied to the disk's serial number and stays stable
 
 ## 6. Initial TrueNAS Configuration
 
-Access the web UI at `http://10.0.0.30` (or whatever IP it got via DHCP).
+Access the web UI at `http://192.168.86.40` (or whatever IP it got via DHCP).
 
 ### Set Static IP
 1. **Network** -> **Global Configuration**
    - Hostname: `truenas`
    - Domain: `woodhead.tech`
-   - Nameserver 1: `10.0.0.1` (gateway)
-   - Default Gateway: `10.0.0.1`
+   - Nameserver 1: `192.168.86.1` (gateway)
+   - Default Gateway: `192.168.86.1`
 2. **Network** -> **Interfaces** -> Edit the active interface
    - Uncheck DHCP
-   - Add alias: `10.0.0.30/24`
+   - Add alias: `192.168.86.40/24`
    - Save and test
 
 ### Create ZFS Storage Pool
@@ -123,7 +123,7 @@ The ARR stack, Plex, and Jellyfin all share this dataset.
    - Path: `/mnt/pool/media`
    - Maproot User: `root`
    - Maproot Group: `wheel`
-   - Authorized Networks: `10.0.0.0/24`
+   - Authorized Networks: `192.168.86.0/24`
    - Save
 2. **Services** -> Enable **NFS** -> Set to start automatically
 
@@ -142,17 +142,17 @@ Now that TrueNAS is serving NFS, re-run the ARR stack playbook with NFS paramete
 
 ```bash
 cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
-  --extra-vars "nfs_server=10.0.0.30 nfs_share=/mnt/pool/media"
+  --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
 ```
 
-This mounts `10.0.0.30:/mnt/pool/media` at `/media` inside the ARR LXC and adds it
+This mounts `192.168.86.40:/mnt/pool/media` at `/media` inside the ARR LXC and adds it
 to fstab for persistence. All ARR containers (Sonarr, Radarr, SABnzbd, etc.) access
 media at `/media/movies`, `/media/tv`, `/media/downloads`, etc.
 
 ### Verify the NFS Mount
 ```bash
 # SSH into the ARR LXC
-ssh root@10.0.0.22
+ssh root@192.168.86.22
 
 # Check the mount
 df -h /media
@@ -178,7 +178,7 @@ Store ISOs and VM backups on TrueNAS instead of local disk:
 ```bash
 # On Proxmox host
 pvesm add nfs truenas-backups \
-  --server 10.0.0.30 \
+  --server 192.168.86.40 \
   --export /mnt/pool/backups \
   --content backup,iso \
   --options soft,intr
@@ -198,11 +198,11 @@ systemctl start qemu-guest-agent
 ## Verification Checklist
 
 - [ ] VM 300 boots and shows TrueNAS web UI on console
-- [ ] Static IP `10.0.0.30` is configured and reachable
+- [ ] Static IP `192.168.86.40` is configured and reachable
 - [ ] ZFS pool created with passthrough disks (check: `zpool status`)
 - [ ] `/mnt/pool/media` dataset exists with correct subdirectories
-- [ ] NFS share active (`showmount -e 10.0.0.30` from another host)
-- [ ] ARR LXC mounts NFS at `/media` (`df -h /media` on 10.0.0.22)
+- [ ] NFS share active (`showmount -e 192.168.86.40` from another host)
+- [ ] ARR LXC mounts NFS at `/media` (`df -h /media` on 192.168.86.22)
 - [ ] ARR containers can read/write media directories
 - [ ] QEMU guest agent responds (`qm agent 300 ping` from Proxmox)
 
@@ -211,11 +211,11 @@ systemctl start qemu-guest-agent
 ### NFS mount fails on ARR LXC
 ```bash
 # Test connectivity from ARR LXC
-ping 10.0.0.30
-showmount -e 10.0.0.30
+ping 192.168.86.40
+showmount -e 192.168.86.40
 
 # Check NFS service on TrueNAS
-ssh root@10.0.0.30 "systemctl status nfs-server"
+ssh root@192.168.86.40 "systemctl status nfs-server"
 
 # Check firewall isn't blocking NFS (ports 111, 2049)
 ```
