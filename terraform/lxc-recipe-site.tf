@@ -27,12 +27,14 @@ resource "proxmox_virtual_environment_container" "recipe_site" {
   }
 
   memory {
-    dedicated = 512
+    # 2GB needed for Go compilation of modernc.org/sqlite (CGo-free)
+    dedicated = 2048
   }
 
   disk {
     datastore_id = var.lxc_storage
-    size         = 4
+    # 8GB: Go toolchain (~500MB) + app + SQLite DB + headroom
+    size         = 8
   }
 
   network_interface {

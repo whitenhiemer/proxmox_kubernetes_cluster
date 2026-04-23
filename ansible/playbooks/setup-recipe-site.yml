@@ -21,13 +21,59 @@
 # Usage: ansible-playbook playbooks/setup-recipe-site.yml
 ---
 - name: Deploy recipe site
-  hosts: lxc_services
+  hosts: recipe-site
   vars:
     # Path to the install script in the recipes repo
     # Assumes both repos are cloned in ~/WORKSPACE on the control machine
     install_script: "{{ lookup('env', 'HOME') }}/WORKSPACE/recipes/site/deploy/install-recipe-site.sh"
+    # Go version must satisfy go.mod requirement (currently go 1.25.0)
+    go_version: "1.25.9"
 
   tasks:
+    # --- Install Go from official tarball ---
+    # Debian 12 ships Go 1.19 but the recipes app requires Go 1.26+.
+    # Install the official Go binary before running the install script.
+    - name: Check current Go version
+      ansible.builtin.command:
+        cmd: /usr/local/go/bin/go version
+      register: go_version_check
+      changed_when: false
+      failed_when: false
+
+    - name: Download Go {{ go_version }}
+      ansible.builtin.get_url:
+        url: "https://go.dev/dl/go{{ go_version }}.linux-amd64.tar.gz"
+        dest: /tmp/go.tar.gz
+        mode: "0644"
+        timeout: 120
+      when: go_version not in (go_version_check.stdout | default(''))
+
+    - name: Remove old Go installation
+      ansible.builtin.file:
+        path: /usr/local/go
+        state: absent
+      when: go_version not in (go_version_check.stdout | default(''))
+
+    - name: Extract Go to /usr/local
+      ansible.builtin.unarchive:
+        src: /tmp/go.tar.gz
+        dest: /usr/local/
+        remote_src: true
+      when: go_version not in (go_version_check.stdout | default(''))
+
+    - name: Add Go to system PATH
+      ansible.builtin.copy:
+        content: 'export PATH=$PATH:/usr/local/go/bin'
+        dest: /etc/profile.d/golang.sh
+        mode: "0644"
+
+    - name: Symlink go binary into /usr/bin
+      ansible.builtin.file:
+        src: /usr/local/go/bin/go
+        dest: /usr/bin/go
+        state: link
+        force: true
+
     # --- Copy Install Script ---
     - name: Copy install script to container
       ansible.builtin.copy:
@@ -41,6 +87,9 @@
     - name: Run recipe site install script
       ansible.builtin.command:
         cmd: /bin/bash /tmp/install-recipe-site.sh
+      environment:
+        # APP is referenced in the install script banner but not defined
+        APP: "Recipe Site"
       register: install_result
       changed_when: "'already exists' not in install_result.stdout"
 

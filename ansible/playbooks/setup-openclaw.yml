@@ -176,40 +176,23 @@
     # --- Inject Credentials ---
     # API keys written to env file, never committed to git
     - name: Write OpenClaw environment file
-      ansible.builtin.template:
-        src: /dev/stdin
+      ansible.builtin.copy:
+        # Build env file content with conditional API key inclusion
+        content: |
+          # OpenClaw environment - managed by Ansible
+          # DO NOT commit this file to version control
+          {{ 'ANTHROPIC_API_KEY=' + anthropic_api_key if anthropic_api_key != '' else '# ANTHROPIC_API_KEY=' }}
+          {{ 'OPENAI_API_KEY=' + openai_api_key if openai_api_key != '' else '# OPENAI_API_KEY=' }}
+          {{ 'GEMINI_API_KEY=' + gemini_api_key if gemini_api_key != '' else '# GEMINI_API_KEY=' }}
+          {{ 'OPENROUTER_API_KEY=' + openrouter_api_key if openrouter_api_key != '' else '# OPENROUTER_API_KEY=' }}
+          {{ 'OPENCLAW_GATEWAY_TOKEN=' + gateway_token if gateway_token != '' else '# OPENCLAW_GATEWAY_TOKEN=' }}
+          {{ 'DISCORD_BOT_TOKEN=' + discord_bot_token if discord_bot_token != '' else '# DISCORD_BOT_TOKEN=' }}
+          {{ 'SLACK_BOT_TOKEN=' + slack_bot_token if slack_bot_token != '' else '# SLACK_BOT_TOKEN=' }}
+          {{ 'TELEGRAM_BOT_TOKEN=' + telegram_bot_token if telegram_bot_token != '' else '# TELEGRAM_BOT_TOKEN=' }}
         dest: "{{ openclaw_base_dir }}/openclaw.env"
         owner: "{{ openclaw_user }}"
         group: "{{ openclaw_user }}"
         mode: "0600"
-      args:
-        _raw_params: |
-          # OpenClaw environment - managed by Ansible
-          # DO NOT commit this file to version control
-          {% if anthropic_api_key != "" %}
-          ANTHROPIC_API_KEY={{ anthropic_api_key }}
-          {% endif %}
-          {% if openai_api_key != "" %}
-          OPENAI_API_KEY={{ openai_api_key }}
-          {% endif %}
-          {% if gemini_api_key != "" %}
-          GEMINI_API_KEY={{ gemini_api_key }}
-          {% endif %}
-          {% if openrouter_api_key != "" %}
-          OPENROUTER_API_KEY={{ openrouter_api_key }}
-          {% endif %}
-          {% if gateway_token != "" %}
-          OPENCLAW_GATEWAY_TOKEN={{ gateway_token }}
-          {% endif %}
-          {% if discord_bot_token != "" %}
-          DISCORD_BOT_TOKEN={{ discord_bot_token }}
-          {% endif %}
-          {% if slack_bot_token != "" %}
-          SLACK_BOT_TOKEN={{ slack_bot_token }}
-          {% endif %}
-          {% if telegram_bot_token != "" %}
-          TELEGRAM_BOT_TOKEN={{ telegram_bot_token }}
-          {% endif %}
       notify: Restart OpenClaw stack
 
     # --- Deploy Docker Compose ---

@@ -96,7 +96,14 @@ apply-lxc: ## Create/update LXC containers only
 # ===== Phase 2-3: LXC Services =====
 
 traefik: ## Configure Traefik reverse proxy in its LXC
-	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-traefik.yml
+	@# Source Cloudflare token from DDNS env file (same token used for DNS-01 ACME)
+	@if [ ! -f $(SCRIPTS_DIR)/ddns/cloudflare.env ]; then \
+		echo "Error: scripts/ddns/cloudflare.env not found. Run 'make ddns' first."; \
+		exit 1; \
+	fi
+	. $(SCRIPTS_DIR)/ddns/cloudflare.env && cd $(ANSIBLE_DIR) && \
+		ansible-playbook playbooks/setup-traefik.yml \
+		--extra-vars "cf_api_token=$$CF_API_TOKEN acme_email=admin@woodhead.tech"
 
 recipe-site: ## Deploy recipe site into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-recipe-site.yml
