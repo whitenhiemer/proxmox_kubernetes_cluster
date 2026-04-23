@@ -151,6 +151,91 @@ qm importdisk <vmid> haos_ova-<version>.qcow2 <storage>
 
 ---
 
+### WireGuard VPN
+
+**Type**: LXC container (lightweight tunnel endpoint)
+**Domain**: `vpn.woodhead.tech` (for documentation; VPN uses UDP, not HTTP)
+**Goal**: Secure remote access to the entire homelab LAN from anywhere.
+Connect from laptop/phone while away and access all services as if on the
+local network -- no port forwarding needed beyond the VPN port.
+
+**Why WireGuard**: Modern, fast, minimal attack surface. Single UDP port,
+kernel-level performance, simple config. Replaces clunky OpenVPN setups.
+
+**Architecture**:
+```
+Phone/Laptop (remote)
+    |
+    | WireGuard tunnel (UDP 51820)
+    |
+    v
+ISP Modem -> Google Nest (port forward UDP 51820)
+    |
+    v
+WireGuard LXC (192.168.86.39)
+    |
+    | IP forwarding + masquerade
+    |
+    v
+192.168.86.0/24 (full LAN access)
+```
+
+**Requirements**:
+- 1 CPU core, 256 MB RAM, 2 GB disk (extremely lightweight)
+- Port forward: UDP 51820 on Google Nest -> WireGuard LXC
+- Static public IP or DDNS (already running for Cloudflare)
+- IP forwarding enabled in the LXC (`net.ipv4.ip_forward=1`)
+
+**Approach options**:
+1. **Dedicated LXC** (VM ID 208, IP 192.168.86.39) -- cleanest isolation,
+   own Terraform + Ansible like other services
+2. **Run on Proxmox host directly** -- simplest, no LXC overhead, but
+   mixes concerns with the hypervisor
+3. **Run in existing LXC** (e.g., Traefik) -- fewer containers, but
+   couples unrelated services
+
+**Recommended: Dedicated LXC**. Follows the existing pattern and keeps the
+VPN endpoint isolated. If the VPN LXC is compromised, other services are
+unaffected (assuming firewall rules are added later).
+
+**VPN subnet**: `10.10.0.0/24` (separate from LAN)
+- `10.10.0.1` -- WireGuard server (LXC)
+- `10.10.0.2` -- Brandon's laptop
+- `10.10.0.3` -- Brandon's phone
+- `10.10.0.4+` -- additional clients
+
+**Implementation plan**:
+1. `terraform/lxc-wireguard.tf` -- LXC container (VM ID 208, 192.168.86.39)
+2. `ansible/playbooks/setup-wireguard.yml` -- Install WireGuard, generate
+   server + client keys, configure interface, enable IP forwarding
+3. Generate client configs (QR codes for phone, .conf files for laptop)
+4. Port forward UDP 51820 on Google Nest -> 192.168.86.39
+5. Traefik route not needed (WireGuard is UDP, not HTTP)
+
+**Client setup**:
+- macOS/Windows/Linux: official WireGuard app, import `.conf` file
+- iOS/Android: WireGuard app, scan QR code from server
+
+**DNS inside tunnel**: Clients use the LAN DNS (192.168.86.1) so
+`*.woodhead.tech` resolves via hairpin NAT or split DNS. Alternatively,
+set DNS to a Pi-hole/AdGuard instance in the future.
+
+**Security notes**:
+- Private keys generated on the server, never transmitted in plaintext
+- Client configs contain pre-shared keys for post-quantum resistance
+- Ansible playbook stores keys in `/etc/wireguard/` (mode 0600)
+- Keys are injected via `--extra-vars` or generated at deploy time
+- Consider AllowedIPs restrictions per client (e.g., phone only gets
+  media services, not admin tools)
+
+**Files to create (when implementing)**:
+| File | Purpose |
+|------|---------|
+| `terraform/lxc-wireguard.tf` | LXC container |
+| `terraform/lxc-wireguard-variables.tf` | VM ID, IP variables |
+| `ansible/playbooks/setup-wireguard.yml` | Install + configure WireGuard |
+| `ansible/files/wireguard/wg0.conf.j2` | Server config template |
+
 ---
 
 ## IP Address Plan
@@ -169,6 +254,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.25     | Monitoring           | LXC  | 205   |
 | 192.168.86.26     | OpenClaw             | LXC  | 206   |
 | 192.168.86.28     | Authelia             | LXC  | 207   |
+| 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
 | 192.168.86.41     | Home Assistant       | VM   | 301   |
 | 192.168.86.100    | K8s API VIP          | VIP  | --    |
@@ -303,7 +389,8 @@ container in its own LXC or in the Traefik LXC.
 2. **ARR stack** -- needs NAS media shares
 3. **Plex / Jellyfin** -- needs NAS media shares + iGPU passthrough
 4. **Home Assistant** -- independent, can be done anytime
-5. **Google OAuth / SSO** -- requires Traefik + Cloudflare DNS running first
+5. **Authelia SSO** -- DONE (deployed at auth.woodhead.tech)
+6. **WireGuard VPN** -- remote access to LAN from anywhere
 
 ## Hardware Considerations
 
