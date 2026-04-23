@@ -41,9 +41,12 @@ resource "proxmox_virtual_environment_vm" "worker" {
     model  = "virtio"
   }
 
-  # Enable QEMU guest agent
+  # QEMU guest agent -- Talos doesn't run the agent, but enabling it
+  # lets Proxmox detect it if a future Talos version adds support.
+  # Timeout capped to prevent Terraform from hanging on state refresh.
   agent {
     enabled = true
+    timeout = "15s"
   }
 
   on_boot = true

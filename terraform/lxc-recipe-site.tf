@@ -66,4 +66,11 @@ resource "proxmox_virtual_environment_container" "recipe_site" {
   features {
     nesting = true
   }
+
+  lifecycle {
+    # Proxmox returns dns.domain = " " (a space) when unset; provider bug.
+    ignore_changes = [
+      initialization[0].dns[0].domain,
+    ]
+  }
 }

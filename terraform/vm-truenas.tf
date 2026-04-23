@@ -74,8 +74,10 @@ resource "proxmox_virtual_environment_vm" "truenas" {
   }
 
   # QEMU guest agent -- TrueNAS Scale is Debian-based, supports it
+  # Timeout capped to prevent Terraform from hanging on state refresh.
   agent {
     enabled = true
+    timeout = "15s"
   }
 
   # Start on boot -- other services depend on NFS shares from this VM

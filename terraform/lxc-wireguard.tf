@@ -76,6 +76,7 @@ resource "proxmox_virtual_environment_container" "wireguard" {
       unprivileged,
       operating_system[0].template_file_id,
       initialization[0].user_account,
+      initialization[0].dns[0].domain,  # Proxmox returns " " when unset
     ]
   }
 }

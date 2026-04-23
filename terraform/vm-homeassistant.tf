@@ -84,8 +84,10 @@ resource "proxmox_virtual_environment_vm" "homeassistant" {
   }
 
   # HAOS includes the QEMU guest agent
+  # Timeout capped to prevent Terraform from hanging on state refresh.
   agent {
     enabled = true
+    timeout = "15s"
   }
 
   # Start on boot -- smart home should always be running
