@@ -22,7 +22,7 @@
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw \
         bootstrap kubeconfig health k8s-base harden \
-        patch-lxc patch-docker destroy clean help
+        patch-proxmox patch-lxc patch-docker destroy clean help
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -118,7 +118,9 @@ jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-jellyfin.yml
 
 monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager) into its LXC
-	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml
+	@# Pass DISCORD_WEBHOOK env var to enable alerting: make monitoring DISCORD_WEBHOOK=https://...
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml \
+		$(if $(DISCORD_WEBHOOK),--extra-vars "discord_webhook=$(DISCORD_WEBHOOK)")
 
 openclaw: ## Deploy OpenClaw AI agent framework into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-openclaw.yml
@@ -153,6 +155,9 @@ k8s-base-metallb: ## Apply base K8s manifests with MetalLB
 	./$(SCRIPTS_DIR)/apply-k8s-base.sh --with-metallb
 
 # ===== Patching =====
+
+patch-proxmox: ## Patch Proxmox VE hosts (serial, one at a time)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/patch-proxmox.yml
 
 patch-lxc: ## Patch Debian packages on all LXC containers
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/patch-lxc.yml

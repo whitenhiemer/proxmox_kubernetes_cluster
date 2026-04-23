@@ -109,6 +109,7 @@ make harden
 | `health`            | 4     | Check K8s cluster health via talosctl          |
 | `k8s-base`          | 4     | Apply base K8s manifests (namespaces)          |
 | `k8s-base-metallb`  | 4     | Apply base manifests + MetalLB                 |
+| `patch-proxmox`     | --    | Patch Proxmox VE hosts (serial, one at a time) |
 | `patch-lxc`         | --    | Patch Debian packages on all LXC containers    |
 | `patch-docker`      | --    | Pull latest Docker images, restart all stacks  |
 | `harden`            | 5     | Security hardening (SSH, firewall, fail2ban)   |
@@ -165,6 +166,7 @@ make harden
 │   │   ├── setup-jellyfin.yml           # Deploy Jellyfin + iGPU passthrough
 │   │   ├── setup-monitoring.yml          # Deploy monitoring stack (Docker)
 │   │   ├── setup-openclaw.yml           # Deploy OpenClaw AI agent (Docker)
+│   │   ├── patch-proxmox.yml              # Patch Proxmox VE hosts
 │   │   ├── patch-lxc.yml                 # Patch Debian packages on LXCs
 │   │   ├── patch-docker.yml              # Update Docker images on all stacks
 │   │   └── harden-proxmox.yml            # Security hardening
