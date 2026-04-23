@@ -17,7 +17,7 @@ ISP Modem/ONT
     |       +-- ARR Stack LXC (192.168.86.22) -- Sonarr, Radarr, Prowlarr, etc.
     |       +-- Monitoring LXC (192.168.86.25) -- Prometheus, Grafana, Alertmanager
     |       +-- OpenClaw LXC (192.168.86.26) -- AI agent gateway
-    |       +-- Authelia LXC (192.168.86.27) -- SSO gateway (forwardAuth + TOTP)
+    |       +-- Authelia LXC (192.168.86.28) -- SSO gateway (forwardAuth + TOTP)
     |       +-- K8s VIP (192.168.86.100)
     |
     +-- TrueNAS VM (192.168.86.40) -- NFS media storage for ARR/Plex/Jellyfin

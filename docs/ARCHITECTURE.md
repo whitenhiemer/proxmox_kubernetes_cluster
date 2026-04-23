@@ -102,7 +102,7 @@ and resource allocation.
     |  nas.*        +---> 192.168.86.40:443
     |  home.*       +---> 192.168.86.41:8123
     |  claw.*       +---> 192.168.86.26:18789
-    |  auth.*       +---> 192.168.86.27:9091
+    |  auth.*       +---> 192.168.86.28:9091
     |  grafana.*    +---> 192.168.86.25:3000
     |  prometheus.* +---> 192.168.86.25:9090
     |  traefik.*    +---> dashboard (local)
@@ -126,7 +126,7 @@ and resource allocation.
 | 192.168.86.24      | jellyfin         | LXC    | 204   | Jellyfin Media Server + iGPU        |
 | 192.168.86.25      | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
 | 192.168.86.26      | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
-| 192.168.86.27      | authelia         | LXC    | 207   | SSO gateway (forwardAuth + TOTP)    |
+| 192.168.86.28      | authelia         | LXC    | 207   | SSO gateway (forwardAuth + TOTP)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
@@ -522,7 +522,7 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Commented |
 | alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Commented |
 | claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Commented |
-| auth.woodhead.tech     | 192.168.86.27        | 9091  | authelia.yml          | Active    |
+| auth.woodhead.tech     | 192.168.86.28        | 9091  | authelia.yml          | Active    |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Commented |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 

@@ -21,7 +21,7 @@ http:
     authelia:
       loadBalancer:
         servers:
-          - url: "http://192.168.86.27:9091"
+          - url: "http://192.168.86.28:9091"
 
   middlewares:
     # forwardAuth middleware -- Traefik sends every request to Authelia first.
@@ -29,7 +29,7 @@ http:
     # request passes through. If not, the user is redirected to the login portal.
     authelia:
       forwardAuth:
-        address: "http://192.168.86.27:9091/api/authz/forward-auth"
+        address: "http://192.168.86.28:9091/api/authz/forward-auth"
         trustForwardHeader: true
         authResponseHeaders:
           - Remote-User

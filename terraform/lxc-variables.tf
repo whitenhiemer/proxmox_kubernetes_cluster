@@ -221,7 +221,7 @@ variable "authelia_vmid" {
 variable "authelia_ip" {
   description = "Static IP for the Authelia LXC"
   type        = string
-  default     = "192.168.86.27"
+  default     = "192.168.86.28"
 }
 
 # --- Domain ---

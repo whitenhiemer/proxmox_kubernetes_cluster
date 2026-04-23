@@ -177,7 +177,7 @@
     - name: Generate argon2id password hash
       ansible.builtin.command:
         cmd: >
-          docker run --rm authelia/authelia:latest
+          docker run --rm --entrypoint authelia authelia/authelia:latest
           crypto hash generate argon2
           --password '{{ authelia_admin_password }}'
       register: password_hash_result
@@ -186,7 +186,8 @@
 
     - name: Extract password hash
       ansible.builtin.set_fact:
-        authelia_password_hash: "{{ password_hash_result.stdout | trim }}"
+        # Output format: "Digest: $argon2id$..." -- strip the "Digest: " prefix
+        authelia_password_hash: "{{ password_hash_result.stdout | regex_replace('^Digest: ', '') | trim }}"
 
     # --- Deploy Config Files ---
     - name: Copy Docker Compose file

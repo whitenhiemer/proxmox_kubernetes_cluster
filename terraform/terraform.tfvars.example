@@ -87,7 +87,7 @@ openclaw_disk_size = 20    # Source build + Docker images + workspace
 
 # Authelia SSO gateway (centralized auth for all web services)
 authelia_vmid = 207
-authelia_ip   = "192.168.86.27"
+authelia_ip   = "192.168.86.28"
 
 # --- TrueNAS Scale NAS ---
 # Centralized storage for media, backups, ISOs
