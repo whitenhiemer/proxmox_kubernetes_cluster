@@ -3,6 +3,7 @@ terraform/.terraform/
 terraform/.terraform.lock.hcl
 terraform/terraform.tfstate
 terraform/terraform.tfstate.backup
+terraform/terraform.tfstate.*.backup
 terraform/terraform.tfvars
 terraform/*.tfplan
 .terraform/
@@ -12,6 +13,9 @@ talos/_out/
 
 # Ansible
 ansible/*.retry
+
+# WireGuard client configs (contain private keys)
+ansible/files/wireguard/clients/
 
 # Environment files (may contain API tokens)
 .env

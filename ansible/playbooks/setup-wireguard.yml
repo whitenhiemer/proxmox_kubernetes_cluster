@@ -297,8 +297,10 @@
 
   handlers:
     - name: Apply sysctl
+      # Only apply our wireguard sysctl file -- `sysctl --system` fails in LXC
+      # because it also tries to apply kernel params the container can't modify.
       ansible.builtin.command:
-        cmd: sysctl --system
+        cmd: sysctl -p /etc/sysctl.d/99-wireguard.conf
       changed_when: true
 
     - name: Restart WireGuard
