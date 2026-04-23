@@ -109,6 +109,8 @@ make harden
 | `health`            | 4     | Check K8s cluster health via talosctl          |
 | `k8s-base`          | 4     | Apply base K8s manifests (namespaces)          |
 | `k8s-base-metallb`  | 4     | Apply base manifests + MetalLB                 |
+| `patch-lxc`         | --    | Patch Debian packages on all LXC containers    |
+| `patch-docker`      | --    | Pull latest Docker images, restart all stacks  |
 | `harden`            | 5     | Security hardening (SSH, firewall, fail2ban)   |
 | `destroy`           | --    | Tear down K8s VMs and clean configs            |
 | `clean`             | --    | Remove generated Talos configs only            |
@@ -121,6 +123,7 @@ make harden
 ├── docs/
 │   ├── RUNBOOK.md                        # Step-by-step deployment guide
 │   ├── ROADMAP.md                        # Future services + IP plan
+│   ├── PATCHING.md                       # Patching plan for all components
 │   ├── TRUENAS-SETUP.md                  # TrueNAS install + NFS config guide
 │   └── HOMEASSISTANT-SETUP.md            # HAOS install + smart home config guide
 ├── terraform/
@@ -162,6 +165,8 @@ make harden
 │   │   ├── setup-jellyfin.yml           # Deploy Jellyfin + iGPU passthrough
 │   │   ├── setup-monitoring.yml          # Deploy monitoring stack (Docker)
 │   │   ├── setup-openclaw.yml           # Deploy OpenClaw AI agent (Docker)
+│   │   ├── patch-lxc.yml                 # Patch Debian packages on LXCs
+│   │   ├── patch-docker.yml              # Update Docker images on all stacks
 │   │   └── harden-proxmox.yml            # Security hardening
 │   └── files/
 │       ├── arr-stack/

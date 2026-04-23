@@ -14,7 +14,7 @@
 # Jellyfin config lives on the LXC disk at /var/lib/jellyfin.
 
 resource "proxmox_virtual_environment_container" "jellyfin" {
-  node_name   = var.proxmox_node
+  node_name   = lookup(var.node_assignments, "jellyfin", var.proxmox_node)
   vm_id       = var.jellyfin_vmid
   description = "Jellyfin Media Server - open source streaming for ${var.domain}"
   tags        = ["service", "media", "jellyfin"]
@@ -42,17 +42,21 @@ resource "proxmox_virtual_environment_container" "jellyfin" {
   }
 
   network_interface {
-    name = "eth0"
+    name   = "eth0"
+    bridge = var.network_bridge
+  }
+
+  # Static IP, DNS, and SSH key for Ansible access
+  initialization {
+    hostname = "jellyfin"
+
     ip_config {
       ipv4 {
         address = "${var.jellyfin_ip}/${var.network_subnet}"
         gateway = var.network_gateway
       }
     }
-  }
 
-  # SSH key and DNS for Ansible access
-  initialization {
     dns {
       servers = var.nameservers
     }

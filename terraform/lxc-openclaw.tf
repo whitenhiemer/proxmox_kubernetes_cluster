@@ -11,7 +11,7 @@
 # LLM API keys are injected via Ansible --extra-vars (not stored in git).
 
 resource "proxmox_virtual_environment_container" "openclaw" {
-  node_name   = var.proxmox_node
+  node_name   = lookup(var.node_assignments, "openclaw", var.proxmox_node)
   vm_id       = var.openclaw_vmid
   description = "OpenClaw AI agent framework - gateway + CLI"
   tags        = ["service", "openclaw", "ai"]
@@ -39,17 +39,21 @@ resource "proxmox_virtual_environment_container" "openclaw" {
   }
 
   network_interface {
-    name = "eth0"
+    name   = "eth0"
+    bridge = var.network_bridge
+  }
+
+  # Static IP, DNS, and SSH key for Ansible access
+  initialization {
+    hostname = "openclaw"
+
     ip_config {
       ipv4 {
         address = "${var.openclaw_ip}/${var.network_subnet}"
         gateway = var.network_gateway
       }
     }
-  }
 
-  # SSH key and DNS for Ansible access
-  initialization {
     dns {
       servers = var.nameservers
     }

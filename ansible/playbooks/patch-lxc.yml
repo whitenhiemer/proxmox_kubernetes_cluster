@@ -1,0 +1,48 @@
+# patch-lxc.yml - Patch Debian LXC containers
+#
+# Runs apt update + apt upgrade on all LXC containers.
+# Safe to run at any time -- does not restart services unless
+# the package manager requires it.
+#
+# Usage:
+#   cd ansible && ansible-playbook playbooks/patch-lxc.yml
+#   cd ansible && ansible-playbook playbooks/patch-lxc.yml --limit traefik
+#   cd ansible && ansible-playbook playbooks/patch-lxc.yml --limit monitoring
+
+---
+- name: Patch Debian LXC containers
+  hosts: lxc_services
+  become: true
+  gather_facts: true
+  serial: 2  # Patch 2 containers at a time to avoid overloading
+
+  tasks:
+    - name: Update apt package cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: safe
+      register: apt_upgrade
+
+    - name: Show upgraded packages
+      ansible.builtin.debug:
+        msg: "{{ apt_upgrade.stdout_lines | default(['No packages upgraded']) }}"
+      when: apt_upgrade.changed
+
+    - name: Check if reboot is required
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Warn if reboot is needed
+      ansible.builtin.debug:
+        msg: "WARNING: {{ inventory_hostname }} requires a reboot to complete updates"
+      when: reboot_required.stat.exists
+
+    - name: Clean up old packages
+      ansible.builtin.apt:
+        autoremove: true
+        autoclean: true

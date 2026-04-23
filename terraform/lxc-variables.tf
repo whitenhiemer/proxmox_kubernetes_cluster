@@ -21,6 +21,15 @@ variable "ssh_public_key" {
   default     = ""
 }
 
+# --- Node Assignments ---
+# Distribute LXC containers across Proxmox cluster nodes.
+# Keys must match the container names used in each lxc-*.tf file.
+variable "node_assignments" {
+  description = "Map of container name to Proxmox node for multi-node distribution"
+  type        = map(string)
+  default     = {}
+}
+
 # --- Traefik LXC ---
 variable "traefik_vmid" {
   description = "VM ID for the Traefik reverse proxy LXC"

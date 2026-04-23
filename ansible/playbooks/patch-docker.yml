@@ -1,0 +1,114 @@
+# patch-docker.yml - Update Docker Compose stacks
+#
+# Pulls latest images and recreates containers for all Docker-based
+# LXC services (ARR stack, monitoring, OpenClaw).
+#
+# OpenClaw is built from source, so it gets a git pull + docker build
+# instead of a docker compose pull.
+#
+# Usage:
+#   cd ansible && ansible-playbook playbooks/patch-docker.yml
+#   cd ansible && ansible-playbook playbooks/patch-docker.yml --limit arr
+#   cd ansible && ansible-playbook playbooks/patch-docker.yml --limit monitoring
+
+---
+- name: Update ARR stack Docker images
+  hosts: lxc_services:&arr
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Pull latest ARR stack images
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: /opt/arr-stack
+      register: pull_result
+      changed_when: "'Pull complete' in pull_result.stderr or 'Downloaded' in pull_result.stderr"
+
+    - name: Recreate ARR stack containers with new images
+      ansible.builtin.command:
+        cmd: docker compose up -d --remove-orphans
+        chdir: /opt/arr-stack
+      when: pull_result.changed
+
+    - name: Verify ARR stack containers
+      ansible.builtin.command:
+        cmd: docker compose ps --format json
+        chdir: /opt/arr-stack
+      register: ps_result
+      changed_when: false
+
+    - name: Clean up old Docker images
+      ansible.builtin.command:
+        cmd: docker image prune -f
+      changed_when: false
+
+- name: Update monitoring stack Docker images
+  hosts: lxc_services:&monitoring
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Pull latest monitoring images
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: /opt/monitoring
+      register: pull_result
+      changed_when: "'Pull complete' in pull_result.stderr or 'Downloaded' in pull_result.stderr"
+
+    - name: Recreate monitoring containers with new images
+      ansible.builtin.command:
+        cmd: docker compose up -d --remove-orphans
+        chdir: /opt/monitoring
+      when: pull_result.changed
+
+    - name: Verify monitoring containers
+      ansible.builtin.command:
+        cmd: docker compose ps --format json
+        chdir: /opt/monitoring
+      register: ps_result
+      changed_when: false
+
+    - name: Clean up old Docker images
+      ansible.builtin.command:
+        cmd: docker image prune -f
+      changed_when: false
+
+- name: Update OpenClaw from source
+  hosts: lxc_services:&openclaw
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Pull latest OpenClaw source
+      ansible.builtin.git:
+        repo: https://github.com/openclaw/openclaw.git
+        dest: /opt/openclaw/src
+        version: main
+        force: false
+      register: git_result
+
+    - name: Rebuild OpenClaw Docker image
+      ansible.builtin.command:
+        cmd: docker build -t openclaw:local .
+        chdir: /opt/openclaw/src
+      when: git_result.changed
+
+    - name: Recreate OpenClaw containers with new image
+      ansible.builtin.command:
+        cmd: docker compose up -d --remove-orphans
+        chdir: /opt/openclaw
+      when: git_result.changed
+
+    - name: Verify OpenClaw health
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:18789/healthz"
+        status_code: 200
+      retries: 5
+      delay: 5
+      when: git_result.changed
+
+    - name: Clean up old Docker images
+      ansible.builtin.command:
+        cmd: docker image prune -f
+      changed_when: false

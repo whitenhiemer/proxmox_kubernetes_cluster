@@ -19,17 +19,16 @@
 # To find your dongle's vendor:product ID:
 #   lsusb | grep -i "zigbee\|z-wave\|silicon\|texas\|dresden"
 
-# Download HAOS disk image to Proxmox storage
-# The provider handles .xz decompression automatically.
-# This runs once -- subsequent applies skip the download if the file exists.
-resource "proxmox_virtual_environment_download_file" "haos_image" {
-  content_type            = "iso"
-  datastore_id            = "local"
-  node_name               = var.proxmox_node
-  url                     = var.homeassistant_image_url
-  file_name               = "haos-ova.qcow2"
-  decompression_algorithm = "xz"
-}
+# HAOS disk image must be pre-downloaded and decompressed on the Proxmox host.
+# The bpg/proxmox provider does not support xz decompression -- only gz, lzo, zst.
+# HAOS ships as .qcow2.xz, so we handle it out of band:
+#
+#   1. Download:  wget -P /var/lib/vz/template/cache/ <haos_url>
+#   2. Decompress: xz -d /var/lib/vz/template/cache/haos_ova-*.qcow2.xz
+#   3. Copy:      cp /var/lib/vz/template/cache/haos_ova-*.qcow2 /var/lib/vz/template/iso/haos-ova.qcow2
+#   4. Run:       make apply-homeassistant
+#
+# Terraform references the decompressed qcow2 directly from local ISO storage.
 
 resource "proxmox_virtual_environment_vm" "homeassistant" {
   name      = "homeassistant"
@@ -59,13 +58,11 @@ resource "proxmox_virtual_environment_vm" "homeassistant" {
     dedicated = var.homeassistant_memory
   }
 
-  # HAOS boot disk -- imported from the downloaded qcow2 image
-  # Terraform downloads the image via proxmox_virtual_environment_download_file
-  # and imports it as the VM's primary disk.
+  # HAOS boot disk -- imported from the pre-decompressed qcow2 on local ISO storage
   disk {
     datastore_id = var.lxc_storage
     interface    = "scsi0"
-    file_id      = proxmox_virtual_environment_download_file.haos_image.id
+    file_id      = "local:iso/haos-ova.qcow2"
     size         = var.homeassistant_disk_size
     discard      = "on"
     ssd          = true

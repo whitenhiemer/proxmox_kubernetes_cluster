@@ -21,7 +21,8 @@
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw \
-        bootstrap kubeconfig health k8s-base harden destroy clean help
+        bootstrap kubeconfig health k8s-base harden \
+        patch-lxc patch-docker destroy clean help
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -68,9 +69,8 @@ apply-truenas: ## Create TrueNAS NAS VM only (pass through data disks separately
 	cd $(TERRAFORM_DIR) && terraform apply \
 		-target=proxmox_virtual_environment_vm.truenas
 
-apply-homeassistant: ## Create Home Assistant VM (downloads HAOS image automatically)
+apply-homeassistant: ## Create Home Assistant VM (HAOS image must be pre-downloaded)
 	cd $(TERRAFORM_DIR) && terraform apply \
-		-target=proxmox_virtual_environment_download_file.haos_image \
 		-target=proxmox_virtual_environment_vm.homeassistant
 
 plan-lxc: ## Preview LXC container changes only
@@ -144,6 +144,14 @@ k8s-base: ## Apply base K8s manifests (namespaces, optional MetalLB)
 k8s-base-metallb: ## Apply base K8s manifests with MetalLB
 	chmod +x $(SCRIPTS_DIR)/apply-k8s-base.sh
 	./$(SCRIPTS_DIR)/apply-k8s-base.sh --with-metallb
+
+# ===== Patching =====
+
+patch-lxc: ## Patch Debian packages on all LXC containers
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/patch-lxc.yml
+
+patch-docker: ## Pull latest Docker images and restart all stacks
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/patch-docker.yml
 
 # ===== Phase 5: Security =====
 

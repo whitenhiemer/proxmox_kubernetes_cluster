@@ -17,7 +17,7 @@
 # 20 GB disk accommodates ~30 days of Prometheus TSDB at 15s intervals.
 
 resource "proxmox_virtual_environment_container" "monitoring" {
-  node_name   = var.proxmox_node
+  node_name   = lookup(var.node_assignments, "monitoring", var.proxmox_node)
   vm_id       = var.monitoring_vmid
   description = "Monitoring stack - Prometheus/Grafana/Alertmanager"
   tags        = ["infrastructure", "monitoring", "grafana"]
@@ -45,17 +45,21 @@ resource "proxmox_virtual_environment_container" "monitoring" {
   }
 
   network_interface {
-    name = "eth0"
+    name   = "eth0"
+    bridge = var.network_bridge
+  }
+
+  # Static IP, DNS, and SSH key for Ansible access
+  initialization {
+    hostname = "monitoring"
+
     ip_config {
       ipv4 {
         address = "${var.monitoring_ip}/${var.network_subnet}"
         gateway = var.network_gateway
       }
     }
-  }
 
-  # SSH key and DNS for Ansible access
-  initialization {
     dns {
       servers = var.nameservers
     }

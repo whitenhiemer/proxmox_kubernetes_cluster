@@ -8,7 +8,7 @@
 # TLS is terminated upstream by the Traefik LXC.
 
 resource "proxmox_virtual_environment_container" "recipe_site" {
-  node_name   = var.proxmox_node
+  node_name   = lookup(var.node_assignments, "recipe_site", var.proxmox_node)
   vm_id       = var.recipe_site_vmid
   description = "Recipe site - recipes.${var.domain}"
   tags        = ["service", "recipe-site", var.domain]
@@ -36,17 +36,21 @@ resource "proxmox_virtual_environment_container" "recipe_site" {
   }
 
   network_interface {
-    name = "eth0"
+    name   = "eth0"
+    bridge = var.network_bridge
+  }
+
+  # Static IP, DNS, and SSH key for Ansible access
+  initialization {
+    hostname = "recipe-site"
+
     ip_config {
       ipv4 {
         address = "${var.recipe_site_ip}/${var.network_subnet}"
         gateway = var.network_gateway
       }
     }
-  }
 
-  # Inject SSH key and DNS config for Ansible access
-  initialization {
     dns {
       servers = var.nameservers
     }

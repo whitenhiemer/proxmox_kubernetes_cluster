@@ -10,6 +10,19 @@ proxmox_node = "pve"
 datastore    = "ceph-pool"
 talos_iso    = "local:iso/talos-amd64.iso"
 
+# --- Node Assignments (optional) ---
+# Distribute LXC containers across cluster nodes.
+# Omit or leave empty to deploy everything on proxmox_node.
+# node_assignments = {
+#   traefik     = "pve1"
+#   recipe_site = "pve1"
+#   arr         = "pve2"
+#   plex        = "pve2"
+#   monitoring  = "pve2"
+#   jellyfin    = "pve3"
+#   openclaw    = "pve3"
+# }
+
 # --- Network ---
 network_bridge  = "vmbr0"
 network_gateway = "10.0.0.1"
