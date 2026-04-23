@@ -476,6 +476,48 @@ in parallel after the host is ready.
 | local-lvm| ~142 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
+### Resource Balancing
+
+Each Proxmox node has 4 physical cores and 7.6 GB RAM (i5-7500T, no hyperthreading).
+All nodes are overcommitted -- this works because most services idle, but concurrent
+spikes cause swapping. Proxmox resource balancing mitigates this.
+
+**Memory ballooning (VMs only):** The balloon driver lets Proxmox reclaim unused
+RAM dynamically. Each VM has a ceiling (max RAM) and a floor (minimum guaranteed).
+The hypervisor adjusts between them based on host memory pressure. LXC containers
+don't support ballooning -- their memory is hard-limited by cgroups.
+
+| VM | Ceiling | Floor (balloon) | Shares | Rationale |
+|----|---------|-----------------|--------|-----------|
+| TrueNAS | 8192 MB | 4096 MB | 1500 | ZFS ARC is greedy but elastic |
+| K8s CP | 4096 MB | 2048 MB | 1200 | etcd + apiserver steady state ~1.5GB |
+| K8s Workers | 8192 MB | 4096 MB | 1000 | Pod workloads vary |
+| Home Assistant | 2048 MB | 1024 MB | 800 | Mostly idle automations |
+
+**CPU units (VMs + LXCs):** CFS scheduler weight for CPU time distribution under
+contention. Higher weight = more CPU time when cores are contested. Idle services
+consume no CPU regardless of weight.
+
+| Service | Type | Units | Tier |
+|---------|------|-------|------|
+| Traefik | LXC | 2048 | Critical |
+| TrueNAS | VM | 1500 | High |
+| K8s CP | VM | 1200 | High |
+| Authelia | LXC | 1200 | High |
+| K8s Workers | VM | 1024 | Normal |
+| ARR, Plex, Jellyfin | LXC | 1024 | Normal |
+| Monitoring, OpenClaw | LXC | 800 | Low |
+| Home Assistant | VM | 800 | Low |
+| Recipe Site, WireGuard | LXC | 512 | Minimal |
+
+**Per-node overcommit ratios:**
+
+| Node | Allocated Cores | Allocated RAM | Physical | Overcommit |
+|------|----------------|---------------|----------|------------|
+| thinkcentre1 | 12 | ~16 GB | 4c / 7.6G | 3x CPU, 2.1x RAM |
+| thinkcentre2 | 10 | ~16 GB | 4c / 7.6G | 2.5x CPU, 2.1x RAM |
+| thinkcentre3 | 8 | ~12 GB | 4c / 7.6G | 2x CPU, 1.6x RAM |
+
 ---
 
 ## Terraform Resource Map

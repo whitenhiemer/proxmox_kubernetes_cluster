@@ -24,6 +24,7 @@ resource "proxmox_virtual_environment_container" "recipe_site" {
 
   cpu {
     cores = 1
+    units = 512  # Minimal -- static Go binary, near-zero CPU
   }
 
   memory {

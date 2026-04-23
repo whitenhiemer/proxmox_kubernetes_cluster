@@ -18,10 +18,12 @@ resource "proxmox_virtual_environment_vm" "worker" {
   cpu {
     cores = var.worker_cores
     type  = "x86-64-v2-AES"
+    units = 1024  # Normal priority -- pod workloads
   }
 
   memory {
-    dedicated = var.worker_memory
+    dedicated = var.worker_memory          # Ceiling: max RAM available
+    floating  = var.worker_balloon         # Floor: minimum guaranteed RAM (enables ballooning)
   }
 
   # OS disk on Ceph

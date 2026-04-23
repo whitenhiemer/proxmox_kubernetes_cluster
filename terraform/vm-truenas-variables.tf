@@ -24,6 +24,12 @@ variable "truenas_memory" {
   default     = 8192
 }
 
+variable "truenas_balloon" {
+  description = "Minimum guaranteed RAM in MB for TrueNAS (balloon floor, ZFS ARC shrinks gracefully)"
+  type        = number
+  default     = 4096
+}
+
 variable "truenas_disk_size" {
   description = "OS disk size in GB for TrueNAS (data goes on passthrough disks, not here)"
   type        = number

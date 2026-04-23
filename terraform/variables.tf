@@ -97,9 +97,15 @@ variable "controlplane_cores" {
 }
 
 variable "controlplane_memory" {
-  description = "Memory in MB per control plane node"
+  description = "Memory in MB per control plane node (balloon ceiling)"
   type        = number
   default     = 4096
+}
+
+variable "controlplane_balloon" {
+  description = "Minimum guaranteed RAM in MB per control plane node (balloon floor)"
+  type        = number
+  default     = 2048
 }
 
 variable "controlplane_disk_size" {
@@ -140,9 +146,15 @@ variable "worker_cores" {
 }
 
 variable "worker_memory" {
-  description = "Memory in MB per worker node"
+  description = "Memory in MB per worker node (balloon ceiling)"
   type        = number
   default     = 8192
+}
+
+variable "worker_balloon" {
+  description = "Minimum guaranteed RAM in MB per worker node (balloon floor)"
+  type        = number
+  default     = 4096
 }
 
 variable "worker_disk_size" {

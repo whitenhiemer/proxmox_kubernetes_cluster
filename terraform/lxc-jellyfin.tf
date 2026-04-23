@@ -30,6 +30,7 @@ resource "proxmox_virtual_environment_container" "jellyfin" {
 
   cpu {
     cores = var.jellyfin_cores
+    units = 1024  # Normal -- transcoding uses iGPU, not CPU
   }
 
   memory {

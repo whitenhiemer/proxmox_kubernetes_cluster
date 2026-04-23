@@ -33,6 +33,7 @@ resource "proxmox_virtual_environment_container" "monitoring" {
 
   cpu {
     cores = var.monitoring_cores
+    units = 800  # Low -- scrapes are lightweight, Grafana is read-only
   }
 
   memory {

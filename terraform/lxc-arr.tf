@@ -34,6 +34,7 @@ resource "proxmox_virtual_environment_container" "arr" {
 
   cpu {
     cores = var.arr_cores
+    units = 1024  # Normal -- background downloads and indexing
   }
 
   memory {

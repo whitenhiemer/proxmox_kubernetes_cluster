@@ -20,6 +20,7 @@ resource "proxmox_virtual_environment_container" "traefik" {
 
   cpu {
     cores = 1
+    units = 2048  # Critical -- front door for all external traffic
   }
 
   memory {

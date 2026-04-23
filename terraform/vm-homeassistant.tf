@@ -52,10 +52,12 @@ resource "proxmox_virtual_environment_vm" "homeassistant" {
     cores = var.homeassistant_cores
     # host type for USB passthrough and hardware access
     type  = "host"
+    units = 800  # Low priority -- mostly idle automations
   }
 
   memory {
-    dedicated = var.homeassistant_memory
+    dedicated = var.homeassistant_memory           # Ceiling: max RAM available
+    floating  = var.homeassistant_balloon          # Floor: minimum guaranteed RAM (enables ballooning)
   }
 
   # HAOS boot disk -- Terraform creates a blank disk, then the HAOS qcow2 is

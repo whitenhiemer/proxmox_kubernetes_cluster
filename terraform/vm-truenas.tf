@@ -43,12 +43,15 @@ resource "proxmox_virtual_environment_vm" "truenas" {
     cores = var.truenas_cores
     # host type for optimal ZFS performance (AES-NI, AVX for checksums)
     type  = "host"
+    units = 1500  # High priority -- NFS dependency for media services
   }
 
   memory {
     # TrueNAS/ZFS benefits heavily from RAM -- ARC cache uses ~1GB per TB of storage.
     # 8GB minimum, 16GB+ recommended for a media NAS with multiple consumers.
-    dedicated = var.truenas_memory
+    # Ballooning: ZFS ARC is greedy but elastic -- it releases RAM under pressure.
+    dedicated = var.truenas_memory           # Ceiling: max RAM available
+    floating  = var.truenas_balloon          # Floor: minimum guaranteed RAM (enables ballooning)
   }
 
   # OS disk -- local storage, separate from the ZFS data pool

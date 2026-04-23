@@ -37,7 +37,8 @@ cluster_vip  = "192.168.86.100"
 # --- Control Plane ---
 controlplane_count = 1
 controlplane_cores = 2
-controlplane_memory = 4096
+controlplane_memory = 4096    # Balloon ceiling (max RAM)
+controlplane_balloon = 2048   # Balloon floor (min guaranteed RAM)
 controlplane_disk_size = 50
 controlplane_ips = ["192.168.86.101"]
 # Anti-affinity: pin each CP VM to a different Proxmox host.
@@ -47,7 +48,8 @@ controlplane_ips = ["192.168.86.101"]
 # --- Workers ---
 worker_count = 2
 worker_cores = 4
-worker_memory = 8192
+worker_memory = 8192          # Balloon ceiling
+worker_balloon = 4096         # Balloon floor
 worker_disk_size = 100
 worker_ips = ["192.168.86.111", "192.168.86.112"]
 # Anti-affinity: spread workers across remaining hosts.
@@ -105,7 +107,8 @@ wireguard_ip   = "192.168.86.39"
 truenas_vmid      = 300
 truenas_iso       = "local:iso/TrueNAS-SCALE.iso"
 truenas_cores     = 4
-truenas_memory    = 8192
+truenas_memory    = 8192      # Balloon ceiling
+truenas_balloon   = 4096     # Balloon floor (ZFS ARC shrinks gracefully)
 truenas_disk_size = 16    # OS disk only; data goes on passthrough ZFS disks
 truenas_ip        = "192.168.86.40"
 
@@ -129,7 +132,8 @@ jellyfin_disk_size = 8
 homeassistant_vmid      = 301
 homeassistant_image_url = "https://github.com/home-assistant/operating-system/releases/download/14.2/haos_ova-14.2.qcow2.xz"
 homeassistant_cores     = 2
-homeassistant_memory    = 2048
+homeassistant_memory    = 2048    # Balloon ceiling
+homeassistant_balloon   = 1024   # Balloon floor
 homeassistant_disk_size = 32
 homeassistant_ip        = "192.168.86.41"
 

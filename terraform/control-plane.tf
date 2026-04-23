@@ -18,10 +18,14 @@ resource "proxmox_virtual_environment_vm" "controlplane" {
   cpu {
     cores = var.controlplane_cores
     type  = "x86-64-v2-AES"
+    units = 1200  # High priority -- cluster control plane
   }
 
   memory {
-    dedicated = var.controlplane_memory
+    dedicated = var.controlplane_memory          # Ceiling: max RAM available
+    floating  = var.controlplane_balloon         # Floor: minimum guaranteed RAM (enables ballooning)
+    # Note: memory shares (ivshmem) requires root@pam auth, not API tokens.
+    # Set shares via Proxmox UI or CLI: qm set <vmid> -shares <value>
   }
 
   # OS disk on Ceph

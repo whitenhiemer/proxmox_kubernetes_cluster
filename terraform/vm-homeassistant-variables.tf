@@ -27,6 +27,12 @@ variable "homeassistant_memory" {
   default     = 2048
 }
 
+variable "homeassistant_balloon" {
+  description = "Minimum guaranteed RAM in MB for Home Assistant (balloon floor)"
+  type        = number
+  default     = 1024
+}
+
 variable "homeassistant_disk_size" {
   description = "Disk size in GB for Home Assistant (HAOS + addons + database)"
   type        = number

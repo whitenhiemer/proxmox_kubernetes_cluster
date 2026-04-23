@@ -32,6 +32,7 @@ resource "proxmox_virtual_environment_container" "wireguard" {
 
   cpu {
     cores = 1
+    units = 512  # Minimal -- kernel WireGuard, near-zero overhead
   }
 
   memory {
@@ -68,8 +69,4 @@ resource "proxmox_virtual_environment_container" "wireguard" {
     }
   }
 
-  # Nesting for network namespace support
-  features {
-    nesting = true
-  }
 }

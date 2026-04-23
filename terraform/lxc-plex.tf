@@ -28,6 +28,7 @@ resource "proxmox_virtual_environment_container" "plex" {
 
   cpu {
     cores = var.plex_cores
+    units = 1024  # Normal -- transcoding uses iGPU, not CPU
   }
 
   memory {

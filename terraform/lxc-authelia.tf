@@ -27,6 +27,7 @@ resource "proxmox_virtual_environment_container" "authelia" {
 
   cpu {
     cores = 1
+    units = 1200  # High -- auth gate blocks all protected services if slow
   }
 
   memory {

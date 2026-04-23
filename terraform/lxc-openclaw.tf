@@ -27,6 +27,7 @@ resource "proxmox_virtual_environment_container" "openclaw" {
 
   cpu {
     cores = var.openclaw_cores
+    units = 800  # Low -- bursty but not latency-critical
   }
 
   memory {
