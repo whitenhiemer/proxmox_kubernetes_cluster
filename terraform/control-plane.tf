@@ -3,8 +3,10 @@
 resource "proxmox_virtual_environment_vm" "controlplane" {
   count = var.controlplane_count
 
-  name    = "${var.cluster_name}-cp-${count.index}"
-  node_name = var.proxmox_node
+  name      = "${var.cluster_name}-cp-${count.index}"
+  # Spread control plane VMs across Proxmox hosts for HA.
+  # Falls back to proxmox_node if controlplane_nodes is not set.
+  node_name = length(var.controlplane_nodes) > count.index ? var.controlplane_nodes[count.index] : var.proxmox_node
   vm_id   = var.controlplane_vmid_start + count.index
   tags    = ["kubernetes", "controlplane", var.cluster_name]
 

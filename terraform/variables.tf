@@ -113,6 +113,12 @@ variable "controlplane_ips" {
   type        = list(string)
 }
 
+variable "controlplane_nodes" {
+  description = "Proxmox node name for each control plane VM (index-matched). Falls back to proxmox_node if index not defined."
+  type        = list(string)
+  default     = []
+}
+
 # --- Worker Nodes ---
 
 variable "worker_count" {
@@ -148,6 +154,12 @@ variable "worker_disk_size" {
 variable "worker_ips" {
   description = "Static IPs for worker nodes"
   type        = list(string)
+}
+
+variable "worker_nodes" {
+  description = "Proxmox node name for each worker VM (index-matched). Falls back to proxmox_node if index not defined."
+  type        = list(string)
+  default     = []
 }
 
 # --- Talos ---

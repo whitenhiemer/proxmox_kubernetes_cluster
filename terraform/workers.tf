@@ -3,8 +3,10 @@
 resource "proxmox_virtual_environment_vm" "worker" {
   count = var.worker_count
 
-  name    = "${var.cluster_name}-worker-${count.index}"
-  node_name = var.proxmox_node
+  name      = "${var.cluster_name}-worker-${count.index}"
+  # Spread worker VMs across Proxmox hosts for anti-affinity.
+  # Falls back to proxmox_node if worker_nodes is not set.
+  node_name = length(var.worker_nodes) > count.index ? var.worker_nodes[count.index] : var.proxmox_node
   vm_id   = var.worker_vmid_start + count.index
   tags    = ["kubernetes", "worker", var.cluster_name]
 

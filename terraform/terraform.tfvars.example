@@ -40,6 +40,9 @@ controlplane_cores = 2
 controlplane_memory = 4096
 controlplane_disk_size = 50
 controlplane_ips = ["192.168.86.101"]
+# Anti-affinity: pin each CP VM to a different Proxmox host.
+# Index-matched to controlplane_ips. Falls back to proxmox_node if omitted.
+# controlplane_nodes = ["pve1"]  # Must match Proxmox node hostnames (pvecm nodes)
 
 # --- Workers ---
 worker_count = 2
@@ -47,6 +50,9 @@ worker_cores = 4
 worker_memory = 8192
 worker_disk_size = 100
 worker_ips = ["192.168.86.111", "192.168.86.112"]
+# Anti-affinity: spread workers across remaining hosts.
+# No worker should share a host with the control plane if possible.
+# worker_nodes = ["pve2", "pve3"]
 
 # --- Talos ---
 talos_version = "v1.9.0"
@@ -88,6 +94,10 @@ openclaw_disk_size = 20    # Source build + Docker images + workspace
 # Authelia SSO gateway (centralized auth for all web services)
 authelia_vmid = 207
 authelia_ip   = "192.168.86.28"
+
+# WireGuard VPN tunnel (remote LAN access, UDP 51820)
+wireguard_vmid = 208
+wireguard_ip   = "192.168.86.39"
 
 # --- TrueNAS Scale NAS ---
 # Centralized storage for media, backups, ISOs
