@@ -122,6 +122,16 @@ output "authelia_vmid" {
   value       = proxmox_virtual_environment_container.authelia.vm_id
 }
 
+output "wireguard_ip" {
+  description = "WireGuard VPN tunnel LXC IP"
+  value       = var.wireguard_ip
+}
+
+output "wireguard_vmid" {
+  description = "WireGuard LXC VM ID"
+  value       = proxmox_virtual_environment_container.wireguard.vm_id
+}
+
 output "domain" {
   description = "Base domain for services"
   value       = var.domain

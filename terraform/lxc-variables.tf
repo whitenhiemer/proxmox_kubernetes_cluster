@@ -224,6 +224,19 @@ variable "authelia_ip" {
   default     = "192.168.86.28"
 }
 
+# --- WireGuard VPN LXC ---
+variable "wireguard_vmid" {
+  description = "VM ID for the WireGuard VPN tunnel LXC"
+  type        = number
+  default     = 208
+}
+
+variable "wireguard_ip" {
+  description = "Static IP for the WireGuard LXC"
+  type        = string
+  default     = "192.168.86.39"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

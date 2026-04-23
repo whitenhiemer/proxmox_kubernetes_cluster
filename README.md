@@ -20,6 +20,8 @@ ISP Modem/ONT
     |       +-- Authelia LXC (192.168.86.28) -- SSO gateway (forwardAuth + TOTP)
     |       +-- K8s VIP (192.168.86.100)
     |
+    +-- WireGuard LXC (192.168.86.39) -- VPN tunnel (UDP 51820)
+    |
     +-- TrueNAS VM (192.168.86.40) -- NFS media storage for ARR/Plex/Jellyfin
     +-- K8s Cluster (192.168.86.101, 192.168.86.111-112)
 ```
@@ -106,6 +108,7 @@ make harden
 | `monitoring`        | 3     | Deploy monitoring stack (Prometheus, Grafana)  |
 | `openclaw`          | 3     | Deploy OpenClaw AI agent framework             |
 | `authelia`          | 3     | Deploy Authelia SSO gateway (requires password)|
+| `wireguard`         | 3     | Deploy WireGuard VPN tunnel for remote access  |
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
@@ -143,6 +146,7 @@ make harden
 │   ├── lxc-monitoring.tf                 # Monitoring stack LXC (Docker)
 │   ├── lxc-openclaw.tf                  # OpenClaw AI agent LXC (Docker)
 │   ├── lxc-authelia.tf                  # Authelia SSO gateway LXC (Docker)
+│   ├── lxc-wireguard.tf                 # WireGuard VPN tunnel LXC
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
 │   ├── vm-truenas-variables.tf           # TrueNAS variables
 │   ├── vm-homeassistant.tf               # Home Assistant OS VM
@@ -170,6 +174,7 @@ make harden
 │   │   ├── setup-monitoring.yml          # Deploy monitoring stack (Docker)
 │   │   ├── setup-openclaw.yml           # Deploy OpenClaw AI agent (Docker)
 │   │   ├── setup-authelia.yml           # Deploy Authelia SSO gateway (Docker)
+│   │   ├── setup-wireguard.yml          # Deploy WireGuard VPN tunnel
 │   │   ├── patch-proxmox.yml              # Patch Proxmox VE hosts
 │   │   ├── patch-lxc.yml                 # Patch Debian packages on LXCs
 │   │   ├── patch-docker.yml              # Update Docker images on all stacks
@@ -183,6 +188,9 @@ make harden
 │       │   ├── docker-compose.yml        # Authelia SSO Docker Compose
 │       │   ├── configuration.yml         # Authelia server + access control config
 │       │   └── users_database.yml        # File-based user database template
+│       ├── wireguard/
+│       │   ├── wg0.conf.j2              # Server config Jinja2 template
+│       │   └── client.conf.j2           # Client config Jinja2 template
 │       ├── monitoring/
 │       │   ├── docker-compose.yml        # Monitoring stack Docker Compose
 │       │   ├── prometheus/
@@ -268,6 +276,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | Monitoring       | LXC  | Ready       | `grafana.woodhead.tech`    |
 | OpenClaw         | LXC  | Ready       | `claw.woodhead.tech`       |
 | Authelia SSO     | LXC  | Ready       | `auth.woodhead.tech`       |
+| WireGuard VPN    | LXC  | Ready       | UDP 51820 (not HTTP)       |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 

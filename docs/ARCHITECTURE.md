@@ -82,12 +82,12 @@ and resource allocation.
             |   | NFS:2049 |   | .31 :8123    |
             |   +----------+   +--------------+
             |
-            |   +----------+   +----------+
-            |   | OpenClaw |   | Authelia |
-            |   | LXC 206  |   | LXC 207  |
-            |   | .26      |   | .27      |
-            |   | :18789   |   | :9091    |
-            |   +----------+   +----------+
+            |   +----------+   +----------+   +-----------+
+            |   | OpenClaw |   | Authelia |   | WireGuard |
+            |   | LXC 206  |   | LXC 207  |   | LXC 208   |
+            |   | .26      |   | .28      |   | .39       |
+            |   | :18789   |   | :9091    |   | UDP:51820 |
+            |   +----------+   +----------+   +-----------+
             |
     +-------+-------+
     | Traefik       |
@@ -127,6 +127,7 @@ and resource allocation.
 | 192.168.86.25      | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
 | 192.168.86.26      | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
 | 192.168.86.28      | authelia         | LXC    | 207   | SSO gateway (forwardAuth + TOTP)    |
+| 192.168.86.39      | wireguard        | LXC    | 208   | WireGuard VPN tunnel (UDP 51820)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
@@ -174,10 +175,11 @@ An external request to `https://recipes.woodhead.tech`:
 
 Configure via Google Home app > WiFi > Settings > Advanced Networking > Port Management.
 
-| WAN Port | Destination        | Protocol | Purpose             |
-|----------|--------------------|----------|---------------------|
-| 80       | 192.168.86.20:80   | TCP      | HTTP -> Traefik     |
-| 443      | 192.168.86.20:443  | TCP      | HTTPS -> Traefik    |
+| WAN Port | Destination           | Protocol | Purpose               |
+|----------|-----------------------|----------|-----------------------|
+| 80       | 192.168.86.20:80      | TCP      | HTTP -> Traefik       |
+| 443      | 192.168.86.20:443     | TCP      | HTTPS -> Traefik      |
+| 51820    | 192.168.86.39:51820   | UDP      | WireGuard VPN tunnel  |
 
 ---
 
@@ -335,6 +337,7 @@ NFS mount (/media, read-only)
 - All services -> Google Nest gateway (routing, DHCP, DNS)
 - All external access -> Traefik (TLS, routing)
 - Protected services -> Authelia (forwardAuth SSO, TOTP 2FA)
+- Remote VPN access -> WireGuard (UDP 51820 port forward required)
 - ARR stack media storage -> TrueNAS (NFS at `/media`)
 - Plex/Jellyfin media library -> TrueNAS (NFS at `/media`, read-only)
 - Plex/Jellyfin transcoding -> iGPU (`/dev/dri` passthrough from Proxmox host)
@@ -368,6 +371,7 @@ in parallel after the host is ready.
 | auto  | Monitoring LXC       | 205   | --     | Starts on boot, scrapes all services        |
 | auto  | OpenClaw LXC         | 206   | --     | Starts on boot, AI agent framework          |
 | auto  | Authelia LXC         | 207   | --     | Starts on boot, SSO gateway                 |
+| auto  | WireGuard LXC        | 208   | --     | Starts on boot, VPN tunnel                  |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
 
 ---
@@ -441,6 +445,7 @@ in parallel after the host is ready.
 | Monitoring LXC    | 2     | 2048     | --       | Prometheus, Grafana, exporters  |
 | OpenClaw LXC      | 2     | 2048     | --       | AI agent gateway + CLI          |
 | Authelia LXC      | 1     | 1024     | --       | SSO gateway (forwardAuth + TOTP)|
+| WireGuard LXC     | 1     | 256      | --       | Kernel WireGuard, privileged LXC|
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
@@ -459,15 +464,16 @@ in parallel after the host is ready.
 | Monitoring LXC    | 20 GB  | local-lvm   | --        | Prometheus TSDB (30-day retention)  |
 | OpenClaw LXC      | 20 GB  | local-lvm   | --        | Source build + Docker images + workspace |
 | Authelia LXC      | 4 GB   | local-lvm   | --        | Docker + config + SQLite session store   |
+| WireGuard LXC     | 2 GB   | local-lvm   | --        | WireGuard tools + configs                |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
 
 ### Total resource budget (all services running)
 
 | Resource | Total       | Notes                                      |
 |----------|-------------|--------------------------------------------|
-| CPU      | ~27 cores   | Shared across Proxmox nodes                |
-| RAM      | ~37.5 GB    | TrueNAS benefits from more (ZFS ARC)       |
-| local-lvm| ~140 GB     | OS disks for VMs + all LXCs                |
+| CPU      | ~28 cores   | Shared across Proxmox nodes                |
+| RAM      | ~37.75 GB   | TrueNAS benefits from more (ZFS ARC)       |
+| local-lvm| ~142 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
 ---
@@ -484,6 +490,7 @@ in parallel after the host is ready.
 | `proxmox_virtual_environment_container.monitoring`| lxc-monitoring.tf           | LXC  | 205 |
 | `proxmox_virtual_environment_container.openclaw`  | lxc-openclaw.tf             | LXC  | 206 |
 | `proxmox_virtual_environment_container.authelia`  | lxc-authelia.tf             | LXC  | 207 |
+| `proxmox_virtual_environment_container.wireguard` | lxc-wireguard.tf            | LXC  | 208 |
 | `proxmox_virtual_environment_vm.truenas`          | vm-truenas.tf               | VM   | 300 |
 | `proxmox_virtual_environment_vm.homeassistant`    | vm-homeassistant.tf         | VM   | 301 |
 | `proxmox_virtual_environment_download_file.haos_image` | vm-homeassistant.tf    | File | --  |
@@ -700,10 +707,11 @@ Guest (40) -----> ALL internal     DENY    (full isolation)
 
 Configured via Google Home app > WiFi > Advanced Networking > Port Management.
 
-| WAN Port | Destination        | Protocol | Purpose             |
-|----------|--------------------|----------|---------------------|
-| 80       | 192.168.86.20:80   | TCP      | HTTP -> Traefik     |
-| 443      | 192.168.86.20:443  | TCP      | HTTPS -> Traefik    |
+| WAN Port | Destination           | Protocol | Purpose               |
+|----------|-----------------------|----------|-----------------------|
+| 80       | 192.168.86.20:80      | TCP      | HTTP -> Traefik       |
+| 443      | 192.168.86.20:443     | TCP      | HTTPS -> Traefik      |
+| 51820    | 192.168.86.39:51820   | UDP      | WireGuard VPN tunnel  |
 
 Google Nest handles NAT and basic firewall (blocks unsolicited inbound by default).
 No advanced firewall rules, IDS/IPS, or VPN server available on consumer hardware.

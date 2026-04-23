@@ -15,13 +15,14 @@
 #   make monitoring     - Deploy monitoring stack
 #   make openclaw       - Deploy OpenClaw AI agent
 #   make authelia       - Deploy Authelia SSO gateway
+#   make wireguard      - Deploy WireGuard VPN tunnel
 #   make bootstrap      - Bootstrap Talos K8s cluster
 #   make k8s-base       - Apply base K8s manifests
 #   make harden         - Security hardening
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authelia \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authelia wireguard \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker destroy clean help
 
@@ -83,7 +84,8 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.jellyfin \
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
-		-target=proxmox_virtual_environment_container.authelia
+		-target=proxmox_virtual_environment_container.authelia \
+		-target=proxmox_virtual_environment_container.wireguard
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -94,7 +96,8 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.jellyfin \
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
-		-target=proxmox_virtual_environment_container.authelia
+		-target=proxmox_virtual_environment_container.authelia \
+		-target=proxmox_virtual_environment_container.wireguard
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -135,6 +138,9 @@ authelia: ## Deploy Authelia SSO gateway into its LXC
 	fi
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-authelia.yml \
 		--extra-vars "authelia_admin_password=$(AUTHELIA_ADMIN_PASSWORD)"
+
+wireguard: ## Deploy WireGuard VPN tunnel into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-wireguard.yml
 
 # ===== Phase 4: Talos K8s Cluster =====
 
