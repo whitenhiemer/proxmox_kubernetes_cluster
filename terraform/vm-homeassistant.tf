@@ -58,12 +58,19 @@ resource "proxmox_virtual_environment_vm" "homeassistant" {
     dedicated = var.homeassistant_memory
   }
 
-  # HAOS boot disk -- imported from the pre-decompressed qcow2 on local ISO storage
+  # HAOS boot disk -- Terraform creates a blank disk, then the HAOS qcow2 is
+  # imported via 'qm importdisk' after VM creation. The lifecycle block below
+  # ignores disk changes so Terraform won't revert the import.
+  #
+  # After 'make apply-homeassistant', run:
+  #   qm importdisk 301 /var/lib/vz/template/iso/haos-ova.qcow2 local-lvm
+  #   qm set 301 -scsi0 local-lvm:vm-301-disk-1
+  #   qm set 301 -boot order=scsi0
   disk {
     datastore_id = var.lxc_storage
     interface    = "scsi0"
-    file_id      = "local:iso/haos-ova.qcow2"
     size         = var.homeassistant_disk_size
+    file_format  = "raw"
     discard      = "on"
     ssd          = true
   }
