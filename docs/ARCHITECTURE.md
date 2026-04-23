@@ -78,8 +78,8 @@ and resource allocation.
             |   +----------+   +--------------+
             |   | TrueNAS  |   | Home         |
             |   | VM 300   |   | Assistant    |
-            |   | .30      |   | VM 301       |
-            |   | NFS:2049 |   | .31 :8123    |
+            |   | .40      |   | VM 301       |
+            |   | NFS:2049 |   | .41 :8123    |
             |   +----------+   +--------------+
             |
             |   +----------+   +----------+   +-----------+
@@ -448,7 +448,7 @@ in parallel after the host is ready.
 | K8s Control Plane | 2     | 4096     | x86-64   | Per node, default 1 node        |
 | K8s Workers       | 4     | 8192     | x86-64   | Per node, default 2 nodes       |
 | Traefik LXC       | 1     | 256      | --       | Lightweight reverse proxy       |
-| Recipe Site LXC   | 1     | 512      | --       | Go binary + SQLite              |
+| Recipe Site LXC   | 1     | 2048     | --       | Go binary + SQLite (2GB for Go compilation) |
 | Plex LXC          | 2     | 2048     | --       | iGPU passthrough for Quick Sync |
 | Jellyfin LXC      | 2     | 2048     | --       | iGPU passthrough for VAAPI      |
 | Monitoring LXC    | 2     | 2048     | --       | Prometheus, Grafana, exporters  |
@@ -467,7 +467,7 @@ in parallel after the host is ready.
 | K8s CP            | 50 GB  | ceph-pool   | raw       | etcd + system               |
 | K8s Workers       | 100 GB | ceph-pool   | raw       | Container images + volumes  |
 | Traefik LXC       | 4 GB   | local-lvm   | --        | Binary + certs + configs    |
-| Recipe Site LXC   | 4 GB   | local-lvm   | --        | Go binary + SQLite DB       |
+| Recipe Site LXC   | 8 GB   | local-lvm   | --        | Go toolchain + app + SQLite DB |
 | Plex LXC          | 8 GB   | local-lvm   | --        | Plex binary + DB (media on NAS) |
 | Jellyfin LXC      | 8 GB   | local-lvm   | --        | Jellyfin binary + DB (media on NAS) |
 | Monitoring LXC    | 20 GB  | local-lvm   | --        | Prometheus TSDB (30-day retention)  |
@@ -481,8 +481,8 @@ in parallel after the host is ready.
 | Resource | Total       | Notes                                      |
 |----------|-------------|--------------------------------------------|
 | CPU      | ~28 cores   | Shared across Proxmox nodes                |
-| RAM      | ~37.75 GB   | TrueNAS benefits from more (ZFS ARC)       |
-| local-lvm| ~142 GB     | OS disks for VMs + all LXCs                |
+| RAM      | ~39.25 GB   | TrueNAS benefits from more (ZFS ARC)       |
+| local-lvm| ~146 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
 ### Resource Balancing
@@ -571,12 +571,12 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | Subdomain              | Backend              | Port  | Config File           | Status    |
 |------------------------|----------------------|-------|-----------------------|-----------|
 | recipes.woodhead.tech  | 192.168.86.21        | 80    | recipe-site.yml       | Active    |
-| prowlarr.woodhead.tech | 192.168.86.22        | 9696  | arr-stack.yml         | Commented |
-| sonarr.woodhead.tech   | 192.168.86.22        | 8989  | arr-stack.yml         | Commented |
-| radarr.woodhead.tech   | 192.168.86.22        | 7878  | arr-stack.yml         | Commented |
-| bazarr.woodhead.tech   | 192.168.86.22        | 6767  | arr-stack.yml         | Commented |
-| requests.woodhead.tech | 192.168.86.22        | 5055  | arr-stack.yml         | Commented |
-| sabnzbd.woodhead.tech  | 192.168.86.22        | 8080  | arr-stack.yml         | Commented |
+| prowlarr.woodhead.tech | 192.168.86.22        | 9696  | arr-stack.yml         | Active (Authelia 2FA) |
+| sonarr.woodhead.tech   | 192.168.86.22        | 8989  | arr-stack.yml         | Active (Authelia 2FA) |
+| radarr.woodhead.tech   | 192.168.86.22        | 7878  | arr-stack.yml         | Active (Authelia 2FA) |
+| bazarr.woodhead.tech   | 192.168.86.22        | 6767  | arr-stack.yml         | Active (Authelia 2FA) |
+| requests.woodhead.tech | 192.168.86.22        | 5055  | arr-stack.yml         | Active (Authelia 2FA) |
+| sabnzbd.woodhead.tech  | 192.168.86.22        | 8080  | arr-stack.yml         | Active (Authelia 2FA) |
 | plex.woodhead.tech     | 192.168.86.23        | 32400 | media-stack.yml       | Commented |
 | jellyfin.woodhead.tech | 192.168.86.24        | 8096  | media-stack.yml       | Commented |
 | nas.woodhead.tech      | 192.168.86.40        | 443   | media-stack.yml       | Commented |
@@ -584,9 +584,9 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | grafana.woodhead.tech  | 192.168.86.25        | 3000  | monitoring.yml        | Active    |
 | prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Active (Authelia 2FA) |
 | alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Active (Authelia 2FA) |
-| claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Commented |
+| claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Active    |
 | auth.woodhead.tech     | 192.168.86.28        | 9091  | authelia.yml          | Active    |
-| traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Commented |
+| traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authelia 2FA) |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 
 Routes are in `ansible/files/traefik/dynamic/`. Uncomment as you deploy each service.

@@ -65,7 +65,7 @@ echo "deb http://download.proxmox.com/debian/ceph-reef bookworm no-subscription"
 apt update
 ```
 
-### 0.3 Configure Ceph
+### 0.4 Configure Ceph
 
 Via the Proxmox web UI (Datacenter > Ceph):
 1. Install Ceph on each node
@@ -78,7 +78,7 @@ ceph status
 ceph osd pool ls  # Should show "ceph-pool"
 ```
 
-### 0.4 Create API Token
+### 0.5 Create API Token
 
 Via Proxmox web UI:
 1. Datacenter > Permissions > API Tokens
@@ -89,7 +89,7 @@ Via Proxmox web UI:
 
 Format: `root@pam!terraform=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
 
-### 0.5 Run Base Setup Playbook
+### 0.6 Run Base Setup Playbook
 
 Update the inventory with your node IPs:
 ```bash
@@ -220,8 +220,12 @@ This creates:
 - 1 Traefik LXC (ID 200)
 - 1 Recipe site LXC (ID 201)
 - 1 ARR stack LXC (ID 202)
+- 1 Plex LXC (ID 203)
+- 1 Jellyfin LXC (ID 204)
 - 1 Monitoring LXC (ID 205)
 - 1 OpenClaw LXC (ID 206)
+- 1 Authelia LXC (ID 207)
+- 1 WireGuard LXC (ID 208)
 
 Or create infrastructure piecemeal:
 ```bash
@@ -675,16 +679,83 @@ curl -I https://grafana.woodhead.tech
 
 ---
 
-## Phase 11: Security Hardening
+## Phase 11: Authelia SSO Gateway
 
-### 11.1 Verify SSH Key Access
+### 11.1 Deploy
+
+```bash
+make authelia AUTHELIA_ADMIN_PASSWORD="your-strong-password"
+```
+
+This installs Docker, generates cryptographic secrets (JWT, session, storage encryption),
+hashes the admin password with argon2id, and starts Authelia.
+
+### 11.2 Configure
+
+1. Access at `http://192.168.86.28:9091`
+2. Log in with `admin` / the password you set
+3. Register a TOTP device (Authy, Google Authenticator, etc.)
+
+### 11.3 Protect Services
+
+Authelia acts as a forwardAuth middleware for Traefik. Services with
+`middlewares: [authelia@file]` in their Traefik dynamic config require
+authentication before access. Prometheus and Alertmanager are protected by default.
+
+### 11.4 Enable Traefik Route
+
+The route at `ansible/files/traefik/dynamic/authelia.yml` (`auth.woodhead.tech`)
+is already active. Redeploy Traefik if needed:
+```bash
+make traefik
+```
+
+---
+
+## Phase 12: WireGuard VPN
+
+### 12.1 Deploy
+
+```bash
+make wireguard
+```
+
+This installs WireGuard, enables IP forwarding, generates server + client keypairs
+with preshared keys, templates `wg0.conf`, and starts the tunnel.
+
+### 12.2 Configure Port Forwarding
+
+In the Google Home app (WiFi > Settings > Advanced Networking > Port Management):
+- Forward UDP port 51820 -> `192.168.86.39:51820`
+
+### 12.3 Client Setup
+
+Client configs are generated on the LXC at `/etc/wireguard/clients/` and fetched
+to `ansible/files/wireguard/clients/` locally. Import the `.conf` file into the
+WireGuard app on your phone/laptop.
+
+### 12.4 Verify
+
+```bash
+# Check tunnel status on server
+ssh root@192.168.86.39 "wg show"
+
+# Test from client: ping the WireGuard server
+ping 10.0.0.1
+```
+
+---
+
+## Phase 13: Security Hardening
+
+### 13.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@192.168.86.29  # Should work without password
 ```
 
-### 11.2 Apply Hardening
+### 13.2 Apply Hardening
 
 ```bash
 make harden
