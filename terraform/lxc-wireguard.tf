@@ -69,4 +69,13 @@ resource "proxmox_virtual_environment_container" "wireguard" {
     }
   }
 
+  lifecycle {
+    # These are creation-time attributes that Terraform can't read back
+    # from an imported container. Ignoring prevents destroy/recreate drift.
+    ignore_changes = [
+      unprivileged,
+      operating_system[0].template_file_id,
+      initialization[0].user_account,
+    ]
+  }
 }
