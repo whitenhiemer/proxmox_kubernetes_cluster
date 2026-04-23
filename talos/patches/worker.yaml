@@ -3,6 +3,19 @@
 # Applied via: talosctl gen config ... --config-patch-worker @patches/worker.yaml
 
 machine:
+  network:
+    interfaces:
+      - deviceSelector:
+          driver: virtio_net
+        addresses:
+          - ${WORKER_IP}/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 192.168.86.1
+    nameservers:
+      - 192.168.86.1
+      - 1.1.1.1
+
   # Install to the first virtio disk
   install:
     disk: /dev/sda

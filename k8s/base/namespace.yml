@@ -20,9 +20,12 @@ metadata:
     app.kubernetes.io/managed-by: manual
 ---
 # Namespace for monitoring and observability (Prometheus, Grafana, etc.)
+# Privileged: node-exporter needs hostNetwork, hostPID, hostPath
 apiVersion: v1
 kind: Namespace
 metadata:
   name: monitoring
   labels:
     app.kubernetes.io/managed-by: manual
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged

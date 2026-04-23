@@ -9,8 +9,16 @@ machine:
     interfaces:
       - deviceSelector:
           driver: virtio_net
+        addresses:
+          - ${CONTROLPLANE_IP}/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 192.168.86.1
         vip:
-          ip: ${CLUSTER_VIP}  # Replaced by envsubst or set manually
+          ip: ${CLUSTER_VIP}
+    nameservers:
+      - 192.168.86.1
+      - 1.1.1.1
 
   # Install to the first virtio disk
   install:
