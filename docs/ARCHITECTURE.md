@@ -440,7 +440,7 @@ in parallel after the host is ready.
 | Jellyfin LXC      | 2     | 2048     | --       | iGPU passthrough for VAAPI      |
 | Monitoring LXC    | 2     | 2048     | --       | Prometheus, Grafana, exporters  |
 | OpenClaw LXC      | 2     | 2048     | --       | AI agent gateway + CLI          |
-| Authelia LXC      | 1     | 512      | --       | SSO gateway (forwardAuth + TOTP)|
+| Authelia LXC      | 1     | 1024     | --       | SSO gateway (forwardAuth + TOTP)|
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
