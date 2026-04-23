@@ -57,9 +57,9 @@ scrape_configs:
       module: [default]
     static_configs:
       - targets:
-          - 192.168.86.29    # pve1
-          # - 192.168.86.30  # pve2 (uncomment for multi-node)
-          # - 192.168.86.31  # pve3 (uncomment for 3-node cluster)
+          - 192.168.86.29    # pve1 (thinkcentre1)
+          - 192.168.86.30    # pve2 (thinkcentre2)
+          - 192.168.86.31    # pve3 (thinkcentre3)
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target

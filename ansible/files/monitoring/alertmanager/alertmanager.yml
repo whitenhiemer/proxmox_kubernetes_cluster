@@ -41,10 +41,11 @@ route:
 
 # --- Receivers ---
 receivers:
-  # Discord webhook (replace URL at deploy time)
+  # Discord native receiver (Alertmanager v0.25.0+)
+  # Webhook URL replaced at deploy time via --extra-vars
   - name: "discord"
-    webhook_configs:
-      - url: "DISCORD_WEBHOOK_URL"
+    discord_configs:
+      - webhook_url: "DISCORD_WEBHOOK_URL"
         send_resolved: true
 
   # Null receiver (swallows alerts -- used for info severity)

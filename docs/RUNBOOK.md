@@ -575,22 +575,32 @@ Via Proxmox web UI:
    - Uncheck "Privilege Separation"
 5. Save the token value
 
-### 10.3 Deploy Monitoring Stack
+### 10.3 Create Discord Webhook
+
+1. Create a Discord server (or use existing)
+2. Create a `#homelab-alerts` channel
+3. Channel Settings > Integrations > Webhooks > New Webhook
+4. Name it "Alertmanager" and select the `#homelab-alerts` channel
+5. Copy the webhook URL (format: `https://discord.com/api/webhooks/<id>/<token>`)
+
+### 10.4 Deploy Monitoring Stack
 
 Basic deployment (configure credentials later):
 ```bash
 make monitoring
 ```
 
-With all credentials:
+With all credentials (recommended):
 ```bash
-cd ansible && ansible-playbook playbooks/setup-monitoring.yml \
-  --extra-vars "pve_user=monitoring@pve pve_token_name=prometheus pve_token_value=YOUR_TOKEN" \
-  --extra-vars "grafana_password=your-secure-password" \
-  --extra-vars "discord_webhook=https://discord.com/api/webhooks/..."
+make monitoring \
+  DISCORD_WEBHOOK="https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN" \
+  GRAFANA_PASSWORD="your-secure-password" \
+  PVE_USER=monitoring@pve \
+  PVE_TOKEN_NAME=prometheus \
+  PVE_TOKEN_VALUE="YOUR_TOKEN_VALUE"
 ```
 
-### 10.4 Enable Traefik Metrics
+### 10.5 Enable Traefik Metrics
 
 Redeploy Traefik to add the Prometheus metrics entrypoint:
 ```bash
@@ -599,27 +609,37 @@ make traefik
 
 This adds a `:8082` metrics endpoint that Prometheus scrapes for request data.
 
-### 10.5 Import Grafana Dashboards
+### 10.6 Grafana Dashboards
 
-Access Grafana at `http://192.168.86.25:3000` (default: admin/admin).
+Four dashboards are auto-provisioned from JSON files in `ansible/files/monitoring/grafana/dashboards/`:
 
-Import community dashboards by ID:
-1. Dashboards > New > Import
-2. Enter dashboard ID and select Prometheus datasource:
-   - `10347` -- Proxmox VE (via PVE Exporter)
-   - `14282` -- Docker containers (cAdvisor)
-   - `17346` -- Traefik 3.x
-   - `7587` -- Blackbox exporter (service probes)
-   - `315` -- Kubernetes cluster overview
+| Dashboard | Source ID | Purpose |
+|-----------|-----------|---------|
+| Proxmox VE | 10347 | Host/VM/LXC resource metrics (via PVE Exporter) |
+| Docker Containers | 14282 | Container CPU, memory, network (via cAdvisor) |
+| Traefik 3.x | 17346 | Request rate, latency, errors |
+| Blackbox Exporter | 7587 | Service uptime, response time |
 
-### 10.6 Enable Traefik Route (Optional)
-
-Uncomment routes in `ansible/files/traefik/dynamic/monitoring.yml` and:
+These load automatically on first boot -- no manual import needed. To add more,
+download the JSON from grafana.com, replace `${DS_PROMETHEUS}` with `Prometheus`,
+and place the file in the dashboards directory. Redeploy:
 ```bash
-make traefik
+make monitoring
 ```
 
-### 10.7 Deploy K8s Exporters (Optional)
+For the Kubernetes cluster overview dashboard (ID `315`), import manually after
+bootstrapping K8s (it requires kube-state-metrics data to be useful).
+
+### 10.7 Traefik Routes
+
+Monitoring routes are pre-configured in `ansible/files/traefik/dynamic/monitoring.yml`:
+- `grafana.woodhead.tech` -> :3000 (open)
+- `prometheus.woodhead.tech` -> :9090 (behind Authelia 2FA)
+- `alertmanager.woodhead.tech` -> :9093 (behind Authelia 2FA)
+
+These are deployed automatically by `make traefik`. No uncommenting needed.
+
+### 10.8 Deploy K8s Exporters (Optional)
 
 After the K8s cluster is bootstrapped:
 ```bash
@@ -632,7 +652,7 @@ Then uncomment the K8s scrape configs in `ansible/files/monitoring/prometheus/pr
 ssh root@192.168.86.25 "cd /opt/monitoring && docker compose restart prometheus"
 ```
 
-### 10.8 Verify
+### 10.9 Verify
 
 ```bash
 # Prometheus healthy
@@ -641,8 +661,16 @@ curl http://192.168.86.25:9090/-/healthy
 # Grafana healthy
 curl http://192.168.86.25:3000/api/health
 
-# Check scrape targets
+# Check scrape targets (all jobs should be "up")
 curl -s http://192.168.86.25:9090/api/v1/targets | jq '.data.activeTargets[] | {job: .labels.job, health: .health}'
+
+# Test Discord alerting (should appear in #homelab-alerts within 30s)
+curl -X POST http://192.168.86.25:9093/api/v1/alerts \
+  -H 'Content-Type: application/json' \
+  -d '[{"labels":{"alertname":"TestAlert","severity":"warning"},"annotations":{"description":"Test alert from homelab"}}]'
+
+# Traefik routes (after make traefik)
+curl -I https://grafana.woodhead.tech
 ```
 
 ---

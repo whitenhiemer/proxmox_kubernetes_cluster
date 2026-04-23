@@ -219,6 +219,17 @@
         mode: "0644"
       notify: Restart monitoring stack
 
+    - name: Copy Grafana dashboard JSON files
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ mon_base_dir }}/grafana/data/dashboards/"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      with_fileglob:
+        - "{{ playbook_dir }}/../files/monitoring/grafana/dashboards/*.json"
+      notify: Restart monitoring stack
+
     # --- Credential Injection ---
     # Grafana admin password (set via environment in compose)
     - name: Create Grafana environment file

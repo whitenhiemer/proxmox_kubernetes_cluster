@@ -124,9 +124,11 @@ jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-jellyfin.yml
 
 monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager) into its LXC
-	@# Pass DISCORD_WEBHOOK env var to enable alerting: make monitoring DISCORD_WEBHOOK=https://...
+	@# Usage: make monitoring DISCORD_WEBHOOK=https://... GRAFANA_PASSWORD=... PVE_USER=monitoring@pve PVE_TOKEN_NAME=prometheus PVE_TOKEN_VALUE=...
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml \
-		$(if $(DISCORD_WEBHOOK),--extra-vars "discord_webhook=$(DISCORD_WEBHOOK)")
+		$(if $(DISCORD_WEBHOOK),--extra-vars "discord_webhook=$(DISCORD_WEBHOOK)") \
+		$(if $(GRAFANA_PASSWORD),--extra-vars "grafana_password=$(GRAFANA_PASSWORD)") \
+		$(if $(PVE_USER),--extra-vars "pve_user=$(PVE_USER) pve_token_name=$(PVE_TOKEN_NAME) pve_token_value=$(PVE_TOKEN_VALUE)")
 
 openclaw: ## Deploy OpenClaw AI agent framework into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-openclaw.yml

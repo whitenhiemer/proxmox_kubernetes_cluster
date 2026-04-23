@@ -83,11 +83,18 @@ and resource allocation.
             |   +----------+   +--------------+
             |
             |   +----------+   +----------+   +-----------+
-            |   | OpenClaw |   | Authelia |   | WireGuard |
-            |   | LXC 206  |   | LXC 207  |   | LXC 208   |
-            |   | .26      |   | .28      |   | .39       |
-            |   | :18789   |   | :9091    |   | UDP:51820 |
-            |   +----------+   +----------+   +-----------+
+            |   | Monitoring|   | OpenClaw |   | Authelia  |
+            |   | LXC 205  |   | LXC 206  |   | LXC 207   |
+            |   | .25      |   | .26      |   | .28       |
+            |   | :9090    |   | :18789   |   | :9091     |
+            |   | :3000    |   +----------+   +----------+
+            |   | :9093    |
+            |   | -> Discord|   +-----------+
+            |   +----------+   | WireGuard |
+            |                  | LXC 208   |
+            |                  | .39       |
+            |                  | UDP:51820 |
+            |                  +-----------+
             |
     +-------+-------+
     | Traefik       |
@@ -321,6 +328,7 @@ obtained via Cloudflare DNS-01 challenges.
 | Monitoring     |  Scrapes all services via
 | (Prometheus)   |  PVE Exporter, Blackbox,
 | (observes all) |  Traefik metrics, K8s exporters
+|                |  Alerts -> Discord via Alertmanager
 +----------------+
      |
 NFS mount (/media, read-write)
@@ -350,6 +358,7 @@ NFS mount (/media, read-only)
 - Services without Traefik: accessible via direct IP:port (no TLS, no subdomain)
 - K8s without MetalLB: ClusterIP services only (no external access)
 - Monitoring without PVE token: Proxmox metrics unavailable (all other scrapes still work)
+- Monitoring without Discord webhook: alerts fire but no notifications sent
 - Monitoring without K8s manifests: K8s metrics unavailable (deploy kube-state-metrics later)
 
 ---
@@ -572,9 +581,9 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | jellyfin.woodhead.tech | 192.168.86.24        | 8096  | media-stack.yml       | Commented |
 | nas.woodhead.tech      | 192.168.86.40        | 443   | media-stack.yml       | Commented |
 | home.woodhead.tech     | 192.168.86.41        | 8123  | homeassistant.yml     | Commented |
-| grafana.woodhead.tech  | 192.168.86.25        | 3000  | monitoring.yml        | Commented |
-| prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Commented |
-| alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Commented |
+| grafana.woodhead.tech  | 192.168.86.25        | 3000  | monitoring.yml        | Active    |
+| prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Active (Authelia 2FA) |
+| alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Active (Authelia 2FA) |
 | claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Commented |
 | auth.woodhead.tech     | 192.168.86.28        | 9091  | authelia.yml          | Active    |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Commented |
