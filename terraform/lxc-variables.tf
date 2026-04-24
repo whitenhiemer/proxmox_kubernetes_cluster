@@ -250,6 +250,13 @@ variable "libby_alert_ip" {
   default     = "192.168.86.27"
 }
 
+variable "libby_alert_root_password" {
+  description = "Temporary root password for console access during initial setup"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

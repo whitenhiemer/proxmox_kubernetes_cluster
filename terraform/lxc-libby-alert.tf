@@ -56,7 +56,8 @@ resource "proxmox_virtual_environment_container" "libby_alert" {
     }
 
     user_account {
-      keys = var.ssh_public_key != "" ? [var.ssh_public_key] : []
+      keys     = var.ssh_public_key != "" ? [var.ssh_public_key] : []
+      password = var.libby_alert_root_password
     }
   }
 
@@ -64,9 +65,12 @@ resource "proxmox_virtual_environment_container" "libby_alert" {
     nesting = true
   }
 
+  hook_script_file_id = proxmox_virtual_environment_file.lxc_ssh_fix.id
+
   lifecycle {
     ignore_changes = [
       initialization[0].dns[0].domain,
+      hook_script_file_id,
     ]
   }
 }
