@@ -237,6 +237,19 @@ variable "wireguard_ip" {
   default     = "192.168.86.39"
 }
 
+# --- Libby Alert LXC ---
+variable "libby_alert_vmid" {
+  description = "VM ID for the Libby life alert website LXC"
+  type        = number
+  default     = 209
+}
+
+variable "libby_alert_ip" {
+  description = "Static IP for the Libby alert LXC"
+  type        = string
+  default     = "192.168.86.27"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

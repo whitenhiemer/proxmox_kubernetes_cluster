@@ -1,0 +1,20 @@
+# libby-alert.yml - Libby life alert QR website route
+#
+# Routes alert.woodhead.tech to the libby-alert LXC.
+# No Authelia middleware -- this page must be publicly accessible.
+
+http:
+  routers:
+    libby-alert:
+      rule: "Host(`alert.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: libby-alert
+      tls:
+        certResolver: cloudflare
+
+  services:
+    libby-alert:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.27:8080"

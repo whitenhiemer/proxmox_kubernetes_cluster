@@ -137,6 +137,10 @@ homeassistant_balloon   = 1024   # Balloon floor
 homeassistant_disk_size = 32
 homeassistant_ip        = "192.168.86.41"
 
+# Libby life alert QR website
+libby_alert_vmid = 209
+libby_alert_ip   = "192.168.86.27"
+
 # --- Domain ---
 domain     = "woodhead.tech"
 acme_email = "admin@woodhead.tech"

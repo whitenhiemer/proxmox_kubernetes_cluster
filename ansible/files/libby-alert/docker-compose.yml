@@ -1,0 +1,21 @@
+# docker-compose.yml - Libby life alert QR website
+#
+# Single Go web server serving Libby's emergency info page.
+# Fires SMS (Twilio) + Discord alerts when the QR code is scanned.
+# Credentials loaded from libby-alert.env (injected by Ansible, not in git).
+
+services:
+  libby-alert:
+    image: libby-alert:local
+    container_name: libby-alert
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./libby-alert.env
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped

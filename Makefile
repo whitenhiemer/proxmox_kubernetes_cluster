@@ -85,7 +85,8 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
 		-target=proxmox_virtual_environment_container.authelia \
-		-target=proxmox_virtual_environment_container.wireguard
+		-target=proxmox_virtual_environment_container.wireguard \
+		-target=proxmox_virtual_environment_container.libby_alert
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -97,7 +98,8 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
 		-target=proxmox_virtual_environment_container.authelia \
-		-target=proxmox_virtual_environment_container.wireguard
+		-target=proxmox_virtual_environment_container.wireguard \
+		-target=proxmox_virtual_environment_container.libby_alert
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -143,6 +145,18 @@ authelia: ## Deploy Authelia SSO gateway into its LXC
 
 wireguard: ## Deploy WireGuard VPN tunnel into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-wireguard.yml
+
+libby-alert: ## Deploy Libby life alert QR website into its LXC
+	@if [ -z "$(TWILIO_SID)" ] || [ -z "$(TWILIO_TOKEN)" ] || [ -z "$(TWILIO_FROM)" ] || [ -z "$(ALERT_PHONES)" ]; then \
+		echo "Error: Required vars: TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM, ALERT_PHONES"; \
+		echo "Usage: make libby-alert TWILIO_SID=ACxxx TWILIO_TOKEN=xxx TWILIO_FROM=+1xxx ALERT_PHONES=+1xxx,+1yyy DISCORD_WEBHOOK=https://..."; \
+		exit 1; \
+	fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-libby-alert.yml \
+		--extra-vars "twilio_account_sid=$(TWILIO_SID) twilio_auth_token=$(TWILIO_TOKEN) \
+		twilio_from_number=$(TWILIO_FROM) alert_phone_numbers=$(ALERT_PHONES) \
+		$(if $(DISCORD_WEBHOOK),discord_webhook=$(DISCORD_WEBHOOK)) \
+		$(if $(COOLDOWN),alert_cooldown_minutes=$(COOLDOWN))"
 
 # ===== Phase 4: Talos K8s Cluster =====
 
