@@ -50,6 +50,7 @@
     - name: Ensure SSH listens on IPv4
       ansible.builtin.lineinfile:
         path: /etc/ssh/sshd_config
+        regexp: "^#?ListenAddress "
         line: "ListenAddress 0.0.0.0"
         create: false
 
