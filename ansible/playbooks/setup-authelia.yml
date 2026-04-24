@@ -37,6 +37,28 @@
         msg: "authelia_admin_password is required. Pass via --extra-vars \"authelia_admin_password=...\""
       when: authelia_admin_password == ""
 
+    # --- SSH Socket Activation Fix ---
+    # Debian 12.12 uses socket activation for SSH which only binds to IPv6.
+    # Disable the socket unit so sshd listens on 0.0.0.0 (IPv4) directly.
+    - name: Disable SSH socket activation
+      ansible.builtin.systemd:
+        name: ssh.socket
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Ensure SSH listens on IPv4
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?ListenAddress "
+        line: "ListenAddress 0.0.0.0"
+        create: false
+
+    - name: Restart SSH service
+      ansible.builtin.systemd:
+        name: ssh
+        state: restarted
+
     # --- System Setup ---
     - name: Update apt cache
       ansible.builtin.apt:

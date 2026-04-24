@@ -226,6 +226,7 @@ This creates:
 - 1 OpenClaw LXC (ID 206)
 - 1 Authelia LXC (ID 207)
 - 1 WireGuard LXC (ID 208)
+- 1 Libby Alert LXC (ID 209)
 
 Or create infrastructure piecemeal:
 ```bash
@@ -748,16 +749,81 @@ ping 10.0.0.1
 
 ---
 
-## Phase 13: Security Hardening
+## Phase 13: Libby Alert
 
-### 13.1 Verify SSH Key Access
+### 13.1 Create the LXC
+
+```bash
+make apply-lxc
+```
+
+This creates the libby-alert LXC (VM ID 209, 192.168.86.27).
+
+### 13.2 Set SSH Hookscript (Required for Debian 12.12)
+
+Debian 12.12 uses systemd socket activation for sshd, which only binds to IPv6 by default.
+Proxmox provides a hookscript (`lxc-ssh-fix.sh`) that runs post-start to fix this.
+
+The hookscript file is managed by Terraform, but setting it on the LXC requires `root@pam`
+auth (the API token gets a 403). Set it manually:
+
+```bash
+# Verify the snippet was uploaded
+ssh root@192.168.86.29 "ls /var/lib/vz/snippets/"
+# Should show: lxc-ssh-fix.sh
+
+# Make it executable and attach to the LXC
+ssh root@192.168.86.29 "chmod +x /var/lib/vz/snippets/lxc-ssh-fix.sh && pct set 209 --hookscript local:snippets/lxc-ssh-fix.sh"
+
+# Restart the LXC to trigger the hook
+ssh root@192.168.86.29 "pct reboot 209"
+```
+
+Verify SSH is now reachable:
+```bash
+ssh root@192.168.86.27
+```
+
+### 13.3 Deploy
+
+```bash
+make libby-alert \
+  TWILIO_ACCOUNT_SID="..." \
+  TWILIO_AUTH_TOKEN="..." \
+  TWILIO_FROM="..." \
+  TWILIO_TO="..." \
+  DISCORD_WEBHOOK="..."
+```
+
+### 13.4 Enable Traefik Route
+
+Uncomment the route in `ansible/files/traefik/dynamic/libby-alert.yml` and redeploy:
+```bash
+make traefik
+```
+
+### 13.5 Verify
+
+```bash
+# Direct
+curl http://192.168.86.27
+
+# Via Traefik
+curl https://alert.woodhead.tech
+```
+
+---
+
+## Phase 14: Security Hardening
+
+### 14.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@192.168.86.29  # Should work without password
 ```
 
-### 13.2 Apply Hardening
+### 14.2 Apply Hardening
 
 ```bash
 make harden
@@ -837,3 +903,74 @@ Then: `make apply` and `make bootstrap`
 - Check service: `ssh root@192.168.86.21 "systemctl status recipe-site"`
 - Check nginx: `ssh root@192.168.86.21 "systemctl status nginx"`
 - Check Traefik route: `curl -I https://recipes.woodhead.tech`
+
+### SSH refused on a new Debian 12.12 LXC (IPv6-only binding)
+Debian 12.12 uses systemd socket activation (`ssh.socket`) which binds sshd to `:::22` (IPv6) only.
+Proxmox LXC containers can't reach IPv6-only services via the veth bridge, so `ssh root@<ip>` gets refused.
+
+Fix via `pct exec` from the Proxmox host:
+```bash
+pct exec <vmid> -- bash -c "
+  systemctl stop ssh.socket
+  systemctl disable ssh.socket
+  echo 'ListenAddress 0.0.0.0' >> /etc/ssh/sshd_config
+  systemctl restart ssh
+"
+```
+
+Or trigger the hookscript by rebooting the LXC (if hookscript is attached):
+```bash
+pct reboot <vmid>
+```
+
+The Ansible playbooks for affected LXCs (libby-alert, authelia) include this fix as the first task,
+so re-running the playbook also resolves it.
+
+### Stale ARP entry causing TCP connection refusals
+If `ping` works but SSH (or other TCP) is refused with `Connection refused`, a stale ARP entry
+may be routing traffic to the wrong MAC address (a different LAN device).
+
+Diagnose:
+```bash
+# On the Proxmox host
+ip neigh show | grep <ip>
+# If MAC doesn't match the LXC's MAC (visible in Proxmox UI or pct config <vmid>), it's stale
+```
+
+Fix on Proxmox host:
+```bash
+ip neigh del <ip> dev vmbr0
+ping -c1 <ip>  # Forces ARP re-resolution
+```
+
+Fix on local machine (requires sudo):
+```bash
+sudo ip neigh replace <ip> dev <interface> lladdr <correct-mac>
+```
+
+The LXC's correct MAC is shown in the Proxmox web UI under the network interface settings,
+or via `pct config <vmid> | grep hwaddr`.
+
+### Authelia showing Bad Gateway
+Authelia v4.38 removed the `authelia healthcheck` CLI and deprecated the `AUTHELIA_JWT_SECRET_FILE`
+environment variable.
+
+Health check fix (in `ansible/files/authelia/docker-compose.yml`):
+```yaml
+# Old (broken in v4.38+):
+test: ["CMD", "authelia", "healthcheck"]
+
+# New:
+test: ["CMD-SHELL", "wget -q --spider http://localhost:9091/api/health || exit 1"]
+```
+
+JWT secret env var rename:
+```yaml
+# Old (deprecated, logs warning):
+AUTHELIA_JWT_SECRET_FILE=/secrets/jwt
+
+# New:
+AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE=/secrets/jwt
+```
+
+After fixing, redeploy: `make authelia AUTHELIA_ADMIN_PASSWORD="..."`

@@ -89,12 +89,12 @@ and resource allocation.
             |   | :9090    |   | :18789   |   | :9091     |
             |   | :3000    |   +----------+   +----------+
             |   | :9093    |
-            |   | -> Discord|   +-----------+
-            |   +----------+   | WireGuard |
-            |                  | LXC 208   |
-            |                  | .39       |
-            |                  | UDP:51820 |
-            |                  +-----------+
+            |   | -> Discord|   +-----------+   +-----------+
+            |   +----------+   | WireGuard |   | Libby     |
+            |                  | LXC 208   |   | Alert     |
+            |                  | .39       |   | LXC 209   |
+            |                  | UDP:51820 |   | .27 :80   |
+            |                  +-----------+   +-----------+
             |
     +-------+-------+
     | Traefik       |
@@ -109,6 +109,7 @@ and resource allocation.
     |  nas.*        +---> 192.168.86.40:443
     |  home.*       +---> 192.168.86.41:8123
     |  claw.*       +---> 192.168.86.26:18789
+    |  alert.*      +---> 192.168.86.27:80
     |  auth.*       +---> 192.168.86.28:9091
     |  grafana.*    +---> 192.168.86.25:3000
     |  prometheus.* +---> 192.168.86.25:9090
@@ -133,6 +134,7 @@ and resource allocation.
 | 192.168.86.24      | jellyfin         | LXC    | 204   | Jellyfin Media Server + iGPU        |
 | 192.168.86.25      | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
 | 192.168.86.26      | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
+| 192.168.86.27      | libby-alert      | LXC    | 209   | Libby life alert QR site + alerts   |
 | 192.168.86.28      | authelia         | LXC    | 207   | SSO gateway (forwardAuth + TOTP)    |
 | 192.168.86.39      | wireguard        | LXC    | 208   | WireGuard VPN tunnel (UDP 51820)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
@@ -381,6 +383,7 @@ in parallel after the host is ready.
 | auto  | OpenClaw LXC         | 206   | --     | Starts on boot, AI agent framework          |
 | auto  | Authelia LXC         | 207   | --     | Starts on boot, SSO gateway                 |
 | auto  | WireGuard LXC        | 208   | --     | Starts on boot, VPN tunnel                  |
+| auto  | Libby Alert LXC      | 209   | --     | Starts on boot, Go web app + alert service  |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
 
 ---
@@ -455,6 +458,7 @@ in parallel after the host is ready.
 | OpenClaw LXC      | 2     | 2048     | --       | AI agent gateway + CLI          |
 | Authelia LXC      | 1     | 1024     | --       | SSO gateway (forwardAuth + TOTP)|
 | WireGuard LXC     | 1     | 256      | --       | Kernel WireGuard, privileged LXC|
+| Libby Alert LXC   | 1     | 512      | --       | Docker: Go web server, SMS/Discord alerts|
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
@@ -474,6 +478,7 @@ in parallel after the host is ready.
 | OpenClaw LXC      | 20 GB  | local-lvm   | --        | Source build + Docker images + workspace |
 | Authelia LXC      | 4 GB   | local-lvm   | --        | Docker + config + SQLite session store   |
 | WireGuard LXC     | 2 GB   | local-lvm   | --        | WireGuard tools + configs                |
+| Libby Alert LXC   | 8 GB   | local-lvm   | --        | Docker + Go binary + config              |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
 
 ### Total resource budget (all services running)
@@ -522,7 +527,7 @@ consume no CPU regardless of weight.
 | ARR, Plex, Jellyfin | LXC | 1024 | Normal |
 | Monitoring, OpenClaw | LXC | 800 | Low |
 | Home Assistant | VM | 800 | Low |
-| Recipe Site, WireGuard | LXC | 512 | Minimal |
+| Recipe Site, WireGuard, Libby Alert | LXC | 512 | Minimal |
 
 **Per-node overcommit ratios:**
 
@@ -547,6 +552,8 @@ consume no CPU regardless of weight.
 | `proxmox_virtual_environment_container.openclaw`  | lxc-openclaw.tf             | LXC  | 206 |
 | `proxmox_virtual_environment_container.authelia`  | lxc-authelia.tf             | LXC  | 207 |
 | `proxmox_virtual_environment_container.wireguard` | lxc-wireguard.tf            | LXC  | 208 |
+| `proxmox_virtual_environment_container.libby_alert`| lxc-libby-alert.tf         | LXC  | 209 |
+| `proxmox_virtual_environment_file.lxc_ssh_fix`    | lxc-ssh-hook.tf             | File | --  |
 | `proxmox_virtual_environment_vm.truenas`          | vm-truenas.tf               | VM   | 300 |
 | `proxmox_virtual_environment_vm.homeassistant`    | vm-homeassistant.tf         | VM   | 301 |
 | `proxmox_virtual_environment_download_file.haos_image` | vm-homeassistant.tf    | File | --  |
@@ -560,6 +567,14 @@ consume no CPU regardless of weight.
 - `lxc-variables.tf` -- LXC storage, SSH key, per-service IPs/VMIDs
 - `vm-truenas-variables.tf` -- TrueNAS ISO, sizing
 - `vm-homeassistant-variables.tf` -- HAOS image URL, sizing
+
+**Terraform state notes:**
+- Terraform state (`terraform.tfstate`) is gitignored. In state: traefik, recipe_site, authelia, wireguard, libby_alert, lxc_ssh_fix.
+- Not in state: truenas (300), homeassistant (301), controlplane (400) — imports hang due to Proxmox API timeout reading complex VM disk configs. Use `-target` for all applies until resolved.
+- Not in state (don't exist yet): arr (202), plex (203), jellyfin (204), monitoring (205), openclaw (206), K8s workers (410, 411).
+
+**Hookscript restriction:**
+The `lxc-ssh-hook.tf` snippet uploads to Proxmox as a file resource. Wiring it as a hookscript on an LXC (`hook_script_file_id`) requires `root@pam` authentication — the Terraform API token (non-root) gets a 403. Set hookscripts manually via SSH: `pct set <vmid> --hookscript local:snippets/lxc-ssh-fix.sh`.
 
 ---
 
@@ -585,6 +600,7 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Active (Authelia 2FA) |
 | alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Active (Authelia 2FA) |
 | claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Active    |
+| alert.woodhead.tech    | 192.168.86.27        | 80    | libby-alert.yml       | Active    |
 | auth.woodhead.tech     | 192.168.86.28        | 9091  | authelia.yml          | Active    |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authelia 2FA) |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |

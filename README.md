@@ -17,6 +17,7 @@ ISP Modem/ONT
     |       +-- ARR Stack LXC (192.168.86.22) -- Sonarr, Radarr, Prowlarr, etc.
     |       +-- Monitoring LXC (192.168.86.25) -- Prometheus, Grafana, Alertmanager
     |       +-- OpenClaw LXC (192.168.86.26) -- AI agent gateway
+    |       +-- Libby Alert LXC (192.168.86.27) -- life alert QR site + SMS/Discord
     |       +-- Authelia LXC (192.168.86.28) -- SSO gateway (forwardAuth + TOTP)
     |       +-- K8s VIP (192.168.86.100)
     |
@@ -109,6 +110,7 @@ make harden
 | `openclaw`          | 3     | Deploy OpenClaw AI agent framework             |
 | `authelia`          | 3     | Deploy Authelia SSO gateway (requires password)|
 | `wireguard`         | 3     | Deploy WireGuard VPN tunnel for remote access  |
+| `libby-alert`       | 3     | Deploy Libby life alert site (requires Twilio + Discord creds)|
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
@@ -147,6 +149,8 @@ make harden
 │   ├── lxc-openclaw.tf                  # OpenClaw AI agent LXC (Docker)
 │   ├── lxc-authelia.tf                  # Authelia SSO gateway LXC (Docker)
 │   ├── lxc-wireguard.tf                 # WireGuard VPN tunnel LXC
+│   ├── lxc-libby-alert.tf               # Libby life alert LXC (Docker)
+│   ├── lxc-ssh-hook.tf                  # Proxmox hookscript: fix Debian 12.12 SSH socket
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
 │   ├── vm-truenas-variables.tf           # TrueNAS variables
 │   ├── vm-homeassistant.tf               # Home Assistant OS VM
@@ -175,6 +179,7 @@ make harden
 │   │   ├── setup-openclaw.yml           # Deploy OpenClaw AI agent (Docker)
 │   │   ├── setup-authelia.yml           # Deploy Authelia SSO gateway (Docker)
 │   │   ├── setup-wireguard.yml          # Deploy WireGuard VPN tunnel
+│   │   ├── setup-libby-alert.yml        # Deploy Libby life alert site (Docker)
 │   │   ├── patch-proxmox.yml              # Patch Proxmox VE hosts
 │   │   ├── patch-lxc.yml                 # Patch Debian packages on LXCs
 │   │   ├── patch-docker.yml              # Update Docker images on all stacks
@@ -277,6 +282,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | OpenClaw         | LXC  | Ready       | `claw.woodhead.tech`       |
 | Authelia SSO     | LXC  | Ready       | `auth.woodhead.tech`       |
 | WireGuard VPN    | LXC  | Ready       | UDP 51820 (not HTTP)       |
+| Libby Alert      | LXC  | Ready       | `alert.woodhead.tech`      |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 
