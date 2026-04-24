@@ -23,7 +23,7 @@ services:
     environment:
       - TZ=America/Chicago
       # Secrets loaded from files (never passed as plain env vars)
-      - AUTHELIA_JWT_SECRET_FILE=/secrets/jwt
+      - AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE=/secrets/jwt
       - AUTHELIA_SESSION_SECRET_FILE=/secrets/session
       - AUTHELIA_STORAGE_ENCRYPTION_KEY_FILE=/secrets/storage_encryption
     ports:
