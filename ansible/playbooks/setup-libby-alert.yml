@@ -26,7 +26,7 @@
     app_uid: 1000
     app_gid: 1000
     app_dir: /opt/libby-alert
-    app_repo: https://github.com/bwoodwar/libby-alert.git
+    app_repo: https://github.com/whitenhiemer/libby-alert.git
     compose_src: "{{ playbook_dir }}/../files/libby-alert/docker-compose.yml"
     # Alert credentials (pass via --extra-vars, NOT stored in git)
     twilio_account_sid: ""
