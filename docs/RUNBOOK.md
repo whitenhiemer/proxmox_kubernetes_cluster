@@ -680,12 +680,12 @@ curl -I https://grafana.woodhead.tech
 
 ---
 
-## Phase 11: Authelia SSO Gateway
+## Phase 11: Authentik Identity Provider
 
 ### 11.1 Deploy
 
 ```bash
-make authelia AUTHELIA_ADMIN_PASSWORD="your-strong-password"
+make authentik
 ```
 
 This installs Docker, generates cryptographic secrets (JWT, session, storage encryption),
@@ -693,8 +693,8 @@ hashes the admin password with argon2id, and starts Authelia.
 
 ### 11.2 Configure
 
-1. Access at `http://192.168.86.28:9091`
-2. Log in with `admin` / the password you set
+1. Access at `http://192.168.86.28:9000`
+2. Log in with `admin account created during initial setup
 3. Register a TOTP device (Authy, Google Authenticator, etc.)
 
 ### 11.3 Protect Services
@@ -973,4 +973,4 @@ AUTHELIA_JWT_SECRET_FILE=/secrets/jwt
 AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE=/secrets/jwt
 ```
 
-After fixing, redeploy: `make authelia AUTHELIA_ADMIN_PASSWORD="..."`
+After fixing, redeploy: `make authentik

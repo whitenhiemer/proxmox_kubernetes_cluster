@@ -83,7 +83,7 @@ and resource allocation.
             |   +----------+   +--------------+
             |
             |   +----------+   +----------+   +-----------+
-            |   | Monitoring|   | OpenClaw |   | Authelia  |
+            |   | Monitoring|   | OpenClaw |   | Authentik |
             |   | LXC 205  |   | LXC 206  |   | LXC 207   |
             |   | .25      |   | .26      |   | .28       |
             |   | :9090    |   | :18789   |   | :9091     |
@@ -135,7 +135,7 @@ and resource allocation.
 | 192.168.86.25      | monitoring       | LXC    | 205   | Prometheus, Grafana, Alertmanager   |
 | 192.168.86.26      | openclaw         | LXC    | 206   | OpenClaw AI agent framework         |
 | 192.168.86.27      | libby-alert      | LXC    | 209   | Libby life alert QR site + alerts   |
-| 192.168.86.28      | authelia         | LXC    | 207   | SSO gateway (forwardAuth + TOTP)    |
+| 192.168.86.28      | authentik        | LXC    | 207   | Identity provider (Authentik SSO, OIDC)    |
 | 192.168.86.39      | wireguard        | LXC    | 208   | WireGuard VPN tunnel (UDP 51820)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
@@ -346,7 +346,7 @@ NFS mount (/media, read-only)
 **Hard dependencies (service won't function without):**
 - All services -> Google Nest gateway (routing, DHCP, DNS)
 - All external access -> Traefik (TLS, routing)
-- Protected services -> Authelia (forwardAuth SSO, TOTP 2FA)
+- Protected services -> Authentik (forwardAuth SSO, OIDC)
 - Remote VPN access -> WireGuard (UDP 51820 port forward required)
 - ARR stack media storage -> TrueNAS (NFS at `/media`)
 - Plex/Jellyfin media library -> TrueNAS (NFS at `/media`, read-only)
@@ -356,7 +356,7 @@ NFS mount (/media, read-only)
 - ARR stack without TrueNAS: uses local `/media` directory (no NAS)
 - Plex/Jellyfin without TrueNAS: no media to serve
 - Plex/Jellyfin without iGPU: falls back to software transcoding (CPU-heavy)
-- Protected services without Authelia: accessible via direct IP:port only (Traefik blocks)
+- Protected services without Authentik: accessible via direct IP:port only (Traefik blocks)
 - Services without Traefik: accessible via direct IP:port (no TLS, no subdomain)
 - K8s without MetalLB: ClusterIP services only (no external access)
 - Monitoring without PVE token: Proxmox metrics unavailable (all other scrapes still work)
@@ -381,7 +381,7 @@ in parallel after the host is ready.
 | auto  | Jellyfin LXC         | 204   | --     | Starts on boot, iGPU node pinned            |
 | auto  | Monitoring LXC       | 205   | --     | Starts on boot, scrapes all services        |
 | auto  | OpenClaw LXC         | 206   | --     | Starts on boot, AI agent framework          |
-| auto  | Authelia LXC         | 207   | --     | Starts on boot, SSO gateway                 |
+| auto  | Authentik LXC        | 207   | --     | Starts on boot, SSO gateway                 |
 | auto  | WireGuard LXC        | 208   | --     | Starts on boot, VPN tunnel                  |
 | auto  | Libby Alert LXC      | 209   | --     | Starts on boot, Go web app + alert service  |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
@@ -456,7 +456,7 @@ in parallel after the host is ready.
 | Jellyfin LXC      | 2     | 2048     | --       | iGPU passthrough for VAAPI      |
 | Monitoring LXC    | 2     | 2048     | --       | Prometheus, Grafana, exporters  |
 | OpenClaw LXC      | 2     | 2048     | --       | AI agent gateway + CLI          |
-| Authelia LXC      | 1     | 1024     | --       | SSO gateway (forwardAuth + TOTP)|
+| Authentik LXC     | 2     | 2048     | --       | Identity provider (Postgres + Redis + server + worker)|
 | WireGuard LXC     | 1     | 256      | --       | Kernel WireGuard, privileged LXC|
 | Libby Alert LXC   | 1     | 512      | --       | Docker: Go web server, SMS/Discord alerts|
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
@@ -476,7 +476,7 @@ in parallel after the host is ready.
 | Jellyfin LXC      | 8 GB   | local-lvm   | --        | Jellyfin binary + DB (media on NAS) |
 | Monitoring LXC    | 20 GB  | local-lvm   | --        | Prometheus TSDB (30-day retention)  |
 | OpenClaw LXC      | 20 GB  | local-lvm   | --        | Source build + Docker images + workspace |
-| Authelia LXC      | 4 GB   | local-lvm   | --        | Docker + config + SQLite session store   |
+| Authentik LXC     | 8 GB   | local-lvm   | --        | Docker + Postgres data + media + certs   |
 | WireGuard LXC     | 2 GB   | local-lvm   | --        | WireGuard tools + configs                |
 | Libby Alert LXC   | 8 GB   | local-lvm   | --        | Docker + Go binary + config              |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
@@ -522,7 +522,7 @@ consume no CPU regardless of weight.
 | Traefik | LXC | 2048 | Critical |
 | TrueNAS | VM | 1500 | High |
 | K8s CP | VM | 1200 | High |
-| Authelia | LXC | 1200 | High |
+| Authentik | LXC | 1200 | High |
 | K8s Workers | VM | 1024 | Normal |
 | ARR, Plex, Jellyfin | LXC | 1024 | Normal |
 | Monitoring, OpenClaw | LXC | 800 | Low |
@@ -550,7 +550,7 @@ consume no CPU regardless of weight.
 | `proxmox_virtual_environment_container.jellyfin`  | lxc-jellyfin.tf             | LXC  | 204 |
 | `proxmox_virtual_environment_container.monitoring`| lxc-monitoring.tf           | LXC  | 205 |
 | `proxmox_virtual_environment_container.openclaw`  | lxc-openclaw.tf             | LXC  | 206 |
-| `proxmox_virtual_environment_container.authelia`  | lxc-authelia.tf             | LXC  | 207 |
+| `proxmox_virtual_environment_container.authelia`  | lxc-authelia.tf (authentik stack) | LXC  | 207 |
 | `proxmox_virtual_environment_container.wireguard` | lxc-wireguard.tf            | LXC  | 208 |
 | `proxmox_virtual_environment_container.libby_alert`| lxc-libby-alert.tf         | LXC  | 209 |
 | `proxmox_virtual_environment_file.lxc_ssh_fix`    | lxc-ssh-hook.tf             | File | --  |
@@ -569,7 +569,7 @@ consume no CPU regardless of weight.
 - `vm-homeassistant-variables.tf` -- HAOS image URL, sizing
 
 **Terraform state notes:**
-- Terraform state (`terraform.tfstate`) is gitignored. In state: traefik, recipe_site, authelia, wireguard, libby_alert, lxc_ssh_fix.
+- Terraform state (`terraform.tfstate`) is gitignored. In state: traefik, recipe_site, authelia (authentik), wireguard, libby_alert, lxc_ssh_fix.
 - Not in state: truenas (300), homeassistant (301), controlplane (400) — imports hang due to Proxmox API timeout reading complex VM disk configs. Use `-target` for all applies until resolved.
 - Not in state (don't exist yet): arr (202), plex (203), jellyfin (204), monitoring (205), openclaw (206), K8s workers (410, 411).
 
@@ -586,23 +586,23 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | Subdomain              | Backend              | Port  | Config File           | Status    |
 |------------------------|----------------------|-------|-----------------------|-----------|
 | recipes.woodhead.tech  | 192.168.86.21        | 80    | recipe-site.yml       | Active    |
-| prowlarr.woodhead.tech | 192.168.86.22        | 9696  | arr-stack.yml         | Active (Authelia 2FA) |
-| sonarr.woodhead.tech   | 192.168.86.22        | 8989  | arr-stack.yml         | Active (Authelia 2FA) |
-| radarr.woodhead.tech   | 192.168.86.22        | 7878  | arr-stack.yml         | Active (Authelia 2FA) |
-| bazarr.woodhead.tech   | 192.168.86.22        | 6767  | arr-stack.yml         | Active (Authelia 2FA) |
-| requests.woodhead.tech | 192.168.86.22        | 5055  | arr-stack.yml         | Active (Authelia 2FA) |
-| sabnzbd.woodhead.tech  | 192.168.86.22        | 8080  | arr-stack.yml         | Active (Authelia 2FA) |
+| prowlarr.woodhead.tech | 192.168.86.22        | 9696  | arr-stack.yml         | Active (Authentik SSO) |
+| sonarr.woodhead.tech   | 192.168.86.22        | 8989  | arr-stack.yml         | Active (Authentik SSO) |
+| radarr.woodhead.tech   | 192.168.86.22        | 7878  | arr-stack.yml         | Active (Authentik SSO) |
+| bazarr.woodhead.tech   | 192.168.86.22        | 6767  | arr-stack.yml         | Active (Authentik SSO) |
+| requests.woodhead.tech | 192.168.86.22        | 5055  | arr-stack.yml         | Active (Authentik SSO) |
+| sabnzbd.woodhead.tech  | 192.168.86.22        | 8080  | arr-stack.yml         | Active (Authentik SSO) |
 | plex.woodhead.tech     | 192.168.86.23        | 32400 | media-stack.yml       | Active    |
 | jellyfin.woodhead.tech | 192.168.86.24        | 8096  | media-stack.yml       | Active    |
-| nas.woodhead.tech      | 192.168.86.40        | 443   | media-stack.yml       | Active (Authelia 2FA) |
+| nas.woodhead.tech      | 192.168.86.40        | 443   | media-stack.yml       | Active (Authentik SSO) |
 | home.woodhead.tech     | 192.168.86.41        | 8123  | homeassistant.yml     | Active    |
 | grafana.woodhead.tech  | 192.168.86.25        | 3000  | monitoring.yml        | Active    |
-| prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Active (Authelia 2FA) |
-| alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Active (Authelia 2FA) |
+| prometheus.woodhead.tech| 192.168.86.25       | 9090  | monitoring.yml        | Active (Authentik SSO) |
+| alertmanager.woodhead.tech| 192.168.86.25     | 9093  | monitoring.yml        | Active (Authentik SSO) |
 | claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Active    |
 | alert.woodhead.tech    | 192.168.86.27        | 80    | libby-alert.yml       | Active    |
-| auth.woodhead.tech     | 192.168.86.28        | 9091  | authelia.yml          | Active    |
-| traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authelia 2FA) |
+| auth.woodhead.tech     | 192.168.86.28        | 9000  | authentik.yml         | Active    |
+| traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authentik SSO) |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 
 Routes are in `ansible/files/traefik/dynamic/`. Uncomment as you deploy each service.

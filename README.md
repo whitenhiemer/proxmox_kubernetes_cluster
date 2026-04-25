@@ -18,7 +18,7 @@ ISP Modem/ONT
     |       +-- Monitoring LXC (192.168.86.25) -- Prometheus, Grafana, Alertmanager
     |       +-- OpenClaw LXC (192.168.86.26) -- AI agent gateway
     |       +-- Libby Alert LXC (192.168.86.27) -- life alert QR site + SMS/Discord
-    |       +-- Authelia LXC (192.168.86.28) -- SSO gateway (forwardAuth + TOTP)
+    |       +-- Authentik LXC (192.168.86.28) -- identity provider (SSO, OIDC, forwardAuth)
     |       +-- K8s VIP (192.168.86.100)
     |
     +-- WireGuard LXC (192.168.86.39) -- VPN tunnel (UDP 51820)
@@ -147,7 +147,7 @@ make harden
 │   ├── lxc-jellyfin.tf                   # Jellyfin Media Server LXC
 │   ├── lxc-monitoring.tf                 # Monitoring stack LXC (Docker)
 │   ├── lxc-openclaw.tf                  # OpenClaw AI agent LXC (Docker)
-│   ├── lxc-authelia.tf                  # Authelia SSO gateway LXC (Docker)
+│   ├── lxc-authelia.tf                  # Authentik identity provider LXC (Docker)
 │   ├── lxc-wireguard.tf                 # WireGuard VPN tunnel LXC
 │   ├── lxc-libby-alert.tf               # Libby life alert LXC (Docker)
 │   ├── lxc-ssh-hook.tf                  # Proxmox hookscript: fix Debian 12.12 SSH socket
@@ -177,7 +177,7 @@ make harden
 │   │   ├── setup-jellyfin.yml           # Deploy Jellyfin + iGPU passthrough
 │   │   ├── setup-monitoring.yml          # Deploy monitoring stack (Docker)
 │   │   ├── setup-openclaw.yml           # Deploy OpenClaw AI agent (Docker)
-│   │   ├── setup-authelia.yml           # Deploy Authelia SSO gateway (Docker)
+│   │   ├── setup-authentik.yml          # Deploy Authentik identity provider (Docker)
 │   │   ├── setup-wireguard.yml          # Deploy WireGuard VPN tunnel
 │   │   ├── setup-libby-alert.yml        # Deploy Libby life alert site (Docker)
 │   │   ├── patch-proxmox.yml              # Patch Proxmox VE hosts
@@ -280,7 +280,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | Home Assistant   | VM   | Ready       | `home.woodhead.tech`       |
 | Monitoring       | LXC  | Ready       | `grafana.woodhead.tech`    |
 | OpenClaw         | LXC  | Ready       | `claw.woodhead.tech`       |
-| Authelia SSO     | LXC  | Ready       | `auth.woodhead.tech`       |
+| Authentik SSO    | LXC  | Ready       | `auth.woodhead.tech`       |
 | WireGuard VPN    | LXC  | Ready       | UDP 51820 (not HTTP)       |
 | Libby Alert      | LXC  | Ready       | `alert.woodhead.tech`      |
 

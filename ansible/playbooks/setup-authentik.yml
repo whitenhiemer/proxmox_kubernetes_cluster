@@ -1,0 +1,200 @@
+# setup-authentik.yml - Install Docker and deploy Authentik identity provider
+#
+# This playbook configures the Authentik LXC container:
+#   1. Installs Docker CE and Docker Compose plugin
+#   2. Creates directory structure
+#   3. Generates PostgreSQL password and Authentik secret key
+#   4. Writes .env file (loaded by docker-compose)
+#   5. Deploys docker-compose.yml and starts the stack
+#   6. Waits for the server health endpoint to become ready
+#
+# Prerequisites:
+#   - Authentik LXC created via Terraform (make apply-lxc)
+#   - SSH access to the LXC (key injected by Terraform or via pct exec)
+#   - At least 2GB RAM on the LXC
+#
+# Usage:
+#   make authentik
+#
+# After deploy, complete setup in the browser:
+#   https://auth.woodhead.tech/if/flow/initial-setup/
+---
+- name: Deploy Authentik identity provider
+  hosts: lxc_services:&authentik
+  vars:
+    auth_base_dir: /opt/authentik
+    compose_src: "{{ playbook_dir }}/../files/authentik/docker-compose.yml"
+
+  tasks:
+    # --- SSH Socket Activation Fix ---
+    - name: Disable SSH socket activation
+      ansible.builtin.systemd:
+        name: ssh.socket
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Ensure SSH listens on IPv4
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?ListenAddress "
+        line: "ListenAddress 0.0.0.0"
+        create: false
+
+    - name: Restart SSH service
+      ansible.builtin.systemd:
+        name: ssh
+        state: restarted
+
+    # --- System Setup ---
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - openssl
+        state: present
+
+    # --- Docker Installation ---
+    - name: Create Docker keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Set permissions on Docker GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/docker.gpg
+        mode: "0644"
+
+    - name: Add Docker repository
+      ansible.builtin.copy:
+        content: |
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable
+        dest: /etc/apt/sources.list.d/docker.list
+        mode: "0644"
+
+    - name: Install Docker CE and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # --- Directory Structure ---
+    - name: Create Authentik directories
+      ansible.builtin.file:
+        path: "{{ auth_base_dir }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - ""
+        - media
+        - certs
+        - templates
+        - postgres
+        - redis
+
+    # --- Generate Secrets ---
+    - name: Check if .env already exists
+      ansible.builtin.stat:
+        path: "{{ auth_base_dir }}/.env"
+      register: env_file
+
+    - name: Generate PostgreSQL password
+      ansible.builtin.shell:
+        cmd: openssl rand -hex 24
+      register: pg_pass_result
+      changed_when: false
+      when: not env_file.stat.exists
+
+    - name: Generate Authentik secret key
+      ansible.builtin.shell:
+        cmd: openssl rand -hex 32
+      register: secret_key_result
+      changed_when: false
+      when: not env_file.stat.exists
+
+    - name: Write .env file
+      ansible.builtin.copy:
+        content: |
+          PG_PASS={{ pg_pass_result.stdout }}
+          AUTHENTIK_SECRET_KEY={{ secret_key_result.stdout }}
+          AUTHENTIK_ERROR_REPORTING__ENABLED=false
+        dest: "{{ auth_base_dir }}/.env"
+        mode: "0600"
+      when: not env_file.stat.exists
+      no_log: true
+
+    # --- Deploy ---
+    - name: Copy Docker Compose file
+      ansible.builtin.copy:
+        src: "{{ compose_src }}"
+        dest: "{{ auth_base_dir }}/docker-compose.yml"
+        mode: "0644"
+      notify: Restart authentik
+
+    - name: Start Authentik stack
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ auth_base_dir }}"
+      changed_when: true
+
+    # --- Verify ---
+    # Authentik takes 60-90s on first boot to run migrations
+    - name: Wait for Authentik server to start
+      ansible.builtin.uri:
+        url: "http://localhost:9000/-/health/live/"
+        return_content: false
+        status_code: 204
+      register: health_check
+      until: health_check.status == 204
+      retries: 18
+      delay: 10
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Authentik deployed to {{ auth_base_dir }}"
+          - ""
+          - "Internal URL: http://{{ ansible_host }}:9000"
+          - "External URL: https://auth.woodhead.tech"
+          - ""
+          - "NEXT STEPS (required -- do these in order):"
+          - "  1. Browse to https://auth.woodhead.tech/if/flow/initial-setup/"
+          - "  2. Create your admin account (email + password)"
+          - "  3. Admin UI > Applications > Providers > Create > Proxy Provider"
+          - "     - Name: woodhead-forward-auth"
+          - "     - Mode: Forward auth (domain level)"
+          - "     - External host: https://auth.woodhead.tech"
+          - "  4. Admin UI > Applications > Create"
+          - "     - Name: woodhead-forward-auth"
+          - "     - Provider: woodhead-forward-auth"
+          - "  5. Admin UI > Outposts > Edit the default outpost"
+          - "     - Add woodhead-forward-auth application"
+          - "  6. Traefik authentik@file middleware is already wired -- auth is live"
+
+  handlers:
+    - name: Restart authentik
+      ansible.builtin.command:
+        cmd: docker compose up -d --force-recreate
+        chdir: "{{ auth_base_dir }}"
