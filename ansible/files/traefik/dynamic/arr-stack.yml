@@ -13,7 +13,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
     prowlarr:
       rule: "Host(`prowlarr.woodhead.tech`)"
@@ -23,7 +23,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
     sonarr:
       rule: "Host(`sonarr.woodhead.tech`)"
@@ -33,7 +33,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
     radarr:
       rule: "Host(`radarr.woodhead.tech`)"
@@ -43,7 +43,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
     bazarr:
       rule: "Host(`bazarr.woodhead.tech`)"
@@ -53,7 +53,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
     sabnzbd:
       rule: "Host(`sabnzbd.woodhead.tech`)"
@@ -63,7 +63,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
   services:
     overseerr:

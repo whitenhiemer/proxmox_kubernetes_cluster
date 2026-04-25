@@ -1,19 +1,18 @@
-# lxc-authelia.tf - Authelia SSO gateway LXC container
+# lxc-authelia.tf - Authentik identity provider LXC container
 #
-# Single LXC running Docker Compose with Authelia:
-#   - Centralized authentication + authorization for all web services
-#   - File-based user database with argon2id password hashing
-#   - TOTP 2FA support (Google Authenticator, Authy)
+# Single LXC running Docker Compose with Authentik:
+#   - Full identity provider: OIDC, SAML, proxy auth
+#   - PostgreSQL 16 + Redis + Authentik server + worker
 #   - Integrates with Traefik via forwardAuth middleware
 #
-# Lightweight footprint: single Go binary, ~50MB RAM, SQLite session store.
+# Requires 2GB RAM for the full stack (Postgres + Redis + server + worker).
 # Nesting is enabled for Docker-in-LXC support.
-# Secrets (JWT, session, storage encryption) are generated at deploy time.
+# Secrets are generated at deploy time and stored in /opt/authentik/.env.
 
 resource "proxmox_virtual_environment_container" "authelia" {
   node_name   = lookup(var.node_assignments, "authelia", var.proxmox_node)
   vm_id       = var.authelia_vmid
-  description = "Authelia - SSO authentication gateway"
+  description = "Authentik - identity provider (SSO, OIDC, proxy auth)"
   tags        = ["infrastructure", "auth", "security"]
 
   unprivileged  = true
@@ -31,12 +30,12 @@ resource "proxmox_virtual_environment_container" "authelia" {
   }
 
   memory {
-    dedicated = 1024
+    dedicated = 2048
   }
 
   disk {
     datastore_id = var.lxc_storage
-    size         = 4
+    size         = 8
   }
 
   network_interface {
@@ -46,7 +45,7 @@ resource "proxmox_virtual_environment_container" "authelia" {
 
   # Static IP, DNS, and SSH key for Ansible access
   initialization {
-    hostname = "authelia"
+    hostname = "authentik"
 
     ip_config {
       ipv4 {

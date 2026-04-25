@@ -14,7 +14,7 @@
 #   make arr-stack      - Deploy ARR media stack
 #   make monitoring     - Deploy monitoring stack
 #   make openclaw       - Deploy OpenClaw AI agent
-#   make authelia       - Deploy Authelia SSO gateway
+#   make authentik      - Deploy Authentik identity provider
 #   make wireguard      - Deploy WireGuard VPN tunnel
 #   make bootstrap      - Bootstrap Talos K8s cluster
 #   make k8s-base       - Apply base K8s manifests
@@ -22,7 +22,7 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authelia wireguard \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker destroy clean help
 
@@ -85,6 +85,7 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
 		-target=proxmox_virtual_environment_container.authelia \
+
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert
 
@@ -98,6 +99,7 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
 		-target=proxmox_virtual_environment_container.authelia \
+
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert
 
@@ -135,13 +137,8 @@ monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager) into 
 openclaw: ## Deploy OpenClaw AI agent framework into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-openclaw.yml
 
-authelia: ## Deploy Authelia SSO gateway into its LXC
-	@if [ -z "$(AUTHELIA_ADMIN_PASSWORD)" ]; then \
-		echo "Error: AUTHELIA_ADMIN_PASSWORD is required. Usage: make authelia AUTHELIA_ADMIN_PASSWORD=..."; \
-		exit 1; \
-	fi
-	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-authelia.yml \
-		--extra-vars "authelia_admin_password=$(AUTHELIA_ADMIN_PASSWORD)"
+authentik: ## Deploy Authentik identity provider into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-authentik.yml
 
 wireguard: ## Deploy WireGuard VPN tunnel into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-wireguard.yml
