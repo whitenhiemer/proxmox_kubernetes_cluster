@@ -22,7 +22,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
     # Alertmanager UI (admin access only -- protected by Authelia 2FA)
     alertmanager:
@@ -33,7 +33,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
   services:
     grafana:

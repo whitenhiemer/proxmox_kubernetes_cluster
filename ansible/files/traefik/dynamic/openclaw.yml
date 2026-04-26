@@ -12,7 +12,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - authelia@file
+        - authentik@file
 
   services:
     openclaw:
