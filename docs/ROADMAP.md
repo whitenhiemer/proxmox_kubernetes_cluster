@@ -246,7 +246,8 @@ Keeping track of allocated IPs to avoid conflicts:
 | IP            | Service              | Type | VM ID |
 |---------------|----------------------|------|-------|
 | 192.168.86.1      | Gateway (Nest WiFi)  | Router | --  |
-| 192.168.86.29-31  | Proxmox nodes        | Host | --    |
+| 192.168.86.29-31  | Proxmox nodes (thinkcentre1–3) | Host | --    |
+| 192.168.86.130    | tower1 (Proxmox node)  | Host | --    |
 | 192.168.86.20     | Traefik              | LXC  | 200   |
 | 192.168.86.21     | Recipe site          | LXC  | 201   |
 | 192.168.86.22     | ARR stack            | LXC  | 202   |
@@ -385,16 +386,62 @@ container in its own LXC or in the Traefik LXC.
 
 ---
 
+---
+
+### Proxmox Backups via TrueNAS NFS
+
+**Blocked on**: TrueNAS setup (NFS share must exist first)
+
+**Plan**:
+1. On TrueNAS: create a dataset (e.g., `tank/proxmox-backups`) and export it as NFS
+   - Restrict access to the Proxmox subnet (`192.168.86.0/24`)
+   - Use NFS v4, async writes for performance
+2. On all Proxmox nodes: add NFS storage endpoint via `pvesm add nfs`
+   - Storage ID: `truenas-backups`
+   - Content type: `backup`
+   - Mount point: `/mnt/pve/truenas-backups`
+3. Create a cluster-wide backup job via Proxmox UI or `pvesh`:
+   - Schedule: nightly (e.g., 02:00)
+   - Mode: snapshot (zero downtime for running VMs)
+   - Compression: zstd
+   - Retention: 7 daily, 4 weekly
+   - Target: `truenas-backups` storage
+   - Scope: all VMs and LXCs across all nodes (thinkcentre1–3, tower1)
+
+**Nodes to include**: thinkcentre1, thinkcentre2, thinkcentre3, tower1
+
+**VMs/LXCs to back up** (currently none have backup jobs):
+| ID  | Name                   | Node          |
+|-----|------------------------|---------------|
+| 200 | traefik                | thinkcentre1  |
+| 201 | recipe-site            | thinkcentre1  |
+| 202 | arr-stack              | thinkcentre2  |
+| 203 | plex                   | thinkcentre2  |
+| 204 | jellyfin               | thinkcentre3  |
+| 205 | monitoring             | thinkcentre2  |
+| 206 | openclaw               | thinkcentre3  |
+| 207 | authentik              | thinkcentre1  |
+| 208 | wireguard              | thinkcentre1  |
+| 209 | libby-alert            | thinkcentre1  |
+| 300 | truenas                | thinkcentre1  |
+| 301 | homeassistant          | thinkcentre1  |
+| 400 | talos-proxmox-cp-0     | tower1        |
+| 410 | talos-proxmox-worker-0 | tower1        |
+| 411 | talos-proxmox-worker-1 | thinkcentre3  |
+
+---
+
 ## Implementation Priority
 
-1. **NAS** -- DONE (TrueNAS Scale VM, ZFS on passthrough disks)
-2. **ARR stack** -- DONE (LXC with Docker Compose, NFS media mount)
-3. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough for hardware transcoding)
-4. **Home Assistant** -- DONE (HAOS VM, UEFI boot, qcow2 import)
-5. **Authelia SSO** -- DONE (deployed at auth.woodhead.tech)
-6. **WireGuard VPN** -- DONE (LXC, UDP 51820, split tunnel to LAN)
-7. **Resource Balancing** -- DONE (memory ballooning for VMs, CPU units for all)
-8. **Piboard Dashboard** -- DONE (Raspberry Pi 3B + Waveshare 5" HDMI, Go + SSE + Prometheus)
+1. **NAS** -- PENDING (VM exists at 192.168.86.40, needs TrueNAS install)
+2. **Proxmox Backups** -- PENDING (blocked on TrueNAS NFS share)
+3. **ARR stack** -- DONE (LXC with Docker Compose, NFS media mount)
+4. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough for hardware transcoding)
+5. **Home Assistant** -- DONE (HAOS VM, UEFI boot, qcow2 import)
+6. **Authelia SSO** -- DONE (deployed at auth.woodhead.tech)
+7. **WireGuard VPN** -- DONE (LXC, UDP 51820, split tunnel to LAN)
+8. **Resource Balancing** -- DONE (tower1 added, Talos VMs redistributed across nodes)
+9. **Piboard Dashboard** -- DONE (Raspberry Pi 3B + Waveshare 5" HDMI, Go + SSE + Prometheus)
 
 ## Hardware Considerations
 

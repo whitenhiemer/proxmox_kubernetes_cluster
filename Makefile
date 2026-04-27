@@ -22,7 +22,7 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard truenas \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help
 
@@ -142,6 +142,15 @@ authentik: ## Deploy Authentik identity provider into its LXC
 
 wireguard: ## Deploy WireGuard VPN tunnel into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-wireguard.yml
+
+truenas: ## Configure TrueNAS Scale via REST API (post-install: ZFS pool, datasets, NFS shares)
+	@if [ -z "$(TRUENAS_PASSWORD)" ]; then \
+		echo "Error: TRUENAS_PASSWORD is required."; \
+		echo "Usage: make truenas TRUENAS_PASSWORD=your-root-password"; \
+		exit 1; \
+	fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-truenas.yml \
+		--extra-vars "truenas_password=$(TRUENAS_PASSWORD)"
 
 libby-alert: ## Deploy Libby life alert QR website into its LXC
 	@if [ -z "$(TWILIO_SID)" ] || [ -z "$(TWILIO_TOKEN)" ] || [ -z "$(TWILIO_FROM)" ] || [ -z "$(ALERT_PHONES)" ]; then \

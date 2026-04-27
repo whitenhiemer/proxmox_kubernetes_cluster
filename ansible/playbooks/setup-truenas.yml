@@ -1,0 +1,219 @@
+# setup-truenas.yml - Post-install TrueNAS Scale configuration via REST API
+#
+# Configures TrueNAS Scale after the OS has been installed via the console:
+#   1. Waits for the TrueNAS API to be available
+#   2. Creates a ZFS pool named 'tank' on the data disk (/dev/sdb)
+#   3. Creates datasets: tank/media (movies, tv, music, downloads), tank/backups, tank/isos
+#   4. Exports NFS shares for each dataset to the LAN
+#
+# Prerequisites:
+#   - TrueNAS Scale installed on scsi0 (/dev/sda) via Proxmox console
+#   - VM booted and reachable at 192.168.86.40
+#   - scsi1 (Ceph RBD, 2 TiB) visible as /dev/sdb inside the VM
+#
+# Usage:
+#   ansible-playbook playbooks/setup-truenas.yml \
+#     --extra-vars "truenas_password=your-root-password"
+#
+# The playbook uses the TrueNAS API v2.0 (Basic auth with root credentials).
+# All tasks run from localhost using the uri module -- no SSH to TrueNAS needed.
+---
+- name: Configure TrueNAS Scale via REST API
+  hosts: localhost
+  gather_facts: false
+  vars:
+    truenas_host: "http://192.168.86.40"
+    truenas_api: "{{ truenas_host }}/api/v2.0"
+    truenas_user: "root"
+    truenas_password: ""  # Required: pass via --extra-vars
+    api_headers:
+      Content-Type: "application/json"
+    pool_name: "tank"
+    data_disk: "sdb"  # scsi1 inside the TrueNAS VM
+    nfs_network: "192.168.86.0/24"
+
+  tasks:
+    - name: Validate password provided
+      ansible.builtin.fail:
+        msg: "truenas_password is required. Pass via --extra-vars \"truenas_password=...\""
+      when: truenas_password == ""
+
+    # --- Wait for API ---
+    - name: Wait for TrueNAS API to be available
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/system/info"
+        method: GET
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        status_code: 200
+        validate_certs: false
+      register: truenas_info
+      until: truenas_info.status == 200
+      retries: 30
+      delay: 10
+
+    - name: Show TrueNAS version
+      ansible.builtin.debug:
+        msg: "TrueNAS {{ truenas_info.json.version }} is ready"
+
+    # --- ZFS Pool ---
+    - name: Check if pool already exists
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/pool"
+        method: GET
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        validate_certs: false
+      register: existing_pools
+
+    - name: Create ZFS pool 'tank' on /dev/sdb
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/pool"
+        method: POST
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        headers: "{{ api_headers }}"
+        body_format: json
+        body:
+          name: "{{ pool_name }}"
+          topology:
+            data:
+              - type: "STRIPE"
+                disks:
+                  - "{{ data_disk }}"
+          encryption: false
+        status_code: 200
+        validate_certs: false
+      when: existing_pools.json | selectattr('name', 'equalto', pool_name) | list | length == 0
+      register: pool_create
+
+    - name: Wait for pool creation job to complete
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/core/get_jobs?id={{ pool_create.json.id }}"
+        method: GET
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        validate_certs: false
+      register: pool_job
+      until: pool_job.json[0].state in ['SUCCESS', 'FAILED']
+      retries: 30
+      delay: 10
+      when: pool_create is changed
+
+    - name: Fail if pool creation failed
+      ansible.builtin.fail:
+        msg: "Pool creation failed: {{ pool_job.json[0].error }}"
+      when: pool_create is changed and pool_job.json[0].state == 'FAILED'
+
+    # --- Datasets ---
+    - name: Create datasets
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/pool/dataset"
+        method: POST
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        headers: "{{ api_headers }}"
+        body_format: json
+        body:
+          name: "{{ pool_name }}/{{ item.name }}"
+          comments: "{{ item.comment }}"
+          compression: "LZ4"
+        status_code: [200, 422]  # 422 = already exists
+        validate_certs: false
+      loop:
+        - { name: "media",   comment: "Media library root" }
+        - { name: "media/movies",    comment: "Movies" }
+        - { name: "media/tv",        comment: "TV shows" }
+        - { name: "media/music",     comment: "Music" }
+        - { name: "media/downloads", comment: "Download staging" }
+        - { name: "backups", comment: "Proxmox VM backups and Home Assistant backups" }
+        - { name: "isos",    comment: "Proxmox ISO images" }
+
+    # --- NFS Service ---
+    - name: Enable NFS service
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/service/id/nfs"
+        method: PUT
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        headers: "{{ api_headers }}"
+        body_format: json
+        body:
+          enable: true
+        validate_certs: false
+
+    - name: Start NFS service
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/service/start"
+        method: POST
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        headers: "{{ api_headers }}"
+        body_format: json
+        body:
+          service: "nfs"
+        validate_certs: false
+
+    # --- NFS Shares ---
+    - name: Check existing NFS shares
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/sharing/nfs"
+        method: GET
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        validate_certs: false
+      register: existing_shares
+
+    - name: Create NFS shares
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/sharing/nfs"
+        method: POST
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        headers: "{{ api_headers }}"
+        body_format: json
+        body:
+          path: "/mnt/{{ pool_name }}/{{ item.dataset }}"
+          comment: "{{ item.comment }}"
+          networks:
+            - "{{ nfs_network }}"
+          hosts: []
+          ro: false
+          maproot_user: "root"
+          maproot_group: "wheel"
+        status_code: 200
+        validate_certs: false
+      loop:
+        - { dataset: "media",   comment: "Media library - Plex, Jellyfin, ARR stack" }
+        - { dataset: "backups", comment: "Proxmox VM backups and Home Assistant backups" }
+        - { dataset: "isos",    comment: "Proxmox ISO images" }
+      when: >
+        existing_shares.json |
+        selectattr('path', 'equalto', '/mnt/' + pool_name + '/' + item.dataset) |
+        list | length == 0
+
+    # --- Summary ---
+    - name: Print share summary
+      ansible.builtin.debug:
+        msg:
+          - "TrueNAS configuration complete."
+          - "NFS shares available at {{ truenas_host }}:"
+          - "  /mnt/tank/media   -> media library (movies, tv, music, downloads)"
+          - "  /mnt/tank/backups -> Proxmox VM and Home Assistant backups"
+          - "  /mnt/tank/isos    -> Proxmox ISO images"
+          - ""
+          - "Next steps:"
+          - "  1. Add NFS storage to Proxmox: Datacenter > Storage > Add > NFS"
+          - "     - ID: truenas-backups, Server: 192.168.86.40, Share: /mnt/tank/backups"
+          - "     - ID: truenas-isos,    Server: 192.168.86.40, Share: /mnt/tank/isos"
+          - "  2. Mount /mnt/tank/media in ARR stack, Plex, Jellyfin LXCs"
+          - "  3. Create Proxmox backup job targeting truenas-backups storage"

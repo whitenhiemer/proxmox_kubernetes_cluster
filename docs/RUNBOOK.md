@@ -310,45 +310,79 @@ In the recipes repo on GitHub (Settings > Webhooks > Add webhook):
 
 ## Phase 5: TrueNAS Scale NAS
 
-See [docs/TRUENAS-SETUP.md](TRUENAS-SETUP.md) for the full setup guide.
+VM 300 (truenas) is already provisioned with two virtual disks:
+- `scsi0`: 16 GiB local-lvm — OS disk
+- `scsi1`: 2 TiB Ceph RBD — data disk (3x replicated across the Ceph cluster)
 
-### 5.1 Download TrueNAS ISO
+The TrueNAS ISO is downloaded and attached. The steps below are the remaining
+manual tasks; all post-install configuration is automated via Ansible.
+
+### 5.1 Download TrueNAS ISO (already done — skip if VM exists)
 
 ```bash
 make prepare-truenas
-```
-
-### 5.2 Create the VM
-
-```bash
 make apply-truenas
 ```
 
-### 5.3 Pass Through Data Disks
-
-From the Proxmox host, attach physical disks for the ZFS pool:
-```bash
-# Identify disks by stable ID
-ls -la /dev/disk/by-id/ | grep -v part
-
-# Attach data disks (replace with your disk IDs)
-qm set 300 -scsi1 /dev/disk/by-id/<disk-id-1>
-qm set 300 -scsi2 /dev/disk/by-id/<disk-id-2>
-```
-
-### 5.4 Install TrueNAS
+### 5.2 Install TrueNAS via Proxmox Console
 
 1. Open Proxmox web UI -> VM 300 (truenas) -> Console
-2. Boot from ISO, install to the 16GB OS disk (NOT the data disks)
-3. Set admin password, reboot
+2. Follow the TrueNAS Scale installer
+3. When asked which disk to install on, select `/dev/sda` (16 GiB) — **not** `/dev/sdb`
+4. Set a root password — you will need it in step 5.3
+5. Reboot when prompted; remove the ISO boot entry if the installer does not do so automatically
 
-### 5.5 Configure TrueNAS
+### 5.3 Verify Network
 
-1. Set static IP: `192.168.86.40/24`, gateway `192.168.86.1`
-2. Create ZFS pool from passthrough disks (mirror or RAIDZ1)
-3. Create dataset: `pool/media`
-4. Create NFS share: `/mnt/pool/media` -> authorized network `192.168.86.0/24`
-5. Set permissions: `chown -R 1000:1000 /mnt/pool/media`
+After reboot, the console shows the assigned IP. Verify:
+```bash
+curl http://192.168.86.40/api/v2.0/system/info
+```
+
+If the IP is wrong, configure it through the TrueNAS console menu:
+- Network -> Interfaces -> edit -> Static IP: `192.168.86.40/24`
+- Default gateway: `192.168.86.1`
+- DNS: `8.8.8.8`
+- Save and apply
+
+### 5.4 Run Ansible Post-Install Configuration
+
+```bash
+make truenas TRUENAS_PASSWORD=<root-password-from-step-5.2>
+```
+
+This runs `ansible/playbooks/setup-truenas.yml` which:
+- Creates ZFS pool `tank` on `/dev/sdb` (the 2 TiB Ceph RBD disk)
+- Creates datasets with LZ4 compression: `tank/media` (movies/tv/music/downloads), `tank/backups`, `tank/isos`
+- Enables and starts the NFS service
+- Creates NFS shares accessible from `192.168.86.0/24`
+
+### 5.5 Add NFS Storage to Proxmox
+
+Via Proxmox web UI: **Datacenter > Storage > Add > NFS** — repeat for each:
+
+| ID                | Server          | Share               | Content          |
+|-------------------|-----------------|---------------------|------------------|
+| `truenas-backups` | `192.168.86.40` | `/mnt/tank/backups` | VZDump backup    |
+| `truenas-isos`    | `192.168.86.40` | `/mnt/tank/isos`    | ISO image        |
+
+### 5.6 Create Proxmox Backup Job
+
+**Datacenter > Backup > Add:**
+- Storage: `truenas-backups`
+- Schedule: `0 2 * * *` (nightly at 2:00 AM)
+- Selection mode: All
+- Compression: LZO
+- Mode: Snapshot
+
+### 5.7 Mount NFS Media in Service LXCs (optional)
+
+ARR stack, Plex, and Jellyfin LXCs access `/mnt/tank/media` over NFS. Pass the
+`nfs_server` extra-var when deploying those services:
+```bash
+cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
+  --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/tank/media"
+```
 
 ---
 
@@ -1050,4 +1084,4 @@ AUTHELIA_JWT_SECRET_FILE=/secrets/jwt
 AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET_FILE=/secrets/jwt
 ```
 
-After fixing, redeploy: `make authentik
+After fixing, redeploy: `make authentik`
