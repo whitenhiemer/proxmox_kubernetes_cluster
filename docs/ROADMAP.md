@@ -258,6 +258,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
 | 192.168.86.41     | Home Assistant       | VM   | 301   |
+| 192.168.86.131    | Piboard dashboard    | Pi   | --    |
 | 192.168.86.100    | K8s API VIP          | VIP  | --    |
 | 192.168.86.101    | K8s control plane    | VM   | 400   |
 | 192.168.86.111-112| K8s workers          | VM   | 410+  |
@@ -393,6 +394,7 @@ container in its own LXC or in the Traefik LXC.
 5. **Authelia SSO** -- DONE (deployed at auth.woodhead.tech)
 6. **WireGuard VPN** -- DONE (LXC, UDP 51820, split tunnel to LAN)
 7. **Resource Balancing** -- DONE (memory ballooning for VMs, CPU units for all)
+8. **Piboard Dashboard** -- DONE (Raspberry Pi 3B + Waveshare 5" HDMI, Go + SSE + Prometheus)
 
 ## Hardware Considerations
 

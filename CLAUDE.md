@@ -52,6 +52,7 @@ make clean          # Delete generated talos/_out/ configs only
 make patch-proxmox  # Patch Proxmox hosts (serial, one at a time)
 make patch-lxc      # Patch Debian packages on all LXCs
 make patch-docker   # Pull latest images + restart all Docker stacks
+make patch-pi       # Patch Raspberry Pi devices (piboard, etc.)
 ```
 
 **Accessing the cluster:**
@@ -81,6 +82,7 @@ Traefik must be running before any HTTP/HTTPS service is reachable. The K8s clus
 - Service LXCs: `.21`–`.26`, `.28`, `.39` (ARR stack, Plex, Jellyfin, monitoring, Authelia, OpenClaw, WireGuard)
 - TrueNAS VM: `.40` | Home Assistant VM: `.41`
 - K8s VIP: `.100` | control plane: `.101` | workers: `.111`, `.112`
+- Piboard (Pi 3B): `.131` (standalone monitoring dashboard, not Proxmox-managed)
 - MetalLB pool: `.150`–`.199`
 
 **Talos/K8s:** Immutable OS, API-driven. Config lives in `talos/talconfig.yaml` (reference) and `talos/patches/`. Generated secrets/configs go to `talos/_out/` (gitignored).
@@ -88,6 +90,8 @@ Traefik must be running before any HTTP/HTTPS service is reachable. The K8s clus
 **Traefik routing:** Static config in `ansible/files/traefik/traefik.yml`; per-service routes in `ansible/files/traefik/dynamic/*.yml`. TLS via Let's Encrypt + Cloudflare DNS challenge. Authelia `forwardAuth` middleware applied to protected routes.
 
 **Monitoring stack:** Prometheus + Grafana + Alertmanager deployed via Docker Compose on a dedicated LXC. Discord webhook alerts. PVE exporter for Proxmox metrics. Dashboards auto-provisioned from `ansible/files/monitoring/`.
+
+**Piboard:** Go dashboard on a Raspberry Pi 3B (192.168.86.131) with a Waveshare 5" HDMI display. Polls Prometheus via HTTP API, streams status via SSE to a Chromium kiosk. Source in `piboard/`, deployed via `make deploy PI_HOST=...` from the piboard directory. Patched via `make patch-pi`.
 
 ## Configuration Files
 

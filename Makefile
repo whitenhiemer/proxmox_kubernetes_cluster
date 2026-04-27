@@ -24,7 +24,7 @@
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard \
         bootstrap kubeconfig health k8s-base harden \
-        patch-proxmox patch-lxc patch-docker destroy clean help
+        patch-proxmox patch-lxc patch-docker patch-pi destroy clean help
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -194,6 +194,9 @@ patch-lxc: ## Patch Debian packages on all LXC containers
 
 patch-docker: ## Pull latest Docker images and restart all stacks
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/patch-docker.yml
+
+patch-pi: ## Patch Raspberry Pi devices (piboard dashboard, etc.)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/patch-pi.yml
 
 # ===== Phase 5: Security =====
 

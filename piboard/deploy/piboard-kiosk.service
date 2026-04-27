@@ -1,0 +1,39 @@
+# piboard-kiosk.service - Chromium kiosk for piboard display
+#
+# Launches Chromium in fullscreen kiosk mode pointed at the local piboard
+# instance. Waits for the piboard service to be healthy before starting.
+#
+# Install: sudo cp piboard-kiosk.service /etc/systemd/system/
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable --now piboard-kiosk
+
+[Unit]
+Description=Piboard Chromium Kiosk
+After=piboard.service graphical.target
+Wants=piboard.service
+Requires=graphical.target
+
+[Service]
+Type=simple
+User=pi
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/pi/.Xauthority
+ExecStartPre=/bin/sh -c 'until curl -sf http://localhost:8080/api/health; do sleep 2; done'
+ExecStart=/usr/bin/chromium-browser \
+    --kiosk \
+    --noerrdialogs \
+    --disable-infobars \
+    --disable-translate \
+    --disable-features=TranslateUI \
+    --no-first-run \
+    --check-for-update-interval=31536000 \
+    --disable-pinch \
+    --overscroll-history-navigation=0 \
+    --disable-session-crashed-bubble \
+    --autoplay-policy=no-user-gesture-required \
+    http://localhost:8080
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical.target

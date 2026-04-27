@@ -814,16 +814,93 @@ curl https://alert.woodhead.tech
 
 ---
 
-## Phase 14: Security Hardening
+## Phase 14: Piboard Dashboard (Raspberry Pi)
 
-### 14.1 Verify SSH Key Access
+The piboard is a standalone Go dashboard that queries Prometheus and displays
+service health, Proxmox node metrics, and alert counts on a Raspberry Pi 3B
+with a Waveshare 5-inch HDMI display (800x480). Not managed by Proxmox.
+
+### 14.1 Flash Raspberry Pi OS
+
+1. Download Raspberry Pi OS Lite (64-bit or 32-bit for Pi 3B)
+2. Flash to SD card with Raspberry Pi Imager
+3. Enable SSH and configure WiFi during imaging
+4. Boot the Pi, note its IP address
+
+### 14.2 Build and Deploy Piboard
+
+```bash
+cd piboard
+
+# Build for ARMv7 (Raspberry Pi 3B)
+make build-pi
+
+# Deploy binary + config to the Pi
+make deploy PI_HOST=192.168.86.131
+```
+
+This copies the `piboard` binary, `config.yaml`, and systemd service file to the Pi.
+
+### 14.3 Run Setup Script
+
+The setup script installs X11, Chromium, configures auto-login, kiosk mode,
+and Waveshare display settings:
+
+```bash
+ssh bwoodwar@192.168.86.131
+sudo bash /tmp/deploy/setup-pi.sh
+```
+
+This:
+- Installs Openbox, Chromium, xinit, and dependencies
+- Configures auto-login on tty1 with `.bash_profile` launching `startx`
+- Sets Waveshare HDMI timing in `/boot/firmware/config.txt`
+- Creates the `piboard` systemd service
+- Reboots into kiosk mode
+
+### 14.4 Add to Ansible Inventory
+
+The Pi is already in `ansible/inventory/hosts.yml` under the `raspberry_pi` group:
+```yaml
+raspberry_pi:
+  hosts:
+    piboard:
+      ansible_host: 192.168.86.131
+      ansible_user: bwoodwar
+```
+
+### 14.5 Verify
+
+```bash
+# Check piboard service
+ssh bwoodwar@192.168.86.131 "sudo systemctl status piboard"
+
+# Check the dashboard API
+curl http://192.168.86.131:8080/api/health
+
+# The Waveshare display should show the dashboard in Chromium kiosk mode
+```
+
+### 14.6 Configuration
+
+Edit `piboard/config.yaml` to adjust:
+- `prometheus_url` -- Prometheus endpoint (default: `http://192.168.86.25:9090`)
+- `poll_interval` -- How often to poll Prometheus (default: `20s`)
+- `services` -- List of monitored services (matched against Blackbox Exporter targets)
+- `proxmox_nodes` -- List of Proxmox nodes with PVE Exporter `id` labels
+
+---
+
+## Phase 15: Security Hardening
+
+### 15.1 Verify SSH Key Access
 
 Before running this, make sure you can SSH with keys:
 ```bash
 ssh root@192.168.86.29  # Should work without password
 ```
 
-### 14.2 Apply Hardening
+### 15.2 Apply Hardening
 
 ```bash
 make harden

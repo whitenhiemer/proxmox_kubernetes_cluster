@@ -1,0 +1,29 @@
+# piboard.service - Piboard monitoring dashboard
+#
+# Runs the piboard binary as a dedicated user.
+# Install: sudo cp piboard.service /etc/systemd/system/
+#          sudo systemctl daemon-reload
+#          sudo systemctl enable --now piboard
+
+[Unit]
+Description=Piboard Homelab Dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=piboard
+Group=piboard
+ExecStart=/usr/local/bin/piboard --config /etc/piboard/config.yaml
+Restart=always
+RestartSec=5
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/etc/piboard
+
+[Install]
+WantedBy=multi-user.target

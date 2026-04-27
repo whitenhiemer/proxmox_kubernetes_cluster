@@ -1,0 +1,197 @@
+/* Piboard - 800x480 dark dashboard for Raspberry Pi 5-inch display */
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 800px;
+    height: 480px;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    background: #0d1117;
+    color: #e6edf3;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    display: grid;
+    grid-template-rows: 48px 1fr 44px;
+    grid-template-areas:
+        "topbar"
+        "grid"
+        "bottombar";
+}
+
+/* --- Top Bar --- */
+
+#top-bar {
+    grid-area: topbar;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+#status-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #484f58;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+#status-dot.healthy { background: #3fb950; }
+#status-dot.degraded { background: #d29922; }
+#status-dot.critical { background: #f85149; animation: pulse 1.5s infinite; }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+#timestamp {
+    font-size: 16px;
+    color: #8b949e;
+    font-family: monospace;
+}
+
+#timestamp.stale {
+    color: #f85149;
+}
+
+/* --- Service Grid --- */
+
+#service-grid {
+    grid-area: grid;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 8px;
+    padding: 8px;
+    align-content: center;
+}
+
+.service-tile {
+    background: #161b22;
+    border: 2px solid #30363d;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    transition: border-color 0.3s ease, background 0.3s ease;
+}
+
+.service-tile.up    { border-color: #238636; }
+.service-tile.down  { border-color: #da3633; background: #1c0d0d; }
+.service-tile.degraded { border-color: #9e6a03; background: #1c1500; }
+.service-tile.unknown  { border-color: #484f58; }
+
+.service-status-dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.service-status-dot.up       { background: #3fb950; }
+.service-status-dot.down     { background: #f85149; animation: pulse 1.5s infinite; }
+.service-status-dot.degraded { background: #d29922; }
+.service-status-dot.unknown  { background: #484f58; }
+
+.service-name {
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 4px;
+    color: #e6edf3;
+    line-height: 1.2;
+}
+
+.service-response-time {
+    font-size: 14px;
+    color: #8b949e;
+    font-family: monospace;
+}
+
+/* --- Bottom Bar --- */
+
+#bottom-bar {
+    grid-area: bottombar;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: #161b22;
+    border-top: 1px solid #30363d;
+    font-size: 15px;
+}
+
+#alerts-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#alerts-icon {
+    font-size: 18px;
+}
+
+#alerts-count {
+    font-weight: 600;
+}
+
+#alerts-count.firing {
+    color: #f85149;
+}
+
+#infra-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: monospace;
+    color: #8b949e;
+}
+
+.divider {
+    color: #30363d;
+}
+
+/* --- Connection Lost Overlay --- */
+
+#connection-lost {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 800px;
+    height: 480px;
+    background: rgba(13, 17, 23, 0.92);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    color: #f85149;
+    letter-spacing: 2px;
+}
+
+#connection-lost.visible {
+    display: flex;
+}

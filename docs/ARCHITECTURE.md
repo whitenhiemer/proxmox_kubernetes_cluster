@@ -96,6 +96,14 @@ and resource allocation.
             |                  | UDP:51820 |   | .27 :80   |
             |                  +-----------+   +-----------+
             |
+          +------- Standalone Devices (not Proxmox-managed) -------+
+          |                                                         |
+     +----+----------+
+     | Piboard       |  Raspberry Pi 3B + Waveshare 5" HDMI
+     | 192.168.86.131|  Go dashboard (SSE) -> Prometheus API
+     | :8080         |  Chromium kiosk, auto-login
+     +---------------+
+            |
     +-------+-------+
     | Traefik       |
     | Routes:       |
@@ -139,6 +147,7 @@ and resource allocation.
 | 192.168.86.39      | wireguard        | LXC    | 208   | WireGuard VPN tunnel (UDP 51820)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
+| 192.168.86.131     | piboard          | Pi     | --    | Raspberry Pi 3B monitoring dashboard|
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
 | 192.168.86.101     | talos-cp-0       | VM     | 400   | K8s control plane (Talos Linux)     |
 | 192.168.86.111-112 | talos-worker-*   | VM     | 410+  | K8s workers (Talos Linux)           |
@@ -331,6 +340,14 @@ obtained via Cloudflare DNS-01 challenges.
 | (Prometheus)   |  PVE Exporter, Blackbox,
 | (observes all) |  Traefik metrics, K8s exporters
 |                |  Alerts -> Discord via Alertmanager
++-------+--------+
+        |
+        | Prometheus API (/api/v1/query)
+        |
++-------v--------+
+| Piboard        |  Raspberry Pi 3B (standalone)
+| (dashboard)    |  Polls Prometheus every 20s
+| 192.168.86.131 |  SSE -> Chromium kiosk (localhost)
 +----------------+
      |
 NFS mount (/media, read-write)
@@ -362,6 +379,8 @@ NFS mount (/media, read-only)
 - Monitoring without PVE token: Proxmox metrics unavailable (all other scrapes still work)
 - Monitoring without Discord webhook: alerts fire but no notifications sent
 - Monitoring without K8s manifests: K8s metrics unavailable (deploy kube-state-metrics later)
+- Piboard without Prometheus: dashboard shows "connection lost" overlay (reconnects via SSE)
+- Piboard without Blackbox Exporter: service tiles show unknown status (Prometheus still reachable)
 
 ---
 
@@ -480,6 +499,12 @@ in parallel after the host is ready.
 | WireGuard LXC     | 2 GB   | local-lvm   | --        | WireGuard tools + configs                |
 | Libby Alert LXC   | 8 GB   | local-lvm   | --        | Docker + Go binary + config              |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
+
+### Standalone Devices (not Proxmox-managed)
+
+| Device            | Cores | RAM (MB) | Disk   | Notes                              |
+|-------------------|-------|----------|--------|------------------------------------|
+| Piboard (Pi 3B)   | 4     | 1024     | 32 GB  | Waveshare 5" HDMI, Chromium kiosk  |
 
 ### Total resource budget (all services running)
 

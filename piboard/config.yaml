@@ -1,0 +1,64 @@
+# config.yaml - Piboard dashboard configuration
+#
+# Prometheus connection, poll interval, and monitored service definitions.
+# All PromQL queries are generated from these service entries.
+#
+# Place at /etc/piboard/config.yaml or pass --config /path/to/config.yaml
+
+# Prometheus HTTP API endpoint
+prometheus_url: "http://192.168.86.25:9090"
+
+# How often to poll Prometheus for fresh data (seconds)
+poll_interval_seconds: 20
+
+# HTTP server listen address
+listen_addr: ":8080"
+
+# Services to monitor via blackbox HTTP probes.
+# The "target" must exactly match the instance label in Prometheus
+# (set by relabel_configs in prometheus.yml).
+services:
+  - name: "Recipes"
+    target: "http://192.168.86.21:80"
+    job: "blackbox-http"
+
+  - name: "Overseerr"
+    target: "http://192.168.86.22:5055"
+    job: "blackbox-http"
+
+  - name: "Plex"
+    target: "http://192.168.86.23:32400"
+    job: "blackbox-http"
+
+  - name: "Jellyfin"
+    target: "http://192.168.86.24:8096"
+    job: "blackbox-http"
+
+  - name: "HomeAssist"
+    target: "http://192.168.86.41:8123"
+    job: "blackbox-http"
+
+  - name: "OpenClaw"
+    target: "http://192.168.86.26:18789"
+    job: "blackbox-http"
+
+  - name: "TrueNAS"
+    target: "https://192.168.86.40:443"
+    job: "blackbox-https"
+
+# Proxmox nodes to monitor via PVE exporter.
+# The "id" must match the PVE exporter's id label (e.g. "node/thinkcentre1").
+# Since each PVE API node returns metrics for the entire cluster, queries
+# are deduplicated by id label rather than scrape instance.
+proxmox_nodes:
+  - name: "thinkcentre1"
+    id: "node/thinkcentre1"
+  - name: "thinkcentre2"
+    id: "node/thinkcentre2"
+  - name: "thinkcentre3"
+    id: "node/thinkcentre3"
+  - name: "tower1"
+    id: "node/tower1"
+
+# Response time threshold (seconds) for "degraded" (amber) status
+degraded_threshold_seconds: 3.0

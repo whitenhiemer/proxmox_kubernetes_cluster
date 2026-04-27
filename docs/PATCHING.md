@@ -13,6 +13,7 @@ Each section covers what to update, how to do it, and how to verify.
 | Monthly    | Terraform provider update                         |
 | Quarterly  | Talos + Kubernetes version bump                   |
 | As-needed  | Proxmox VE host updates                           |
+| Weekly     | Raspberry Pi packages (`apt update && apt upgrade`) |
 | Automatic  | Home Assistant OTA updates (self-managed)          |
 | Automatic  | TrueNAS Scale updates (self-managed via web UI)    |
 
@@ -227,7 +228,35 @@ TrueNAS supports rollback if an update breaks something.
 
 ---
 
-## 8. Kubernetes Manifests
+## 8. Raspberry Pi Devices
+
+The piboard Raspberry Pi runs Raspberry Pi OS and is patched separately from
+the Proxmox-managed LXC containers.
+
+### Ansible Playbook: `ansible/playbooks/patch-pi.yml`
+
+```bash
+# Patch all Raspberry Pi devices
+make patch-pi
+
+# Or run directly
+cd ansible && ansible-playbook playbooks/patch-pi.yml
+```
+
+This runs `apt update && apt upgrade`, reboots if a kernel update requires it,
+and cleans up old packages with `autoremove`.
+
+**Verification**: `ssh bwoodwar@192.168.86.131 "apt list --upgradable 2>/dev/null | wc -l"` should return 1 (header only).
+
+**Post-patch check**: Verify the piboard service is running after reboot:
+```bash
+ssh bwoodwar@192.168.86.131 "sudo systemctl status piboard"
+curl http://192.168.86.131:8080/api/health
+```
+
+---
+
+## 9. Kubernetes Manifests
 
 In-cluster workloads (kube-state-metrics, node-exporter, MetalLB) are defined
 in `k8s/base/`. Update image tags in the manifests, then reapply.
@@ -250,7 +279,7 @@ kubectl get pods -n metallb-system
 
 ---
 
-## 9. Terraform Provider
+## 10. Terraform Provider
 
 ```bash
 cd terraform
@@ -274,8 +303,10 @@ terraform plan
 ## Makefile Targets
 
 ```bash
+make patch-proxmox   # apt update/upgrade on Proxmox hosts (serial, one at a time)
 make patch-lxc       # apt update/upgrade on all LXC containers
 make patch-docker    # docker compose pull + up -d on all Docker stacks
+make patch-pi        # apt update/upgrade on Raspberry Pi devices (piboard, etc.)
 ```
 
 ---
@@ -290,6 +321,7 @@ make patch-docker    # docker compose pull + up -d on all Docker stacks
 | kube-state-metrics  | Pinned          | K8s manifests should be reproducible            |
 | Terraform provider  | Range (`~>`)    | Allow patch updates, manual minor bumps         |
 | Proxmox VE          | Community repo  | Follow Proxmox release cadence                  |
+| Piboard binary      | Manual deploy   | Rebuild from source, deploy via `make deploy`    |
 | HAOS / TrueNAS      | Self-managed    | Purpose-built OS with built-in update mechanisms |
 
 ---

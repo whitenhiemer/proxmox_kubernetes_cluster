@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=800, height=480, initial-scale=1.0, user-scalable=no">
+    <title>Piboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- Top bar: overall cluster status + timestamp -->
+    <header id="top-bar">
+        <div id="overall-status" class="status-indicator">
+            <span id="status-dot"></span>
+            <span id="status-text">Connecting...</span>
+        </div>
+        <div id="timestamp">--:--:--</div>
+    </header>
+
+    <!-- Service health grid -->
+    <main id="service-grid"></main>
+
+    <!-- Bottom bar: alerts + infrastructure summary -->
+    <footer id="bottom-bar">
+        <div id="alerts-section">
+            <span id="alerts-icon">&#9888;</span>
+            <span id="alerts-count">0 alerts</span>
+        </div>
+        <div id="infra-summary">
+            <span id="cpu-summary">CPU: --%</span>
+            <span class="divider">|</span>
+            <span id="mem-summary">MEM: --%</span>
+            <span class="divider">|</span>
+            <span id="disk-summary">DISK: --%</span>
+        </div>
+    </footer>
+
+    <!-- Overlay shown when SSE connection drops -->
+    <div id="connection-lost">CONNECTION LOST</div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
