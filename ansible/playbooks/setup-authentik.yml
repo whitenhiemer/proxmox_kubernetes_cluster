@@ -145,6 +145,14 @@
       when: not env_file.stat.exists
       no_log: true
 
+    # --- Branding ---
+    - name: Copy woodhead.tech logo to Authentik media directory
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../assets/logo.png"
+        dest: "{{ auth_base_dir }}/media/logo.png"
+        mode: "0644"
+      notify: Restart authentik
+
     # --- Deploy ---
     - name: Copy Docker Compose file
       ansible.builtin.copy:

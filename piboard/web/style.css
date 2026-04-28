@@ -37,6 +37,19 @@ body {
     border-bottom: 1px solid #30363d;
 }
 
+#top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#logo {
+    height: 34px;
+    width: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .status-indicator {
     display: flex;
     align-items: center;
