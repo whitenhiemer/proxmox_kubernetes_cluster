@@ -63,10 +63,6 @@ resource "proxmox_virtual_environment_container" "sdr" {
     }
   }
 
-  features {
-    nesting = true
-  }
-
   lifecycle {
     ignore_changes = [
       initialization[0].dns[0].domain,

@@ -4,8 +4,8 @@
     {
       "center": 854212500,
       "rate": 2400000,
-      "driver": "rtlsdr",
-      "device": 0,
+      "driver": "osmosdr",
+      "device": "rtl=0",
       "gain": 40,
       "digitalRecorders": 10,
       "debugRecorders": 0,
