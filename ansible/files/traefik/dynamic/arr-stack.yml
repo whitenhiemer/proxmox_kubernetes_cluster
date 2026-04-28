@@ -6,7 +6,7 @@
 http:
   routers:
     overseerr:
-      rule: "Host(`requests.woodhead.tech`)"
+      rule: "Host(`requests.woodhead.tech`) || Host(`request.woodhead.tech`)"
       entryPoints:
         - websecure
       service: overseerr
