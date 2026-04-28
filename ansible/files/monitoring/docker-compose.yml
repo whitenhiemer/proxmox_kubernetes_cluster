@@ -197,6 +197,40 @@ services:
       - "8083:80"
     restart: unless-stopped
 
+  # --- NUT Exporter: UPS Metrics ---
+  # Queries NUT server on thinkcentre3 (192.168.86.31:3493) and exposes
+  # UPS metrics (battery charge, load, runtime, voltage) for Prometheus.
+  nut-exporter-tc3:
+    image: druggeri/nut_exporter:latest
+    container_name: nut-exporter-tc3
+    network_mode: host
+    environment:
+      - NUT_EXPORTER_SERVER=192.168.86.31
+      - NUT_EXPORTER_USERNAME=prometheus
+      - NUT_EXPORTER_PASSWORD=nutprometheus
+    restart: unless-stopped
+
+  nut-exporter-tower1:
+    image: druggeri/nut_exporter:latest
+    container_name: nut-exporter-tower1
+    network_mode: host
+    command: ["--web.listen-address=:9198", "--nut.server=192.168.86.130"]
+    environment:
+      - NUT_EXPORTER_USERNAME=prometheus
+      - NUT_EXPORTER_PASSWORD=nutprometheus
+    restart: unless-stopped
+
+  # NUT Exporter for zotac UPS (CyberPower CST135UC2)
+  nut-exporter-zotac:
+    image: druggeri/nut_exporter:latest
+    container_name: nut-exporter-zotac
+    network_mode: host
+    command: ["--web.listen-address=:9197", "--nut.server=192.168.86.147"]
+    environment:
+      - NUT_EXPORTER_USERNAME=prometheus
+      - NUT_EXPORTER_PASSWORD=nutprometheus
+    restart: unless-stopped
+
   # --- Loki: Log Aggregation (v2 -- uncomment when ready) ---
   # Centralized log storage. Requires Promtail agents on each LXC/VM.
   # Deferred to reduce initial complexity.

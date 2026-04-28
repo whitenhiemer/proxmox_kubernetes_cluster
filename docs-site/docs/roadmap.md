@@ -24,8 +24,10 @@ Implementation priority and planned services for the homelab.
 | 11 | Talos K8s Cluster | DONE |
 | 12 | SDR Scanner | DONE |
 | 13 | Dexcom Glucose Monitoring | IN PROGRESS |
-| 14 | Docusaurus Docs Site | IN PROGRESS |
-| 15 | Resume Site | PLANNED |
+| 14 | Docusaurus Docs Site | DONE |
+| 15 | Resume Site | DONE |
+| 16 | Landing Page (woodhead.tech) | DONE |
+| 17 | NUT UPS Monitoring | DONE |
 
 ## IP Address Plan
 
@@ -33,7 +35,8 @@ Implementation priority and planned services for the homelab.
 |---|---|---|---|
 | 192.168.86.1 | Gateway (Nest WiFi) | Router | -- |
 | 192.168.86.29-31 | Proxmox nodes | Host | -- |
-| 192.168.86.130 | tower1 (Proxmox node) | Host | -- |
+| 192.168.86.130 | tower1 (Proxmox node 4) | Host | -- |
+| 192.168.86.147 | zotac (Proxmox node 5) | Host | -- |
 | 192.168.86.20 | Traefik | LXC | 200 |
 | 192.168.86.21 | Recipe site | LXC | 201 |
 | 192.168.86.22 | ARR stack | LXC | 202 |
@@ -51,23 +54,36 @@ Implementation priority and planned services for the homelab.
 | 192.168.86.138 | Klipper Ender 3 | Pi | -- |
 | 192.168.86.100 | K8s API VIP | VIP | -- |
 | 192.168.86.101 | K8s control plane | VM | 400 |
-| 192.168.86.111-112 | K8s workers | VM | 410+ |
+| 192.168.86.111-113 | K8s workers | VM | 410-412 |
 | 192.168.86.150-199 | MetalLB pool | K8s | -- |
 
-## Planned Services
+## Deployed Services
 
 ### Docusaurus Docs Site
 
 - **Domain:** `docs.woodhead.tech`
-- **Type:** K8s pod or Docker container
-- **Purpose:** Centralized runbooks, architecture docs, and user guides
-- **Stack:** Docusaurus (React + Markdown) -> nginx static serving
+- **Type:** Docker container on monitoring LXC (port 8081)
+- **Stack:** Docusaurus 3.x static build -> nginx
 
 ### Resume / Portfolio Site
 
 - **Domain:** `resume.woodhead.tech`
-- **Type:** Static site (Hugo or similar)
-- **Purpose:** Personal resume and project portfolio
+- **Type:** Docker container on monitoring LXC (port 8082)
+- **Stack:** Hugo static build -> nginx
+
+### Landing Page
+
+- **Domain:** `woodhead.tech` (root domain)
+- **Type:** Docker container on monitoring LXC (port 8083)
+- **Stack:** Static HTML service link tree -> nginx
+
+### NUT UPS Monitoring
+
+- **Type:** Docker containers on monitoring LXC (ports 9199, 9198)
+- **Stack:** NUT exporter -> Prometheus -> Grafana
+- **UPS units:** thinkcentre3 (192.168.86.31), tower1 (192.168.86.130), and zotac (192.168.86.147)
+
+## Planned Services
 
 ### Dexcom Glucose Monitoring
 

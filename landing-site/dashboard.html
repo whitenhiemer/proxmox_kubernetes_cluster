@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>woodhead.tech - Dashboard</title>
+    <meta name="description" content="Homelab operations dashboard">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        a { color: inherit; text-decoration: none; }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            background: #161b22;
+            border-bottom: 1px solid #21262d;
+            height: 48px;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+
+        .topbar h1 {
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 0.85em;
+            color: #8b949e;
+        }
+
+        .topbar-right a {
+            color: #3fb950;
+            font-size: 0.85em;
+        }
+
+        #clock {
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+            color: #e6edf3;
+        }
+
+        .refresh-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3fb950;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            grid-template-rows: 1fr 1fr;
+            gap: 12px;
+            padding: 12px;
+            height: calc(100vh - 48px);
+        }
+
+        .panel {
+            background: #161b22;
+            border: 1px solid #21262d;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid #21262d;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #8b949e;
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .services-panel { grid-row: 1 / 3; }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 8px;
+        }
+
+        .svc {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: #0d1117;
+            border: 1px solid #21262d;
+            border-radius: 8px;
+            transition: border-color 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+
+        .svc:hover {
+            border-color: #30363d;
+            background: #1c2333;
+        }
+
+        .svc-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .svc-dot.up { background: #3fb950; box-shadow: 0 0 6px #3fb95066; }
+        .svc-dot.down { background: #f85149; box-shadow: 0 0 6px #f8514966; }
+        .svc-dot.unknown { background: #484f58; }
+
+        .svc-info { min-width: 0; }
+
+        .svc-name {
+            font-size: 0.85em;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .svc-sub {
+            font-size: 0.7em;
+            color: #484f58;
+        }
+
+        .metric-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 4px;
+        }
+
+        .metric-row + .metric-row { border-top: 1px solid #21262d; }
+
+        .metric-label {
+            font-size: 0.8em;
+            color: #8b949e;
+            width: 90px;
+            flex-shrink: 0;
+        }
+
+        .metric-bar {
+            flex: 1;
+            height: 8px;
+            background: #21262d;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease, background 0.3s;
+        }
+
+        .metric-fill.green { background: #3fb950; }
+        .metric-fill.yellow { background: #d29922; }
+        .metric-fill.red { background: #f85149; }
+
+        .metric-val {
+            font-size: 0.8em;
+            font-variant-numeric: tabular-nums;
+            width: 48px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 8px 4px;
+        }
+
+        .alert-item + .alert-item { border-top: 1px solid #21262d; }
+
+        .alert-sev {
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .alert-sev.critical { background: #f8514933; color: #f85149; }
+        .alert-sev.warning { background: #d2992233; color: #d29922; }
+        .alert-sev.info { background: #3fb95033; color: #3fb950; }
+
+        .alert-text { font-size: 0.8em; line-height: 1.4; }
+        .alert-name { font-weight: 600; }
+        .alert-desc { color: #8b949e; font-size: 0.9em; }
+
+        .no-alerts {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #3fb950;
+            font-size: 0.9em;
+            gap: 8px;
+        }
+
+        .stat-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #0d1117;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        .stat-pill .val {
+            color: #e6edf3;
+            font-weight: 600;
+        }
+
+        .panel-body::-webkit-scrollbar { width: 4px; }
+        .panel-body::-webkit-scrollbar-track { background: transparent; }
+        .panel-body::-webkit-scrollbar-thumb { background: #30363d; border-radius: 2px; }
+
+        @media (max-width: 800px) {
+            .layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto auto;
+            }
+            .services-panel { grid-row: auto; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <div class="topbar-left">
+        <a href="/"><img src="/logo.png" alt="woodhead.tech"></a>
+        <h1>Operations</h1>
+    </div>
+    <div class="topbar-right">
+        <div class="stat-pill">
+            <span>Services</span>
+            <span class="val" id="svc-count">--/--</span>
+        </div>
+        <div class="stat-pill">
+            <span>Containers</span>
+            <span class="val" id="container-count">--</span>
+        </div>
+        <div class="stat-pill">
+            <span>Alerts</span>
+            <span class="val" id="alert-count">--</span>
+        </div>
+        <span id="clock">--:--:--</span>
+        <div class="refresh-dot" title="Auto-refreshing"></div>
+        <a href="/">Links</a>
+    </div>
+</div>
+
+<div class="layout">
+    <div class="panel services-panel">
+        <div class="panel-header">
+            <span>Services</span>
+            <span id="last-updated" style="font-weight: 400; text-transform: none;">--</span>
+        </div>
+        <div class="panel-body">
+            <div class="services-grid" id="services-grid"></div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">Cluster Metrics</div>
+        <div class="panel-body" id="metrics-body">
+            <div class="metric-row">
+                <span class="metric-label">CPU</span>
+                <div class="metric-bar"><div class="metric-fill green" id="cpu-fill" style="width: 0%"></div></div>
+                <span class="metric-val" id="cpu-val">--%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Memory</span>
+                <div class="metric-bar"><div class="metric-fill green" id="mem-fill" style="width: 0%"></div></div>
+                <span class="metric-val" id="mem-val">--%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Disk /</span>
+                <div class="metric-bar"><div class="metric-fill green" id="disk-fill" style="width: 0%"></div></div>
+                <span class="metric-val" id="disk-val">--%</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Containers</span>
+                <div class="metric-bar"><div class="metric-fill green" id="ct-fill" style="width: 0%"></div></div>
+                <span class="metric-val" id="ct-val">--</span>
+            </div>
+            <div class="metric-row">
+                <span class="metric-label">Uptime</span>
+                <div class="metric-bar"><div class="metric-fill green" style="width: 100%"></div></div>
+                <span class="metric-val" id="uptime-val">--d</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">Active Alerts</div>
+        <div class="panel-body" id="alerts-body">
+            <div class="no-alerts" id="no-alerts">All clear</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var SERVICES = [
+        { name: 'Prometheus', job: 'prometheus', url: 'https://prometheus.woodhead.tech', sub: ':9090' },
+        { name: 'Grafana', job: 'grafana', url: 'https://grafana.woodhead.tech', sub: ':3000' },
+        { name: 'Alertmanager', job: 'alertmanager', url: 'https://alertmanager.woodhead.tech', sub: ':9093' },
+        { name: 'Traefik', job: 'traefik', url: 'https://traefik.woodhead.tech', sub: ':20' },
+        { name: 'Node Exporter', job: 'node-exporter', url: null, sub: ':9100' },
+        { name: 'cAdvisor', job: 'cadvisor', url: null, sub: ':8080' },
+        { name: 'Blackbox', job: 'blackbox', url: null, sub: ':9115' },
+        { name: 'PVE Exporter', job: 'pve-exporter', url: null, sub: ':9221' },
+        { name: 'Plex', job: null, url: 'https://plex.woodhead.tech', sub: 'media' },
+        { name: 'Jellyfin', job: null, url: 'https://jellyfin.woodhead.tech', sub: 'media' },
+        { name: 'Overseerr', job: null, url: 'https://requests.woodhead.tech', sub: 'requests' },
+        { name: 'Sonarr', job: null, url: 'https://sonarr.woodhead.tech', sub: 'tv' },
+        { name: 'Radarr', job: null, url: 'https://radarr.woodhead.tech', sub: 'movies' },
+        { name: 'Bazarr', job: null, url: 'https://bazarr.woodhead.tech', sub: 'subtitles' },
+        { name: 'Prowlarr', job: null, url: 'https://prowlarr.woodhead.tech', sub: 'indexers' },
+        { name: 'SABnzbd', job: null, url: 'https://sabnzbd.woodhead.tech', sub: 'usenet' },
+        { name: 'TrueNAS', job: null, url: 'https://nas.woodhead.tech', sub: 'storage' },
+        { name: 'Home Assistant', job: null, url: 'https://home.woodhead.tech', sub: 'automation' },
+        { name: 'Authentik', job: null, url: 'https://auth.woodhead.tech', sub: 'identity' },
+        { name: 'SDR Scanner', job: null, url: 'https://scanner.woodhead.tech', sub: 'radio' },
+        { name: 'Gourmand', job: null, url: 'https://recipes.woodhead.tech', sub: 'recipes' },
+        { name: 'OpenClaw', job: null, url: 'https://claw.woodhead.tech', sub: 'ai' },
+        { name: 'Libby Alert', job: null, url: 'https://alert.woodhead.tech', sub: 'safety' },
+        { name: 'Docs', job: null, url: 'https://docs.woodhead.tech', sub: 'docs' },
+        { name: 'Resume', job: null, url: 'https://resume.woodhead.tech', sub: 'portfolio' },
+        { name: 'Ender 5 Pro', job: null, url: 'https://ender5.woodhead.tech', sub: '3d printer' },
+        { name: 'Dexcom', job: 'dexcom-exporter', url: null, sub: ':9666' },
+    ];
+
+    var serviceStatus = {};
+
+    function el(tag, cls, text) {
+        var e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (text) e.textContent = text;
+        return e;
+    }
+
+    function renderServices() {
+        var grid = document.getElementById('services-grid');
+        while (grid.firstChild) grid.removeChild(grid.firstChild);
+
+        SERVICES.forEach(function (svc) {
+            var card = document.createElement(svc.url ? 'a' : 'div');
+            card.className = 'svc';
+            if (svc.url) card.href = svc.url;
+
+            var dot = el('div', 'svc-dot ' + (serviceStatus[svc.name] || 'unknown'));
+            var info = el('div', 'svc-info');
+            info.appendChild(el('div', 'svc-name', svc.name));
+            info.appendChild(el('div', 'svc-sub', svc.sub));
+            card.appendChild(dot);
+            card.appendChild(info);
+            grid.appendChild(card);
+        });
+    }
+
+    function fetchStatus() {
+        fetch('/api/prometheus/targets?state=active')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var targets = data.data.activeTargets || [];
+                var jobHealth = {};
+                targets.forEach(function (t) {
+                    var job = t.labels.job || '';
+                    if (!jobHealth[job] || t.health === 'up') {
+                        jobHealth[job] = t.health;
+                    }
+                });
+
+                SERVICES.forEach(function (svc) {
+                    if (svc.job && jobHealth[svc.job]) {
+                        serviceStatus[svc.name] = jobHealth[svc.job] === 'up' ? 'up' : 'down';
+                    }
+                });
+
+                return fetch('/api/prometheus/query?query=probe_success');
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var results = data.data.result || [];
+                results.forEach(function (r) {
+                    var target = r.metric.instance || '';
+                    var val = parseFloat(r.value[1]);
+                    SERVICES.forEach(function (svc) {
+                        if (svc.url && target.indexOf(svc.url.replace('https://', '')) >= 0) {
+                            serviceStatus[svc.name] = val === 1 ? 'up' : 'down';
+                        }
+                    });
+                });
+
+                var up = 0, total = 0;
+                SERVICES.forEach(function (svc) {
+                    var s = serviceStatus[svc.name];
+                    if (s === 'up' || s === 'down') {
+                        total++;
+                        if (s === 'up') up++;
+                    }
+                });
+                document.getElementById('svc-count').textContent = up + '/' + total;
+                document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+                renderServices();
+            })
+            .catch(function () {
+                renderServices();
+            });
+    }
+
+    function setMetric(id, pct) {
+        var fill = document.getElementById(id + '-fill');
+        var valEl = document.getElementById(id + '-val');
+        fill.style.width = pct + '%';
+        valEl.textContent = pct + '%';
+        fill.className = 'metric-fill ' + (pct > 85 ? 'red' : pct > 65 ? 'yellow' : 'green');
+    }
+
+    function fetchMetrics() {
+        var queries = [
+            { id: 'cpu', query: '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)' },
+            { id: 'mem', query: '(1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100' },
+            { id: 'disk', query: '(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100' },
+            { id: 'uptime', query: 'node_time_seconds - node_boot_time_seconds' },
+        ];
+
+        queries.forEach(function (q) {
+            fetch('/api/prometheus/query?query=' + encodeURIComponent(q.query))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var results = data.data.result || [];
+                    if (results.length === 0) return;
+                    var val = parseFloat(results[0].value[1]);
+
+                    if (q.id === 'uptime') {
+                        document.getElementById('uptime-val').textContent = Math.floor(val / 86400) + 'd';
+                        return;
+                    }
+                    setMetric(q.id, Math.round(val));
+                })
+                .catch(function () {});
+        });
+
+        fetch('/api/prometheus/query?query=' + encodeURIComponent('count(container_last_seen{name!=""})'))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var results = data.data.result || [];
+                if (results.length > 0) {
+                    var count = parseInt(results[0].value[1]);
+                    document.getElementById('container-count').textContent = count;
+                    document.getElementById('ct-val').textContent = count;
+                    var pct = Math.min(100, Math.round((count / 20) * 100));
+                    document.getElementById('ct-fill').style.width = pct + '%';
+                }
+            })
+            .catch(function () {});
+    }
+
+    function fetchAlerts() {
+        fetch('/api/alertmanager/alerts?active=true&silenced=false&inhibited=false')
+            .then(function (r) { return r.json(); })
+            .then(function (alerts) {
+                var body = document.getElementById('alerts-body');
+                while (body.firstChild) body.removeChild(body.firstChild);
+                document.getElementById('alert-count').textContent = alerts.length;
+
+                if (alerts.length === 0) {
+                    var clear = el('div', 'no-alerts', 'All clear');
+                    body.appendChild(clear);
+                    return;
+                }
+
+                alerts.forEach(function (a) {
+                    var sev = (a.labels && a.labels.severity) || 'warning';
+                    var name = (a.labels && a.labels.alertname) || 'Unknown';
+                    var desc = '';
+                    if (a.annotations) {
+                        desc = a.annotations.description || a.annotations.summary || '';
+                    }
+
+                    var item = el('div', 'alert-item');
+                    item.appendChild(el('span', 'alert-sev ' + sev, sev));
+                    var text = el('div', 'alert-text');
+                    text.appendChild(el('div', 'alert-name', name));
+                    text.appendChild(el('div', 'alert-desc', desc));
+                    item.appendChild(text);
+                    body.appendChild(item);
+                });
+            })
+            .catch(function () {
+                document.getElementById('alert-count').textContent = '?';
+            });
+    }
+
+    function updateClock() {
+        document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', {
+            hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+    }
+
+    renderServices();
+    fetchStatus();
+    fetchMetrics();
+    fetchAlerts();
+    updateClock();
+
+    setInterval(updateClock, 1000);
+    setInterval(function () {
+        fetchStatus();
+        fetchMetrics();
+        fetchAlerts();
+    }, 30000);
+</script>
+
+</body>
+</html>

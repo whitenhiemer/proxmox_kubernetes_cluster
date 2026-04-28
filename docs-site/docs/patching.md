@@ -97,11 +97,12 @@ ssh root@192.168.86.20 "traefik version"
 
 ```bash
 # Upgrade control plane first
-talosctl upgrade --nodes 192.168.86.101 --image ghcr.io/siderolabs/installer:v1.9.1
+talosctl upgrade --nodes 192.168.86.101 --image ghcr.io/siderolabs/installer:v1.12.5
 
 # Then workers one at a time
-talosctl upgrade --nodes 192.168.86.111 --image ghcr.io/siderolabs/installer:v1.9.1
-talosctl upgrade --nodes 192.168.86.112 --image ghcr.io/siderolabs/installer:v1.9.1
+talosctl upgrade --nodes 192.168.86.111 --image ghcr.io/siderolabs/installer:v1.12.5
+talosctl upgrade --nodes 192.168.86.112 --image ghcr.io/siderolabs/installer:v1.12.5
+talosctl upgrade --nodes 192.168.86.113 --image ghcr.io/siderolabs/installer:v1.12.5
 
 # Verify
 kubectl get nodes

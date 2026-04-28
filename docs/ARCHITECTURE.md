@@ -47,16 +47,16 @@ and resource allocation.
                               |
                          192.168.86.0/24 (flat LAN)
                               |
-          +-------------------+-------------------+
-          |                   |                   |
-    +-----+------+    +------+------+    +-------+-------+
-    | Proxmox    |    | Proxmox    |    | Proxmox       |
-    | Node 1     |    | Node 2     |    | Node 3 (opt.) |
-    | 192.168.86 |    | 192.168.86 |    | 192.168.86    |
-    | .29        |    | .30        |    | .31           |
-    +-----+------+    +------+------+    +-------+-------+
-          |                   |                   |
-          +------- Ceph Storage Mesh (3-way replication) ------+
+          +-------------------+-------------------+-------------------+-------------------+
+          |                   |                   |                   |                   |
+    +-----+------+    +------+------+    +-------+-------+    +-----+------+    +-------+------+
+    | Proxmox    |    | Proxmox    |    | Proxmox       |    | Proxmox    |    | Proxmox      |
+    | Node 1     |    | Node 2     |    | Node 3        |    | tower1     |    | zotac        |
+    | 192.168.86 |    | 192.168.86 |    | 192.168.86    |    | 192.168.86 |    | 192.168.86   |
+    | .29        |    | .30        |    | .31           |    | .130       |    | .147         |
+    +-----+------+    +------+------+    +-------+-------+    +-----+------+    +-------+------+
+          |                   |                   |                   |                   |
+          +------------------ Ceph Storage Mesh (replication across nodes) -----------------+
           |
           |   +----- VMs + LXCs distributed across nodes -----+
           |   |                                                |
@@ -146,6 +146,8 @@ and resource allocation.
 | 192.168.86.29      | pve1             | Host   | --    | Proxmox node 1                      |
 | 192.168.86.30      | pve2             | Host   | --    | Proxmox node 2                      |
 | 192.168.86.31      | pve3             | Host   | --    | Proxmox node 3 (optional)           |
+| 192.168.86.130     | tower1           | Host   | --    | Proxmox node 4 (tower)              |
+| 192.168.86.147     | zotac            | Host   | --    | Proxmox node 5 (Zotac mini PC)      |
 | 192.168.86.20      | traefik          | LXC    | 200   | Reverse proxy, TLS termination      |
 | 192.168.86.21      | recipe-site      | LXC    | 201   | Go + SQLite recipe app              |
 | 192.168.86.22      | arr-stack        | LXC    | 202   | Docker: Sonarr, Radarr, etc.        |

@@ -17,7 +17,7 @@
 # is handled by the Makefile targets.
 
 clusterName: talos-proxmox
-talosVersion: v1.9.0
+talosVersion: v1.12.5
 kubernetesVersion: v1.31.0
 endpoint: https://192.168.86.100:6443  # Update with your VIP
 
@@ -67,6 +67,21 @@ nodes:
         dhcp: false
         addresses:
           - 192.168.86.112/24
+        routes:
+          - network: 0.0.0.0/0
+            gateway: 192.168.86.1
+
+  - hostname: talos-proxmox-worker-2
+    ipAddress: 192.168.86.113
+    controlPlane: false
+    installDiskSelector:
+      size: ">= 40GB"
+    networkInterfaces:
+      - deviceSelector:
+          driver: virtio_net
+        dhcp: false
+        addresses:
+          - 192.168.86.113/24
         routes:
           - network: 0.0.0.0/0
             gateway: 192.168.86.1

@@ -363,21 +363,61 @@
         mode: "0600"
         force: false
 
-    # Discord webhook URL in Alertmanager config
-    - name: Configure Discord webhook in Alertmanager
-      ansible.builtin.replace:
+    # When Discord webhook is provided, activate the discord receiver and route
+    - name: Add Discord receiver to Alertmanager config
+      ansible.builtin.blockinfile:
         path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
-        regexp: 'DISCORD_WEBHOOK_URL'
-        replace: "{{ discord_webhook }}"
+        marker: "# {mark} DISCORD RECEIVER"
+        insertafter: '- name: "null"'
+        block: |2
+            - name: "discord"
+              discord_configs:
+                - webhook_url: "{{ discord_webhook }}"
+                  send_resolved: true
       when: discord_webhook != ""
       notify: Restart monitoring stack
 
-    - name: Configure Home Assistant glucose webhook in Alertmanager
+    - name: Route default alerts to Discord
       ansible.builtin.replace:
         path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
-        regexp: 'HA_GLUCOSE_WEBHOOK_URL'
-        replace: "{{ ha_glucose_webhook }}"
-      when: ha_glucose_webhook != ""
+        regexp: 'receiver: "null"(\n\n  routes:)'
+        replace: 'receiver: "discord"\1'
+      when: discord_webhook != ""
+      notify: Restart monitoring stack
+
+    - name: Route critical alerts to Discord
+      ansible.builtin.replace:
+        path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        regexp: '(severity: critical\n\s+receiver: )"null"(\n\s+repeat_interval: 1h)'
+        replace: '\1"discord"\2'
+      when: discord_webhook != ""
+      notify: Restart monitoring stack
+
+    # When glucose webhooks are provided, activate glucose-alerts receiver
+    - name: Add glucose-alerts receiver to Alertmanager config
+      ansible.builtin.blockinfile:
+        path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        marker: "# {mark} GLUCOSE RECEIVER"
+        insertafter: '- name: "null"'
+        block: |2
+            - name: "glucose-alerts"
+              discord_configs:
+                - webhook_url: "{{ discord_webhook }}"
+                  send_resolved: true
+              webhook_configs:
+                - url: "http://twilio-relay:9667"
+                  send_resolved: true
+                - url: "{{ ha_glucose_webhook }}"
+                  send_resolved: true
+      when: discord_webhook != "" and ha_glucose_webhook != ""
+      notify: Restart monitoring stack
+
+    - name: Route glucose alerts to glucose-alerts receiver
+      ansible.builtin.replace:
+        path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        regexp: '(channel: glucose\n\s+receiver: )"null"'
+        replace: '\1"glucose-alerts"'
+      when: discord_webhook != "" and ha_glucose_webhook != ""
       notify: Restart monitoring stack
 
     # --- Docs Site ---
@@ -456,6 +496,15 @@
         mode: "0644"
       notify: Restart monitoring stack
 
+    - name: Copy landing site nginx config
+      ansible.builtin.copy:
+        src: "{{ landing_src }}/nginx.conf"
+        dest: "{{ mon_base_dir }}/landing-site/build/nginx.conf"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
     - name: Copy landing site static files
       ansible.builtin.synchronize:
         src: "{{ playbook_dir }}/../../landing-site/"
@@ -487,7 +536,7 @@
 
     - name: Start monitoring stack
       ansible.builtin.command:
-        cmd: docker compose up -d --build
+        cmd: docker compose up -d --build --remove-orphans
         chdir: "{{ mon_base_dir }}"
       changed_when: true
 
@@ -547,5 +596,5 @@
   handlers:
     - name: Restart monitoring stack
       ansible.builtin.command:
-        cmd: docker compose up -d --force-recreate --build
+        cmd: docker compose up -d --force-recreate --build --remove-orphans
         chdir: "{{ mon_base_dir }}"

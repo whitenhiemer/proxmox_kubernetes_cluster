@@ -25,11 +25,12 @@ kubectl apply -f k8s/base/monitoring/node-exporter-daemonset.yml
 
 Then uncomment K8s scrape configs in `ansible/files/monitoring/prometheus/prometheus.yml` and restart Prometheus.
 
-## Future Workloads
+## Docker-Hosted Sites
 
-The docs site and resume site are candidates for K8s Deployments once built:
+The docs site, resume site, and landing page are currently deployed as Docker containers on the monitoring LXC (192.168.86.25) rather than as K8s workloads:
 
-- `docs.woodhead.tech` -- Docusaurus static site
-- `resume.woodhead.tech` -- Resume/portfolio site
+- `docs.woodhead.tech` -- Docusaurus static site (port 8081)
+- `resume.woodhead.tech` -- Hugo static site (port 8082)
+- `woodhead.tech` -- Landing page / service link tree (port 8083)
 
-Both would use multi-stage Docker builds (node -> nginx) served via Traefik IngressRoute.
+These could be migrated to K8s Deployments in the future if containerized workload management becomes a priority.

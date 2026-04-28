@@ -25,31 +25,31 @@ route:
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
-  receiver: "discord"
+  # Default to null receiver; Ansible replaces with "discord" when webhook is set
+  receiver: "null"
 
   routes:
     # Glucose alerts: SMS + Alexa + Discord
+    # Ansible replaces receiver with "glucose-alerts" when webhooks are set
     - match:
         channel: glucose
-      receiver: "glucose-alerts"
+      receiver: "null"
       group_wait: 0s
       repeat_interval: 15m
       routes:
-        # Critical glucose: no delay, 15m repeat
         - match:
             severity: critical
-          receiver: "glucose-alerts"
+          receiver: "null"
           repeat_interval: 15m
-        # Warning glucose: 30m repeat
         - match:
             severity: warning
-          receiver: "glucose-alerts"
+          receiver: "null"
           repeat_interval: 30m
 
     # Critical alerts: more frequent repeat
     - match:
         severity: critical
-      receiver: "discord"
+      receiver: "null"
       repeat_interval: 1h
 
     # Info alerts: no notification (visible in Grafana/Alertmanager UI only)
@@ -59,29 +59,7 @@ route:
 
 # --- Receivers ---
 receivers:
-  # Discord native receiver (Alertmanager v0.25.0+)
-  # Webhook URL replaced at deploy time via --extra-vars
-  - name: "discord"
-    discord_configs:
-      - webhook_url: "DISCORD_WEBHOOK_URL"
-        send_resolved: true
-
-  # Glucose alerts: SMS via Twilio + Alexa via Home Assistant + Discord
-  # Webhook URLs replaced at deploy time via --extra-vars
-  - name: "glucose-alerts"
-    discord_configs:
-      - webhook_url: "DISCORD_WEBHOOK_URL"
-        send_resolved: true
-    webhook_configs:
-      # Twilio SMS -- relay container converts Alertmanager JSON to Twilio SMS
-      - url: "http://twilio-relay:9667"
-        send_resolved: true
-      # Home Assistant -- triggers an automation that announces on Alexa
-      # Webhook ID injected at deploy time via --extra-vars
-      - url: "HA_GLUCOSE_WEBHOOK_URL"
-        send_resolved: true
-
-  # Null receiver (swallows alerts -- used for info severity)
+  # Null receiver (swallows alerts -- used when no webhooks are configured)
   - name: "null"
 
 # --- Inhibition Rules ---

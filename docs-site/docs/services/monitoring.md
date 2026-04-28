@@ -18,8 +18,14 @@ LXC 205 | `192.168.86.25` | Prometheus :9090, Grafana :3000, Alertmanager :9093
 | cAdvisor | 8080 | Docker container metrics |
 | Blackbox Exporter | 9115 | HTTP/ICMP service probes |
 | PVE Exporter | 9221 | Proxmox VE API metrics |
+| NUT Exporter (tc3) | 9199 | UPS metrics for thinkcentre3 |
+| NUT Exporter (tower1) | 9198 | UPS metrics for tower1 |
+| NUT Exporter (zotac) | 9197 | UPS metrics for zotac |
 | Dexcom Exporter | 9666 | Glucose CGM readings |
 | Twilio Relay | 9667 | SMS webhook relay for glucose alerts |
+| Docs Site | 8081 | Docusaurus static site (docs.woodhead.tech) |
+| Resume Site | 8082 | Hugo static site (resume.woodhead.tech) |
+| Landing Site | 8083 | Service link tree (woodhead.tech) |
 
 ## Deploy
 

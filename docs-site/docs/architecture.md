@@ -30,15 +30,16 @@ and resource allocation.
                               |
                          192.168.86.0/24 (flat LAN)
                               |
-          +-------------------+-------------------+
-          |                   |                   |
-    +-----+------+    +------+------+    +-------+-------+
-    | Proxmox    |    | Proxmox    |    | Proxmox       |
-    | Node 1     |    | Node 2     |    | Node 3 (opt.) |
-    | 192.168.86 |    | 192.168.86 |    | 192.168.86    |
-    | .29        |    | .30        |    | .31           |
-    +-----+------+    +------+------+    +-------+-------+
-          |                   |                   |
+          +----------+----------+----------+----------+
+          |          |          |          |          |
+    +-----+----+ +--+-------+ +--+------+ +--+-----+ +--+------+
+    | Proxmox  | | Proxmox  | | Proxmox | | Proxmox| | Proxmox |
+    | Node 1   | | Node 2   | | Node 3  | | Node 4 | | Node 5  |
+    | .29      | | .30      | | .31     | | .130   | | .147    |
+    | think-   | | think-   | | think-  | | tower1 | | zotac   |
+    | centre1  | | centre2  | | centre3 | |        | |         |
+    +-----+----+ +--+-------+ +--+------+ +--+-----+ +--+------+
+          |          |          |          |          |
           +------- Ceph Storage Mesh (3-way replication) ------+
           |
           |   +----- VMs + LXCs distributed across nodes -----+
@@ -49,9 +50,9 @@ and resource allocation.
      | .86.20      |   | LXC 201  |   | LXC 202  |   | CP: .101   |
      | :80 :443    |   | .21 :80  |   | .22      |   | W1: .111   |
      +------+------+   +----------+   +----------+   | W2: .112   |
-            |                                         | VIP: .100  |
-            |   +----------+   +----------+           +------------+
-            |   | Plex     |   | Jellyfin |
+            |                                         | W3: .113   |
+            |   +----------+   +----------+           | VIP: .100  |
+            |   | Plex     |   | Jellyfin |           +------------+
             |   | LXC 203  |   | LXC 204  |
             |   | .23      |   | .24      |
             |   | :32400   |   | :8096    |
@@ -103,9 +104,11 @@ and resource allocation.
 | IP | Hostname | Type | VM ID | Purpose |
 |---|---|---|---|---|
 | 192.168.86.1 | nest-gateway | Router | -- | Google Nest WiFi Pro (NAT, DHCP, DNS) |
-| 192.168.86.29 | pve1 | Host | -- | Proxmox node 1 |
-| 192.168.86.30 | pve2 | Host | -- | Proxmox node 2 |
-| 192.168.86.31 | pve3 | Host | -- | Proxmox node 3 |
+| 192.168.86.29 | pve1 (thinkcentre1) | Host | -- | Proxmox node 1 |
+| 192.168.86.30 | pve2 (thinkcentre2) | Host | -- | Proxmox node 2 |
+| 192.168.86.31 | pve3 (thinkcentre3) | Host | -- | Proxmox node 3 |
+| 192.168.86.130 | tower1 | Host | -- | Proxmox node 4 |
+| 192.168.86.147 | zotac | Host | -- | Proxmox node 5 |
 | 192.168.86.20 | traefik | LXC | 200 | Reverse proxy, TLS termination |
 | 192.168.86.21 | recipe-site | LXC | 201 | Go + SQLite recipe app |
 | 192.168.86.22 | arr-stack | LXC | 202 | Docker: Sonarr, Radarr, etc. |
@@ -123,7 +126,7 @@ and resource allocation.
 | 192.168.86.136 | klipper-ender5pro | Pi | -- | Klipper 3D printer (Ender 5 Pro) |
 | 192.168.86.100 | k8s-vip | VIP | -- | Kubernetes API endpoint |
 | 192.168.86.101 | talos-cp-0 | VM | 400 | K8s control plane (Talos Linux) |
-| 192.168.86.111-112 | talos-worker-* | VM | 410+ | K8s workers (Talos Linux) |
+| 192.168.86.111-113 | talos-worker-* | VM | 410-412 | K8s workers (Talos Linux, 3 nodes) |
 | 192.168.86.150-199 | metallb-pool | K8s | -- | MetalLB LoadBalancer IPs |
 | 192.168.86.200-254 | dhcp-pool | DHCP | -- | Dynamic client addresses |
 
@@ -308,7 +311,7 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | TrueNAS | 4 | 8192 | ZFS ARC cache |
 | Home Assistant | 2 | 2048 | USB passthrough |
 | K8s Control Plane | 2 | 4096 | Per node |
-| K8s Workers | 4 | 8192 | Per node, 2 nodes |
+| K8s Workers | 4 | 8192 | Per node, 3 nodes |
 | Traefik LXC | 1 | 256 | Lightweight proxy |
 | Monitoring LXC | 2 | 2048 | Prometheus, Grafana, exporters |
 | ARR Stack LXC | 2 | 4096 | 7 Docker containers |
@@ -321,8 +324,8 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 
 | Resource | Total | Notes |
 |---|---|---|
-| CPU | ~28 cores | Shared across 4 Proxmox nodes |
-| RAM | ~39.25 GB | TrueNAS benefits from more (ZFS ARC) |
+| CPU | ~36 cores | Shared across 5 Proxmox nodes |
+| RAM | ~47.25 GB | TrueNAS benefits from more (ZFS ARC) |
 | local-lvm | ~146 GB | OS disks for VMs + all LXCs |
 | ceph-pool | ~250 GB raw | K8s VMs (3x replication) |
 
@@ -345,6 +348,9 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | prometheus.woodhead.tech | 192.168.86.25 | 9090 | Active (Authentik SSO) |
 | scanner.woodhead.tech | 192.168.86.32 | 3000 | Active (Authentik SSO) |
 | auth.woodhead.tech | 192.168.86.28 | 9000 | Active |
+| docs.woodhead.tech | 192.168.86.25 | 8081 | Active |
+| resume.woodhead.tech | 192.168.86.25 | 8082 | Active |
+| woodhead.tech | 192.168.86.25 | 8083 | Active |
 | ender5.woodhead.tech | 192.168.86.136 | 80 | Active |
 | traefik.woodhead.tech | localhost | -- | Active (Authentik SSO) |
 

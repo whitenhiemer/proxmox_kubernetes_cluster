@@ -19,7 +19,10 @@ Infrastructure documentation for the woodhead.tech Proxmox homelab.
 
 | Resource | URL |
 |----------|-----|
+| Landing Page | [woodhead.tech](https://woodhead.tech) |
 | Grafana | [grafana.woodhead.tech](https://grafana.woodhead.tech) |
+| Docs | [docs.woodhead.tech](https://docs.woodhead.tech) |
+| Resume | [resume.woodhead.tech](https://resume.woodhead.tech) |
 | Home Assistant | [home.woodhead.tech](https://home.woodhead.tech) |
 | Scanner | [scanner.woodhead.tech](https://scanner.woodhead.tech) |
 | Proxmox | `https://192.168.86.29:8006` |
@@ -28,7 +31,7 @@ Infrastructure documentation for the woodhead.tech Proxmox homelab.
 ## Stack
 
 ```
-Proxmox VE 8.x (4-node cluster, Ceph storage)
+Proxmox VE 8.x (5-node cluster, Ceph storage)
 ├── LXC Containers (Traefik, ARR, Monitoring, Authentik, WireGuard, SDR, ...)
 ├── VMs (TrueNAS, Home Assistant, Talos K8s cluster)
 └── Standalone (Piboard Pi 3B, Klipper printers)

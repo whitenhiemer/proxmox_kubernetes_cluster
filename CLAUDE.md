@@ -77,11 +77,11 @@ Traefik must be running before any HTTP/HTTPS service is reachable. The K8s clus
 ## Architecture
 
 **Network (192.168.86.0/24):**
-- Proxmox nodes: `.29` (thinkcentre1), `.30` (thinkcentre2), `.31` (thinkcentre3), `.130` (tower1) — 4-node cluster, shared Ceph
+- Proxmox nodes: `.29` (thinkcentre1), `.30` (thinkcentre2), `.31` (thinkcentre3), `.130` (tower1), `.147` (zotac) — 5-node cluster, shared Ceph
 - Traefik LXC: `.20` (single ingress for all services)
 - Service LXCs: `.21`–`.26`, `.28`, `.32`, `.39` (ARR stack, Plex, Jellyfin, monitoring, Authelia, OpenClaw, SDR scanner, WireGuard)
 - TrueNAS VM: `.40` (on tower1, 16GB RAM) | Home Assistant VM: `.41`
-- K8s VIP: `.100` | control plane: `.101` | workers: `.111`, `.112`
+- K8s VIP: `.100` | control plane: `.101` (tower1) | workers: `.111` (thinkcentre2), `.112` (thinkcentre3), `.113` (zotac)
 - Piboard (Pi 3B): `.131` (standalone monitoring dashboard, not Proxmox-managed)
 - Klipper Ender 5 Pro (Pi 3B): `.136` (MainsailOS, 3D printer control, WiFi)
 - MetalLB pool: `.150`–`.199`

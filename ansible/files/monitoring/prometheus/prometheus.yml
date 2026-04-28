@@ -60,6 +60,8 @@ scrape_configs:
           - 192.168.86.29    # pve1 (thinkcentre1)
           - 192.168.86.30    # pve2 (thinkcentre2)
           - 192.168.86.31    # pve3 (thinkcentre3)
+          - 192.168.86.130   # tower1
+          - 192.168.86.147   # zotac
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -97,6 +99,23 @@ scrape_configs:
   #         - 192.168.86.112:9100    # worker 1
   #       labels:
   #         cluster: "talos-proxmox"
+
+  # ===== UPS Monitoring =====
+
+  # NUT Exporter: queries NUT server for UPS battery, load, runtime metrics.
+  # Exporters use network_mode: host so Prometheus reaches them via the LXC IP.
+  - job_name: "nut"
+    metrics_path: /ups_metrics
+    static_configs:
+      - targets: ["192.168.86.25:9199"]
+        labels:
+          instance: "ups-thinkcentre3"
+      - targets: ["192.168.86.25:9198"]
+        labels:
+          instance: "ups-tower1"
+      - targets: ["192.168.86.25:9197"]
+        labels:
+          instance: "ups-zotac"
 
   # ===== Dexcom Glucose Monitoring =====
 
@@ -155,7 +174,9 @@ scrape_configs:
     static_configs:
       - targets:
           - 192.168.86.1     # Gateway (Google Nest WiFi Pro)
-          - 192.168.86.29    # Proxmox node 1
+          - 192.168.86.29    # Proxmox node 1 (thinkcentre1)
+          - 192.168.86.130   # Proxmox node 4 (tower1)
+          - 192.168.86.147   # Proxmox node 5 (zotac)
           - 192.168.86.40    # TrueNAS
     relabel_configs:
       - source_labels: [__address__]

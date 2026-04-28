@@ -316,6 +316,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.1      | Gateway (Nest WiFi)  | Router | --  |
 | 192.168.86.29-31  | Proxmox nodes (thinkcentre1–3) | Host | --    |
 | 192.168.86.130    | tower1 (Proxmox node)  | Host | --    |
+| 192.168.86.147    | zotac (Proxmox node)   | Host | --    |
 | 192.168.86.20     | Traefik              | LXC  | 200   |
 | 192.168.86.21     | Recipe site          | LXC  | 201   |
 | 192.168.86.22     | ARR stack            | LXC  | 202   |
@@ -479,7 +480,7 @@ container in its own LXC or in the Traefik LXC.
    - Target: `truenas-backups` storage
    - Scope: all VMs and LXCs across all nodes (thinkcentre1–3, tower1)
 
-**Nodes to include**: thinkcentre1, thinkcentre2, thinkcentre3, tower1
+**Nodes to include**: thinkcentre1, thinkcentre2, thinkcentre3, tower1, zotac
 
 **VMs/LXCs to back up** (currently none have backup jobs):
 | ID  | Name                   | Node          |

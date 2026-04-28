@@ -25,11 +25,13 @@ brew install httpd  # Provides htpasswd
 
 1. Download Proxmox VE 8.x ISO from proxmox.com
 2. Flash to USB with `dd` or Balena Etcher
-3. Install on each node (2-3 nodes)
+3. Install on each node (5 nodes)
 4. Set static IPs during install:
-   - Node 1: `192.168.86.29`
-   - Node 2: `192.168.86.30`
-   - Node 3: `192.168.86.31`
+   - Node 1: `192.168.86.29` (thinkcentre1)
+   - Node 2: `192.168.86.30` (thinkcentre2)
+   - Node 3: `192.168.86.31` (thinkcentre3)
+   - Node 4: `192.168.86.130` (tower1)
+   - Node 5: `192.168.86.147` (zotac)
 5. Access web UI at `https://192.168.86.29:8006`
 
 ### 0.2 Create Proxmox Cluster
@@ -205,10 +207,10 @@ make apply-homeassistant  # Downloads HAOS image + creates VM
 ```bash
 export CLUSTER_VIP="192.168.86.100"
 export CONTROLPLANE_IPS="192.168.86.101"
-export WORKER_IPS="192.168.86.111,192.168.86.112"
+export WORKER_IPS="192.168.86.111,192.168.86.112,192.168.86.113"
 make bootstrap
 make kubeconfig
-kubectl get nodes  # Should show 3 nodes Ready
+kubectl get nodes  # Should show 4 nodes Ready
 make k8s-base-metallb
 ```
 
