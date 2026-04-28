@@ -260,7 +260,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
 | 192.168.86.41     | Home Assistant       | VM   | 301   |
 | 192.168.86.131    | Piboard dashboard    | Pi   | --    |
-| 192.168.86.134    | Klipper Ender 3      | Pi   | --    |
+| 192.168.86.138    | Klipper Ender 3      | Pi   | --    |
 | 192.168.86.136    | Klipper Ender 5 Pro  | Pi   | --    |
 | 192.168.86.100    | K8s API VIP          | VIP  | --    |
 | 192.168.86.101    | K8s control plane    | VM   | 400   |

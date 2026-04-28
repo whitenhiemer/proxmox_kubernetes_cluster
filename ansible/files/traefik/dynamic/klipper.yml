@@ -1,0 +1,36 @@
+# klipper.yml - Traefik dynamic routes for Klipper 3D printers
+#
+# Routes ender5.woodhead.tech and ender3.woodhead.tech to their
+# respective Raspberry Pi hosts running Mainsail (nginx on port 80).
+# Mainsail's nginx handles the internal proxy to Moonraker's WebSocket
+# API on port 7125, so Traefik only needs to route to port 80.
+http:
+  routers:
+    # Ender 5 Pro (192.168.86.136)
+    klipper-ender5pro:
+      rule: "Host(`ender5.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: klipper-ender5pro
+      tls:
+        certResolver: cloudflare
+
+    # Ender 3 (192.168.86.138)
+    klipper-ender3:
+      rule: "Host(`ender3.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: klipper-ender3
+      tls:
+        certResolver: cloudflare
+
+  services:
+    klipper-ender5pro:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.136:80"
+
+    klipper-ender3:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.138:80"

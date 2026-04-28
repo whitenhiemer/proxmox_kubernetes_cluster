@@ -630,6 +630,8 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | claw.woodhead.tech     | 192.168.86.26        | 18789 | openclaw.yml          | Active    |
 | alert.woodhead.tech    | 192.168.86.27        | 80    | libby-alert.yml       | Active    |
 | auth.woodhead.tech     | 192.168.86.28        | 9000  | authentik.yml         | Active    |
+| ender5.woodhead.tech   | 192.168.86.136       | 80    | klipper.yml           | Active    |
+| ender3.woodhead.tech   | 192.168.86.138       | 80    | klipper.yml           | Active    |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authentik SSO) |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 
