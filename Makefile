@@ -26,7 +26,8 @@
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr \
         bootstrap kubeconfig health k8s-base harden \
-        patch-proxmox patch-lxc patch-docker patch-pi destroy clean help
+        patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
+        docs-build docs-dev
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -135,12 +136,15 @@ plex: ## Deploy Plex Media Server into its LXC (with iGPU passthrough)
 jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-jellyfin.yml
 
-monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager) into its LXC
+monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager, Dexcom) into its LXC
 	@# Usage: make monitoring DISCORD_WEBHOOK=https://... GRAFANA_PASSWORD=... PVE_USER=monitoring@pve PVE_TOKEN_NAME=prometheus PVE_TOKEN_VALUE=...
+	@# Dexcom: make monitoring DEXCOM_USERNAME=user DEXCOM_PASSWORD=pass HA_GLUCOSE_WEBHOOK=http://192.168.86.41:8123/api/webhook/<id>
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml \
 		$(if $(DISCORD_WEBHOOK),--extra-vars "discord_webhook=$(DISCORD_WEBHOOK)") \
 		$(if $(GRAFANA_PASSWORD),--extra-vars "grafana_password=$(GRAFANA_PASSWORD)") \
-		$(if $(PVE_USER),--extra-vars "pve_user=$(PVE_USER) pve_token_name=$(PVE_TOKEN_NAME) pve_token_value=$(PVE_TOKEN_VALUE)")
+		$(if $(PVE_USER),--extra-vars "pve_user=$(PVE_USER) pve_token_name=$(PVE_TOKEN_NAME) pve_token_value=$(PVE_TOKEN_VALUE)") \
+		$(if $(DEXCOM_USERNAME),--extra-vars "dexcom_username=$(DEXCOM_USERNAME) dexcom_password=$(DEXCOM_PASSWORD)") \
+		$(if $(HA_GLUCOSE_WEBHOOK),--extra-vars "ha_glucose_webhook=$(HA_GLUCOSE_WEBHOOK)")
 
 openclaw: ## Deploy OpenClaw AI agent framework into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-openclaw.yml
@@ -178,6 +182,14 @@ libby-alert: ## Deploy Libby life alert QR website into its LXC
 
 sdr: ## Deploy SDR scanner stack (Trunk Recorder + rdio-scanner) for SNO911 fire/EMS
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-sdr.yml
+
+# ===== Documentation =====
+
+docs-build: ## Build the Docusaurus docs site (static output in docs-site/build/)
+	cd docs-site && npm ci && npm run build
+
+docs-dev: ## Start Docusaurus dev server (hot reload)
+	cd docs-site && npm start
 
 # ===== Phase 4: Talos K8s Cluster =====
 

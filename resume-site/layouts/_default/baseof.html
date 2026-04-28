@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.Language.Lang | default "en" }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Site.Title }}</title>
+    <meta name="description" content="{{ .Site.Params.description }}">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <style>
+        /* Dark resume theme matching woodhead.tech branding */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        a { color: #3fb950; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        header img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        header h1 { font-size: 2em; font-weight: 700; }
+        header p { color: #8b949e; font-size: 1.1em; }
+
+        .contact {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #8b949e;
+        }
+
+        section {
+            margin-bottom: 32px;
+        }
+
+        section h2 {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #3fb950;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #21262d;
+        }
+
+        .entry {
+            margin-bottom: 20px;
+        }
+
+        .entry h3 {
+            font-size: 1.05em;
+            font-weight: 600;
+        }
+
+        .entry .meta {
+            color: #8b949e;
+            font-size: 0.9em;
+            margin-bottom: 4px;
+        }
+
+        .entry ul {
+            padding-left: 20px;
+            color: #c9d1d9;
+        }
+
+        .entry ul li {
+            margin-bottom: 4px;
+        }
+
+        .skills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .skill-tag {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 16px;
+            padding: 4px 12px;
+            font-size: 0.85em;
+            color: #c9d1d9;
+        }
+
+        .projects {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .project-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .project-card h4 {
+            font-size: 0.95em;
+            margin-bottom: 4px;
+        }
+
+        .project-card p {
+            font-size: 0.85em;
+            color: #8b949e;
+        }
+
+        @media print {
+            body { background: white; color: #1a1a1a; max-width: 100%; padding: 20px; }
+            a { color: #238636; }
+            section h2 { color: #238636; border-color: #d0d7de; }
+            .skill-tag { background: #f6f8fa; border-color: #d0d7de; color: #1a1a1a; }
+            .project-card { background: #f6f8fa; border-color: #d0d7de; }
+            .project-card p { color: #57606a; }
+            header img { border: 1px solid #d0d7de; }
+        }
+    </style>
+</head>
+<body>
+    {{ block "main" . }}{{ end }}
+</body>
+</html>

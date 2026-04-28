@@ -1,0 +1,21 @@
+# resume-site.yml - Traefik dynamic route for the resume/portfolio site
+#
+# Routes resume.woodhead.tech to the resume site container.
+# Hugo static site served by nginx on port 80.
+#
+# Uncomment when the resume site container is deployed.
+# http:
+#   routers:
+#     resume-site:
+#       rule: "Host(`resume.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: resume-site
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     resume-site:
+#       loadBalancer:
+#         servers:
+#           - url: "http://resume-site:80"

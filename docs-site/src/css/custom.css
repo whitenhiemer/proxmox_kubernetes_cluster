@@ -1,0 +1,33 @@
+/* woodhead.tech dark theme */
+:root {
+  --ifm-color-primary: #238636;
+  --ifm-color-primary-dark: #1f7830;
+  --ifm-color-primary-darker: #1d712d;
+  --ifm-color-primary-darkest: #185d25;
+  --ifm-color-primary-light: #27943c;
+  --ifm-color-primary-lighter: #299b3f;
+  --ifm-color-primary-lightest: #2faf47;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #3fb950;
+  --ifm-color-primary-dark: #2fad42;
+  --ifm-color-primary-darker: #2ca33e;
+  --ifm-color-primary-darkest: #248633;
+  --ifm-color-primary-light: #56c364;
+  --ifm-color-primary-lighter: #62c76f;
+  --ifm-color-primary-lightest: #80d38b;
+  --ifm-background-color: #0d1117;
+  --ifm-background-surface-color: #161b22;
+  --ifm-navbar-background-color: #161b22;
+  --ifm-footer-background-color: #0d1117;
+  --ifm-color-emphasis-300: #30363d;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Navbar logo */
+.navbar__logo img {
+  border-radius: 50%;
+}

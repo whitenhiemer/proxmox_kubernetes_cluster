@@ -1,0 +1,21 @@
+# docs-site.yml - Traefik dynamic route for the Docusaurus docs site
+#
+# Routes docs.woodhead.tech to the docs site container.
+# The docs site runs nginx on port 80 serving static Docusaurus output.
+#
+# Uncomment when the docs site container is deployed.
+# http:
+#   routers:
+#     docs-site:
+#       rule: "Host(`docs.woodhead.tech`)"
+#       entryPoints:
+#         - websecure
+#       service: docs-site
+#       tls:
+#         certResolver: cloudflare
+#
+#   services:
+#     docs-site:
+#       loadBalancer:
+#         servers:
+#           - url: "http://docs-site:80"
