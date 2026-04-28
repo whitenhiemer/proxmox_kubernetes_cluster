@@ -239,6 +239,74 @@ set DNS to a Pi-hole/AdGuard instance in the future.
 
 ---
 
+### Docusaurus Documentation Site
+
+**Type**: Docker container on existing LXC or K8s pod
+**Domain**: `docs.woodhead.tech`
+**Goal**: Centralized documentation site for the homelab -- runbooks, architecture
+diagrams, user guides, and operational procedures. Replaces the scattered markdown
+files in the repo with a searchable, versioned, browsable site.
+
+**Why Docusaurus**: React-based, Markdown-driven, built-in search, versioning,
+and sidebar navigation. Deploys as a static site (nginx or K8s). Already familiar
+from syssec-docs at work.
+
+**Content to migrate**:
+- `docs/ARCHITECTURE.md` -- network topology, resource allocation
+- `docs/RUNBOOK.md` -- deployment walkthroughs per service
+- `docs/PATCHING.md` -- update strategies
+- `docs/ROADMAP.md` -- planned services
+- Per-service user guides (ARR stack setup, Plex libraries, VPN client config)
+- Operational playbooks (Ceph recovery, node failure, certificate rotation)
+
+**Requirements**:
+- Node.js build step (Docusaurus generates static HTML)
+- Minimal runtime: nginx serving static files, or Kubernetes Deployment
+- CI/CD: rebuild on push to docs branch (GitHub Actions or manual `make docs`)
+- ~256MB RAM, 1 CPU core at runtime (static files)
+
+**Deployment options**:
+1. **K8s pod** (preferred) -- Dockerfile builds the site, Deployment serves it,
+   Traefik IngressRoute routes `docs.woodhead.tech`
+2. **Existing LXC** -- build locally, rsync static output to an nginx container
+3. **Dedicated LXC** -- overkill for a static site
+
+**Implementation plan**:
+1. `docs-site/` directory in this repo (Docusaurus project)
+2. Dockerfile: multi-stage build (node -> nginx)
+3. K8s manifests or Docker Compose for deployment
+4. Traefik route: `docs.woodhead.tech`
+5. Migrate existing markdown content into Docusaurus structure
+6. Makefile target: `make docs`
+
+---
+
+### Resume / Portfolio Site
+
+**Type**: Static site (K8s pod or LXC container)
+**Domain**: `resume.woodhead.tech`
+**Goal**: Personal resume and portfolio site showcasing projects and experience.
+
+**Options**:
+1. **Static HTML/CSS** -- simple, fast, no framework overhead
+2. **Hugo/Jekyll** -- Markdown-driven, theme ecosystem, easy to update
+3. **React/Next.js** -- more interactive, heavier build
+
+**Requirements**:
+- Minimal: static file serving (nginx)
+- ~256MB RAM, 1 CPU core
+- Traefik route: `resume.woodhead.tech`
+
+**Implementation plan**:
+1. `resume-site/` directory in this repo (or separate repo)
+2. Choose framework (Hugo recommended for simplicity + themes)
+3. Dockerfile: multi-stage build -> nginx
+4. K8s manifests or Docker Compose
+5. Traefik route: `resume.woodhead.tech`
+6. Makefile target: `make resume`
+
+---
+
 ## IP Address Plan
 
 Keeping track of allocated IPs to avoid conflicts:
@@ -256,6 +324,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.25     | Monitoring           | LXC  | 205   |
 | 192.168.86.26     | OpenClaw             | LXC  | 206   |
 | 192.168.86.28     | Authelia             | LXC  | 207   |
+| 192.168.86.32     | SDR Scanner          | LXC  | 210   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
 | 192.168.86.41     | Home Assistant       | VM   | 301   |
@@ -446,6 +515,10 @@ container in its own LXC or in the Traefik LXC.
 9. **Piboard Dashboard** -- DONE (Raspberry Pi 3B + Waveshare 5" HDMI, Go + SSE + Prometheus)
 10. **Klipper 3D Printing** -- IN PROGRESS (Ender 5 Pro on Pi 3B with MainsailOS, Ender 3 planned)
 11. **Talos K8s Cluster** -- DONE (3-node cluster bootstrapped: CP at 192.168.86.143, workers at .144/.145; Flannel CNI; namespaces: ingress-system, apps, monitoring; configs in talos/_out/)
+12. **SDR Scanner** -- DONE (LXC 210 on thinkcentre2, Trunk Recorder + rdio-scanner, RTL-SDR V4 USB passthrough, SNO911 P25 Phase II, scanner.woodhead.tech)
+13. **Dexcom Glucose Monitoring** -- IN PROGRESS (Python exporter -> Prometheus -> Grafana dashboard; Alertmanager routes to Twilio SMS + Home Assistant Alexa; needs Dexcom Share credentials + Twilio account)
+14. **Docusaurus Docs Site** -- PLANNED (docs.woodhead.tech; runbooks, architecture docs, user guides; Docusaurus static site in LXC or K8s)
+15. **Resume Site** -- PLANNED (resume.woodhead.tech; personal resume/portfolio site)
 
 ## Hardware Considerations
 

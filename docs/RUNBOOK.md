@@ -650,7 +650,7 @@ This adds a `:8082` metrics endpoint that Prometheus scrapes for request data.
 
 ### 10.6 Grafana Dashboards
 
-Four dashboards are auto-provisioned from JSON files in `ansible/files/monitoring/grafana/dashboards/`:
+Five dashboards are auto-provisioned from JSON files in `ansible/files/monitoring/grafana/dashboards/`:
 
 | Dashboard | Source ID | Purpose |
 |-----------|-----------|---------|
@@ -658,6 +658,7 @@ Four dashboards are auto-provisioned from JSON files in `ansible/files/monitorin
 | Docker Containers | 14282 | Container CPU, memory, network (via cAdvisor) |
 | Traefik 3.x | 17346 | Request rate, latency, errors |
 | Blackbox Exporter | 7587 | Service uptime, response time |
+| Dexcom Glucose | custom | CGM glucose level, trend, 24h history |
 
 These load automatically on first boot -- no manual import needed. To add more,
 download the JSON from grafana.com, replace `${DS_PROMETHEUS}` with `Prometheus`,
@@ -710,6 +711,96 @@ curl -X POST http://192.168.86.25:9093/api/v1/alerts \
 
 # Traefik routes (after make traefik)
 curl -I https://grafana.woodhead.tech
+```
+
+### 10.10 Dexcom Glucose Monitoring
+
+The monitoring stack includes a Dexcom CGM exporter that polls the Dexcom Share API
+and exposes glucose readings as Prometheus metrics. Alert rules notify via Discord,
+Twilio SMS, and Home Assistant Alexa announcements.
+
+**Prerequisites:**
+- Wife enables "Share" in the Dexcom app and adds you as a follower
+- Twilio account with SMS-capable phone number
+- Home Assistant Alexa Media Player integration (for voice announcements)
+
+**Deploy with Dexcom credentials:**
+```bash
+make monitoring \
+  DEXCOM_USERNAME=your-dexcom-username \
+  DEXCOM_PASSWORD=your-dexcom-password
+```
+
+**Configure Twilio SMS (edit on the LXC):**
+```bash
+ssh root@192.168.86.25
+vi /opt/monitoring/dexcom-exporter/twilio.env
+# Set: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER, SMS_TO_NUMBER
+cd /opt/monitoring && docker compose restart twilio-relay
+```
+
+**Configure Home Assistant Alexa webhook:**
+1. In HA, create an automation triggered by webhook (e.g., `glucose-alert`)
+2. Action: Alexa Media Player > Notify > Announce on desired Echo device
+3. Pass the webhook URL to the monitoring deploy:
+```bash
+make monitoring HA_GLUCOSE_WEBHOOK=http://192.168.86.41:8123/api/webhook/glucose-alert
+```
+
+**Alert thresholds:**
+
+| Alert | Threshold | Delay | Severity |
+|-------|-----------|-------|----------|
+| GlucoseCriticalLow | < 55 mg/dL | Immediate | Critical |
+| GlucoseLow | 55-70 mg/dL | 5 min | Warning |
+| GlucoseHigh | > 250 mg/dL | 15 min | Warning |
+| GlucoseCriticalHigh | > 350 mg/dL | 5 min | Critical |
+| DexcomStaleReading | No data 15 min | 5 min | Warning |
+
+**Verify:**
+```bash
+curl -s http://192.168.86.25:9666/metrics | grep dexcom_glucose
+```
+
+---
+
+## Phase 10b: SDR Scanner
+
+### 10b.1 Deploy
+
+The SDR scanner decodes Snohomish County SNO911 P25 Phase II trunked radio
+using an RTL-SDR V4 USB dongle attached to thinkcentre2.
+
+**Prerequisites:**
+- RTL-SDR V4 plugged into thinkcentre2 USB port
+- LXC 210 created via Terraform
+
+```bash
+# Provision the LXC
+cd terraform && terraform apply -target=proxmox_virtual_environment_container.sdr
+
+# Deploy the stack (USB passthrough + Docker + Traefik route)
+make sdr
+```
+
+**Note:** The LXC must be privileged for USB device passthrough. The Ansible playbook
+blacklists the `dvb_usb_rtl28xxu` kernel module on thinkcentre2 and configures cgroup
+rules for USB access. If the LXC is recreated, re-run `make sdr`.
+
+### 10b.2 Verify
+
+```bash
+# Check containers are running
+ssh root@192.168.86.32 "docker ps"
+
+# Check trunk-recorder is decoding
+ssh root@192.168.86.32 "docker logs trunk-recorder --tail 10"
+
+# Check rdio-scanner web UI
+curl -s -o /dev/null -w "%{http_code}" http://192.168.86.32:3000/
+
+# Traefik route
+curl -I https://scanner.woodhead.tech
 ```
 
 ---

@@ -23,7 +23,7 @@ make destroy    # destroy all VMs (prompts for confirmation)
 make setup      # Configure Proxmox base (run once)
 make prepare    # Download ISOs to Proxmox
 make traefik    # Deploy Traefik (requires CF_API_TOKEN env var)
-make monitoring DISCORD_WEBHOOK=... GRAFANA_PASSWORD=... PVE_PASSWORD=...
+make monitoring DISCORD_WEBHOOK=... GRAFANA_PASSWORD=... PVE_PASSWORD=... DEXCOM_USERNAME=... DEXCOM_PASSWORD=...
 make authelia AUTHELIA_ADMIN_PASSWORD=...
 make arr-stack
 make recipe-site
@@ -79,7 +79,7 @@ Traefik must be running before any HTTP/HTTPS service is reachable. The K8s clus
 **Network (192.168.86.0/24):**
 - Proxmox nodes: `.29` (thinkcentre1), `.30` (thinkcentre2), `.31` (thinkcentre3), `.130` (tower1) — 4-node cluster, shared Ceph
 - Traefik LXC: `.20` (single ingress for all services)
-- Service LXCs: `.21`–`.26`, `.28`, `.39` (ARR stack, Plex, Jellyfin, monitoring, Authelia, OpenClaw, WireGuard)
+- Service LXCs: `.21`–`.26`, `.28`, `.32`, `.39` (ARR stack, Plex, Jellyfin, monitoring, Authelia, OpenClaw, SDR scanner, WireGuard)
 - TrueNAS VM: `.40` (on tower1, 16GB RAM) | Home Assistant VM: `.41`
 - K8s VIP: `.100` | control plane: `.101` | workers: `.111`, `.112`
 - Piboard (Pi 3B): `.131` (standalone monitoring dashboard, not Proxmox-managed)
@@ -90,7 +90,9 @@ Traefik must be running before any HTTP/HTTPS service is reachable. The K8s clus
 
 **Traefik routing:** Static config in `ansible/files/traefik/traefik.yml`; per-service routes in `ansible/files/traefik/dynamic/*.yml`. TLS via Let's Encrypt + Cloudflare DNS challenge. Authelia `forwardAuth` middleware applied to protected routes.
 
-**Monitoring stack:** Prometheus + Grafana + Alertmanager deployed via Docker Compose on a dedicated LXC. Discord webhook alerts. PVE exporter for Proxmox metrics. Dashboards auto-provisioned from `ansible/files/monitoring/`.
+**Monitoring stack:** Prometheus + Grafana + Alertmanager deployed via Docker Compose on a dedicated LXC. Discord webhook alerts. PVE exporter for Proxmox metrics. Dexcom glucose exporter polls Dexcom Share API, alerts via Twilio SMS + Home Assistant Alexa. Dashboards auto-provisioned from `ansible/files/monitoring/`.
+
+**SDR Scanner:** Trunk Recorder + rdio-scanner on LXC 210 (192.168.86.32, thinkcentre2). RTL-SDR V4 USB passthrough decodes SNO911 P25 Phase II radio. Web UI at scanner.woodhead.tech. Deploy via `make sdr`.
 
 **Piboard:** Go dashboard on a Raspberry Pi 3B (192.168.86.131) with a Waveshare 5" HDMI display. Polls Prometheus via HTTP API, streams status via SSE to a Chromium kiosk. Source in `piboard/`, deployed via `make deploy PI_HOST=...` from the piboard directory. Patched via `make patch-pi`.
 

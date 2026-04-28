@@ -90,11 +90,20 @@ and resource allocation.
             |   | :3000    |   +----------+   +----------+
             |   | :9093    |
             |   | -> Discord|   +-----------+   +-----------+
-            |   +----------+   | WireGuard |   | Libby     |
-            |                  | LXC 208   |   | Alert     |
-            |                  | .39       |   | LXC 209   |
+            |   | + Dexcom  |   | WireGuard |   | Libby     |
+            |   |   glucose |   | LXC 208   |   | Alert     |
+            |   +----------+   | .39       |   | LXC 209   |
             |                  | UDP:51820 |   | .27 :80   |
             |                  +-----------+   +-----------+
+            |
+            |   +----------+
+            |   | SDR      |
+            |   | Scanner  |
+            |   | LXC 210  |
+            |   | .32      |
+            |   | :3000    |
+            |   | RTL-SDR  |
+            |   +----------+
             |
           +------- Standalone Devices (not Proxmox-managed) -------+
           |                                                         |
@@ -122,6 +131,7 @@ and resource allocation.
     |  auth.*       +---> 192.168.86.28:9091
     |  grafana.*    +---> 192.168.86.25:3000
     |  prometheus.* +---> 192.168.86.25:9090
+    |  scanner.*    +---> 192.168.86.32:3000
     |  traefik.*    +---> dashboard (local)
     +---------------+
 ```
@@ -148,6 +158,7 @@ and resource allocation.
 | 192.168.86.39      | wireguard        | LXC    | 208   | WireGuard VPN tunnel (UDP 51820)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
+| 192.168.86.32      | sdr              | LXC    | 210   | SDR scanner (Trunk Recorder + rdio-scanner)|
 | 192.168.86.131     | piboard          | Pi     | --    | Raspberry Pi 3B monitoring dashboard|
 | 192.168.86.136     | klipper-ender5pro| Pi     | --    | Klipper 3D printer (Ender 5 Pro)    |
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
@@ -380,6 +391,8 @@ NFS mount (/media, read-only)
 - K8s without MetalLB: ClusterIP services only (no external access)
 - Monitoring without PVE token: Proxmox metrics unavailable (all other scrapes still work)
 - Monitoring without Discord webhook: alerts fire but no notifications sent
+- Monitoring without Dexcom credentials: glucose exporter starts but can't poll API
+- Monitoring without Twilio credentials: glucose SMS alerts silently fail
 - Monitoring without K8s manifests: K8s metrics unavailable (deploy kube-state-metrics later)
 - Piboard without Prometheus: dashboard shows "connection lost" overlay (reconnects via SSE)
 - Piboard without Blackbox Exporter: service tiles show unknown status (Prometheus still reachable)
@@ -405,6 +418,7 @@ in parallel after the host is ready.
 | auto  | Authentik LXC        | 207   | --     | Starts on boot, SSO gateway                 |
 | auto  | WireGuard LXC        | 208   | --     | Starts on boot, VPN tunnel                  |
 | auto  | Libby Alert LXC      | 209   | --     | Starts on boot, Go web app + alert service  |
+| auto  | SDR Scanner LXC      | 210   | --     | Starts on boot, privileged, RTL-SDR USB     |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
 
 ---
@@ -480,6 +494,7 @@ in parallel after the host is ready.
 | Authentik LXC     | 2     | 2048     | --       | Identity provider (Postgres + Redis + server + worker)|
 | WireGuard LXC     | 1     | 256      | --       | Kernel WireGuard, privileged LXC|
 | Libby Alert LXC   | 1     | 512      | --       | Docker: Go web server, SMS/Discord alerts|
+| SDR Scanner LXC   | 2     | 2048     | --       | Trunk Recorder + rdio-scanner, privileged (USB) |
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
@@ -500,6 +515,7 @@ in parallel after the host is ready.
 | Authentik LXC     | 8 GB   | local-lvm   | --        | Docker + Postgres data + media + certs   |
 | WireGuard LXC     | 2 GB   | local-lvm   | --        | WireGuard tools + configs                |
 | Libby Alert LXC   | 8 GB   | local-lvm   | --        | Docker + Go binary + config              |
+| SDR Scanner LXC   | 20 GB  | local-lvm   | --        | Docker + recordings + Trunk Recorder |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
 
 ### Standalone Devices (not Proxmox-managed)
@@ -581,6 +597,7 @@ consume no CPU regardless of weight.
 | `proxmox_virtual_environment_container.authelia`  | lxc-authelia.tf (authentik stack) | LXC  | 207 |
 | `proxmox_virtual_environment_container.wireguard` | lxc-wireguard.tf            | LXC  | 208 |
 | `proxmox_virtual_environment_container.libby_alert`| lxc-libby-alert.tf         | LXC  | 209 |
+| `proxmox_virtual_environment_container.sdr`       | lxc-sdr.tf                  | LXC  | 210 |
 | `proxmox_virtual_environment_file.lxc_ssh_fix`    | lxc-ssh-hook.tf             | File | --  |
 | `proxmox_virtual_environment_vm.truenas`          | vm-truenas.tf               | VM   | 300 |
 | `proxmox_virtual_environment_vm.homeassistant`    | vm-homeassistant.tf         | VM   | 301 |
@@ -632,6 +649,7 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | auth.woodhead.tech     | 192.168.86.28        | 9000  | authentik.yml         | Active    |
 | ender5.woodhead.tech   | 192.168.86.136       | 80    | klipper.yml           | Active    |
 | ender3.woodhead.tech   | 192.168.86.138       | 80    | klipper.yml           | Active    |
+| scanner.woodhead.tech  | 192.168.86.32        | 3000  | sdr.yml               | Active (Authentik SSO) |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authentik SSO) |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 
