@@ -1,0 +1,134 @@
+# setup-sdr.yml - Deploy SDR scanner stack (Trunk Recorder + rdio-scanner)
+#
+# Configures a Snohomish County SNO911 P25 Phase II scanner using an
+# RTL-SDR V4 dongle attached to the thinkcentre2 Proxmox host.
+#
+# This playbook:
+#   1. Passes the RTL-SDR USB device through to the LXC via Proxmox cgroup rules
+#   2. Installs Docker in the LXC
+#   3. Deploys trunk-recorder + rdio-scanner via Docker Compose
+#   4. Deploys the Traefik route for scanner.woodhead.tech
+#
+# Usage:
+#   make sdr
+#
+# Prerequisites:
+#   - LXC 210 created via `make apply` (or `terraform apply -target=...sdr`)
+#   - RTL-SDR V4 attached to thinkcentre2 USB port
+---
+
+# --- Play 1: USB passthrough on Proxmox host ---
+- name: Configure USB passthrough for RTL-SDR on Proxmox host
+  hosts: thinkcentre2
+  tasks:
+    - name: Get RTL-SDR USB bus/device numbers
+      ansible.builtin.shell: |
+        lsusb | grep -i "2838\|RTL2838" | awk '{print $2, $4}' | tr -d ':'
+      register: usb_info
+      changed_when: false
+
+    - name: Fail if RTL-SDR not found
+      ansible.builtin.fail:
+        msg: "RTL-SDR not detected on thinkcentre2. Check USB connection."
+      when: usb_info.stdout == ""
+
+    - name: Set USB bus/device facts
+      ansible.builtin.set_fact:
+        usb_bus: "{{ usb_info.stdout.split()[0] }}"
+        usb_dev: "{{ usb_info.stdout.split()[1] }}"
+
+    - name: Get USB device major:minor numbers
+      ansible.builtin.shell: |
+        ls -la /dev/bus/usb/{{ usb_bus }}/{{ usb_dev }} | awk '{print $5 $6}' | tr -d ','
+      register: usb_devnum
+      changed_when: false
+
+    - name: Add USB cgroup passthrough to LXC config
+      ansible.builtin.blockinfile:
+        path: /etc/pve/lxc/210.conf
+        marker: "# {mark} RTL-SDR USB passthrough"
+        block: |
+          lxc.cgroup2.devices.allow: c 189:* rwm
+          lxc.mount.entry: /dev/bus/usb dev/bus/usb none bind,optional,create=dir
+      notify: restart lxc
+
+    - name: Create udev rule for stable RTL-SDR device permissions
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/99-rtlsdr.rules
+        content: |
+          SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", GROUP="plugdev", MODE="0664", SYMLINK+="rtlsdr"
+        mode: "0644"
+      notify: reload udev
+
+  handlers:
+    - name: restart lxc
+      ansible.builtin.shell: pct stop 210 && sleep 3 && pct start 210
+      changed_when: true
+
+    - name: reload udev
+      ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+      changed_when: true
+
+# --- Play 2: Deploy stack in LXC ---
+- name: Deploy trunk-recorder and rdio-scanner in SDR LXC
+  hosts: sdr
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - jq
+        state: present
+        update_cache: true
+
+    - name: Install Docker
+      ansible.builtin.shell: |
+        curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Create directory structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /opt/sdr
+        - /opt/sdr/trunk-recorder/config
+        - /opt/sdr/trunk-recorder/config/logs
+        - /opt/sdr/recordings
+        - /opt/sdr/rdio-scanner
+
+    - name: Deploy Docker Compose file
+      ansible.builtin.copy:
+        src: ../files/sdr/docker-compose.yml
+        dest: /opt/sdr/docker-compose.yml
+        mode: "0644"
+
+    - name: Deploy trunk-recorder config
+      ansible.builtin.copy:
+        src: ../files/sdr/config.json
+        dest: /opt/sdr/trunk-recorder/config/config.json
+        mode: "0644"
+
+    - name: Deploy upload script
+      ansible.builtin.copy:
+        src: ../files/sdr/upload.sh
+        dest: /opt/sdr/trunk-recorder/config/upload.sh
+        mode: "0755"
+
+    - name: Start SDR stack
+      ansible.builtin.shell: |
+        cd /opt/sdr && docker compose up -d
+      changed_when: true
+
+# --- Play 3: Traefik route ---
+- name: Deploy Traefik route for scanner.woodhead.tech
+  hosts: traefik
+  tasks:
+    - name: Copy SDR Traefik config
+      ansible.builtin.copy:
+        src: ../files/traefik/dynamic/sdr.yml
+        dest: /etc/traefik/dynamic/sdr.yml
+        mode: "0644"

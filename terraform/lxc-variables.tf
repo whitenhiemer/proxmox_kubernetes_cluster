@@ -257,6 +257,19 @@ variable "libby_alert_root_password" {
   sensitive   = true
 }
 
+# --- SDR Scanner LXC ---
+variable "sdr_vmid" {
+  description = "VM ID for the SDR scanner LXC (Trunk Recorder + rdio-scanner)"
+  type        = number
+  default     = 210
+}
+
+variable "sdr_ip" {
+  description = "Static IP for the SDR scanner LXC (must be on thinkcentre2)"
+  type        = string
+  default     = "192.168.86.32"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

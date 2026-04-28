@@ -1,0 +1,17 @@
+http:
+  routers:
+    rdio-scanner:
+      rule: "Host(`scanner.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: rdio-scanner
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - authentik@file
+
+  services:
+    rdio-scanner:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.32:3000"

@@ -1,0 +1,42 @@
+{
+  "ver": 2,
+  "sources": [
+    {
+      "center": 854212500,
+      "rate": 2400000,
+      "driver": "rtlsdr",
+      "device": 0,
+      "gain": 40,
+      "digitalRecorders": 10,
+      "debugRecorders": 0,
+      "modulation": "qpsk"
+    }
+  ],
+  "systems": [
+    {
+      "shortName": "sno911",
+      "type": "p25",
+      "control_channels": [
+        853850000,
+        854012500,
+        854212500,
+        854562500,
+        853587500,
+        853612500,
+        853750000,
+        853925000,
+        856362500,
+        857562500,
+        857262500,
+        854737500
+      ],
+      "modulation": "qpsk",
+      "talkgroupsFile": "/app/talkgroups.csv",
+      "uploadScript": "/app/upload.sh",
+      "compressWav": true
+    }
+  ],
+  "captureDir": "/recordings",
+  "logFile": true,
+  "logDir": "/app/logs"
+}
