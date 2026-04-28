@@ -1,0 +1,23 @@
+http:
+  routers:
+    truenas:
+      rule: "Host(`nas.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: truenas
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - authentik@file
+
+  services:
+    truenas:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.86.40"
+        passHostHeader: false
+        serversTransport: truenas-transport
+
+  serversTransports:
+    truenas-transport:
+      insecureSkipVerify: true
