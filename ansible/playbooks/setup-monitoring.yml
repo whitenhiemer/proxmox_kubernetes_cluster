@@ -42,6 +42,7 @@
     grafana_src: "{{ playbook_dir }}/../files/monitoring/grafana"
     dexcom_src: "{{ playbook_dir }}/../files/monitoring/dexcom-exporter"
     resume_src: "{{ playbook_dir }}/../files/monitoring/resume-site"
+    landing_src: "{{ playbook_dir }}/../files/monitoring/landing-site"
     # Optional: set via --extra-vars
     grafana_password: "admin"
     discord_webhook: ""
@@ -167,6 +168,8 @@
         - docs-site/build
         - resume-site
         - resume-site/build
+        - landing-site
+        - landing-site/build
 
     # --- Deploy Config Files ---
     - name: Copy Docker Compose file
@@ -429,6 +432,46 @@
         src: "{{ playbook_dir }}/../../resume-site/public/"
         dest: "{{ mon_base_dir }}/resume-site/build/html/"
         delete: true
+        use_ssh_args: true
+        rsync_opts:
+          - "--no-perms"
+      become: false
+      notify: Restart monitoring stack
+
+    # --- Landing Site ---
+    - name: Create landing site build context directory
+      ansible.builtin.file:
+        path: "{{ mon_base_dir }}/landing-site/build/html"
+        state: directory
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0755"
+
+    - name: Copy landing site Dockerfile
+      ansible.builtin.copy:
+        src: "{{ landing_src }}/Dockerfile"
+        dest: "{{ mon_base_dir }}/landing-site/build/Dockerfile"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      notify: Restart monitoring stack
+
+    - name: Copy landing site static files
+      ansible.builtin.synchronize:
+        src: "{{ playbook_dir }}/../../landing-site/"
+        dest: "{{ mon_base_dir }}/landing-site/build/html/"
+        delete: true
+        use_ssh_args: true
+        rsync_opts:
+          - "--no-perms"
+          - "--exclude=static/"
+      become: false
+      notify: Restart monitoring stack
+
+    - name: Copy landing site static assets
+      ansible.builtin.synchronize:
+        src: "{{ playbook_dir }}/../../landing-site/static/"
+        dest: "{{ mon_base_dir }}/landing-site/build/html/"
         use_ssh_args: true
         rsync_opts:
           - "--no-perms"

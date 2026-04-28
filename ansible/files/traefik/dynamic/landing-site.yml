@@ -1,0 +1,23 @@
+# landing-site.yml - Traefik dynamic route for the landing page
+#
+# Routes woodhead.tech and www.woodhead.tech to the landing site container
+# running on the monitoring LXC. Nginx serves static HTML on port 8083.
+http:
+  routers:
+    landing-site:
+      rule: "Host(`woodhead.tech`) || Host(`www.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: landing-site
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "woodhead.tech"
+            sans:
+              - "www.woodhead.tech"
+
+  services:
+    landing-site:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.25:8083"

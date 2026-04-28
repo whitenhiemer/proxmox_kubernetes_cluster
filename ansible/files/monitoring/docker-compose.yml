@@ -186,6 +186,17 @@ services:
       - "8082:80"
     restart: unless-stopped
 
+  # --- Landing Site: Service Link Tree ---
+  # Static HTML landing page served by nginx. Lists all homelab services
+  # with search filtering. Accessible at woodhead.tech (root domain).
+  landing-site:
+    build:
+      context: /opt/monitoring/landing-site/build
+    container_name: landing-site
+    ports:
+      - "8083:80"
+    restart: unless-stopped
+
   # --- Loki: Log Aggregation (v2 -- uncomment when ready) ---
   # Centralized log storage. Requires Promtail agents on each LXC/VM.
   # Deferred to reduce initial complexity.
