@@ -31,6 +31,9 @@
     nfs_server: ""
     nfs_share: ""
     media_mount: /media
+    # PrivadoVPN credentials (required, set via --extra-vars, never committed)
+    privado_user: ""
+    privado_pass: ""
 
   tasks:
     # --- System Setup ---
@@ -149,6 +152,22 @@
         - tv
         - music
         - books
+
+    # --- VPN Credentials ---
+    - name: Fail if PrivadoVPN credentials not provided
+      ansible.builtin.fail:
+        msg: "PrivadoVPN credentials required. Run: make arr-stack PRIVADO_USER=... PRIVADO_PASS=..."
+      when: privado_user == "" or privado_pass == ""
+
+    - name: Write PrivadoVPN credentials to .env
+      ansible.builtin.copy:
+        dest: "{{ arr_base_dir }}/.env"
+        content: |
+          PRIVADO_USER={{ privado_user }}
+          PRIVADO_PASS={{ privado_pass }}
+        owner: root
+        group: root
+        mode: "0600"
 
     # NFS is bind-mounted into the LXC via the Proxmox host (pct set -mp0).
     # Unprivileged LXCs cannot run mount.nfs directly; the host mounts

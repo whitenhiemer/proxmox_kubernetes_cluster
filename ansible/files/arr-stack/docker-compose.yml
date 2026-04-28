@@ -101,10 +101,35 @@ services:
       - "5055:5055"
     restart: unless-stopped
 
+  # --- Gluetun: VPN killswitch for SABnzbd ---
+  # SABnzbd runs inside gluetun's network namespace. All SABnzbd download
+  # traffic exits through PrivadoVPN. If the VPN drops, SABnzbd loses
+  # connectivity entirely (built-in killswitch).
+  # Credentials passed via /opt/arr/.env (never committed to git).
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=privado
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=${PRIVADO_USER}
+      - OPENVPN_PASSWORD=${PRIVADO_PASS}
+      - TZ=America/Chicago
+    ports:
+      - "8080:8080"  # SABnzbd port exposed through gluetun's network
+    restart: unless-stopped
+
   # --- SABnzbd: Usenet Downloader ---
   sabnzbd:
     image: lscr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
+    network_mode: "service:gluetun"
+    depends_on:
+      - gluetun
     environment:
       - PUID=1000
       - PGID=1000
@@ -112,6 +137,4 @@ services:
     volumes:
       - /opt/arr/sabnzbd/config:/config
       - /media/downloads:/downloads
-    ports:
-      - "8080:8080"
     restart: unless-stopped
