@@ -94,7 +94,7 @@ services:
       - PGID=1000
       - TZ=America/Chicago
     volumes:
-      - /opt/arr/overseerr/config:/config
+      - /opt/arr/overseerr/config:/app/config
     ports:
       - "5055:5055"
     restart: unless-stopped
