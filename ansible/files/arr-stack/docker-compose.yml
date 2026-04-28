@@ -82,12 +82,12 @@ services:
       - "6767:6767"
     restart: unless-stopped
 
-  # --- Overseerr: Request Management ---
+  # --- Seerr: Request Management ---
+  # Successor to Overseerr/Jellyseerr. Supports Plex, Jellyfin, and Emby.
   # User-facing portal for requesting movies/TV shows.
   # Integrates with Sonarr/Radarr to automatically fulfill requests.
-  # This is the only service you'd typically share with family/friends.
   overseerr:
-    image: lscr.io/linuxserver/overseerr:latest
+    image: seerr/seerr:latest
     container_name: overseerr
     environment:
       - PUID=1000
