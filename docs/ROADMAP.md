@@ -445,6 +445,7 @@ container in its own LXC or in the Traefik LXC.
 8. **Resource Balancing** -- DONE (tower1 added, Talos VMs redistributed across nodes)
 9. **Piboard Dashboard** -- DONE (Raspberry Pi 3B + Waveshare 5" HDMI, Go + SSE + Prometheus)
 10. **Klipper 3D Printing** -- IN PROGRESS (Ender 5 Pro on Pi 3B with MainsailOS, Ender 3 planned)
+11. **Talos K8s Cluster** -- DONE (3-node cluster bootstrapped: CP at 192.168.86.143, workers at .144/.145; Flannel CNI; namespaces: ingress-system, apps, monitoring; configs in talos/_out/)
 
 ## Hardware Considerations
 
