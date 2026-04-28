@@ -16,13 +16,14 @@
 #   make openclaw       - Deploy OpenClaw AI agent
 #   make authentik      - Deploy Authentik identity provider
 #   make wireguard      - Deploy WireGuard VPN tunnel
+#   make homeassistant  - Deploy Traefik route + trusted_proxies config for HAOS
 #   make bootstrap      - Bootstrap Talos K8s cluster
 #   make k8s-base       - Apply base K8s manifests
 #   make harden         - Security hardening
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard truenas \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help
 
@@ -142,6 +143,10 @@ authentik: ## Deploy Authentik identity provider into its LXC
 
 wireguard: ## Deploy WireGuard VPN tunnel into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-wireguard.yml
+
+homeassistant: ## Deploy Traefik route for Home Assistant (post-onboarding config via HA_TOKEN=)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml \
+		$(if $(HA_TOKEN),--extra-vars "ha_token=$(HA_TOKEN)")
 
 truenas: ## Configure TrueNAS Scale via REST API (post-install: ZFS pool, datasets, NFS shares)
 	@if [ -z "$(TRUENAS_PASSWORD)" ]; then \

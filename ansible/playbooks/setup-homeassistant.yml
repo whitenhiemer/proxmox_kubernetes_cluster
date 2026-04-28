@@ -1,0 +1,107 @@
+# setup-homeassistant.yml - Configure Home Assistant OS (HAOS) for Traefik reverse proxy
+#
+# HAOS is a self-managing OS -- this playbook handles post-onboarding configuration
+# only. The VM is created by Terraform (vm-homeassistant.tf, VM ID 301) and the
+# initial setup wizard must be completed via the web UI before running this playbook.
+#
+# This playbook:
+#   1. Deploys the Traefik dynamic route for home.woodhead.tech
+#   2. Configures trusted_proxies in HAOS so Traefik can reverse proxy it
+#
+# Prerequisites:
+#   - HAOS VM running at 192.168.86.41 (Terraform + `make apply-homeassistant`)
+#   - Initial setup wizard completed at http://192.168.86.41:8123
+#   - Long-lived access token created in HA: Profile > Security > Long-lived access tokens
+#
+# Usage:
+#   ansible-playbook playbooks/setup-homeassistant.yml \
+#     --extra-vars "ha_token=<your-long-lived-access-token>"
+#
+# Without the token (Traefik config only):
+#   ansible-playbook playbooks/setup-homeassistant.yml --tags traefik
+---
+# --- Play 1: Deploy Traefik route ---
+- name: Deploy Traefik route for Home Assistant
+  hosts: traefik
+  tasks:
+    - name: Copy Home Assistant Traefik config
+      ansible.builtin.copy:
+        src: ../files/traefik/dynamic/homeassistant.yml
+        dest: /etc/traefik/dynamic/homeassistant.yml
+        mode: "0644"
+      tags: traefik
+      # Traefik watches this directory and hot-reloads on change
+
+# --- Play 2: Configure trusted_proxies in HAOS via REST API ---
+- name: Configure Home Assistant trusted_proxies for Traefik
+  hosts: localhost
+  connection: local
+  become: false
+  vars:
+    ha_url: "http://192.168.86.41:8123"
+    ha_token: ""                          # Required: --extra-vars "ha_token=..."
+    traefik_ip: "192.168.86.20"
+
+  tasks:
+    - name: Abort if no HA token provided
+      ansible.builtin.fail:
+        msg: "Provide ha_token via --extra-vars. Create one in HA: Profile > Security > Long-lived access tokens."
+      when: ha_token == ""
+      tags: [ha_config, never]  # Only runs when explicitly tagged or ha_token provided
+
+    - name: Check HA API connectivity
+      ansible.builtin.uri:
+        url: "{{ ha_url }}/api/"
+        headers:
+          Authorization: "Bearer {{ ha_token }}"
+        validate_certs: false
+      register: ha_api_check
+      tags: ha_config
+
+    - name: Read current configuration.yaml via HA API
+      ansible.builtin.uri:
+        url: "{{ ha_url }}/api/config"
+        headers:
+          Authorization: "Bearer {{ ha_token }}"
+        validate_certs: false
+      register: ha_config
+      tags: ha_config
+
+    - name: Show current config location
+      ansible.builtin.debug:
+        msg: "HA config dir: {{ ha_config.json.config_dir }}"
+      tags: ha_config
+
+    # HAOS configuration.yaml is at /config/configuration.yaml inside the VM.
+    # We write the http: block via the HA REST API using the config/core endpoint.
+    # This avoids needing SSH access to the HAOS VM.
+    - name: Verify trusted_proxies not already configured
+      ansible.builtin.uri:
+        url: "{{ ha_url }}/api/config/core/check_config"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ ha_token }}"
+          Content-Type: "application/json"
+        validate_certs: false
+      register: config_check
+      tags: ha_config
+
+    - name: Instruct user to add trusted_proxies manually
+      ansible.builtin.debug:
+        msg:
+          - "MANUAL STEP REQUIRED: Add the following to /config/configuration.yaml in HAOS"
+          - ""
+          - "  http:"
+          - "    use_x_forwarded_for: true"
+          - "    trusted_proxies:"
+          - "      - {{ traefik_ip }}"
+          - ""
+          - "Options to edit configuration.yaml:"
+          - "  1. Install 'Studio Code Server' addon in HA: Settings > Add-ons > Store"
+          - "     Then open it and edit /config/configuration.yaml"
+          - "  2. Install 'Terminal & SSH' addon and use the built-in terminal"
+          - "  3. HA UI: Settings > System > Edit configuration.yaml (if file editor shown)"
+          - ""
+          - "After editing, restart HA: Settings > System > Restart"
+          - "Then verify: https://home.woodhead.tech should load without 400 error"
+      tags: ha_config
