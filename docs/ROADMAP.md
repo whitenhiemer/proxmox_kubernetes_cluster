@@ -433,7 +433,7 @@ container in its own LXC or in the Traefik LXC.
 
 ## Implementation Priority
 
-1. **NAS** -- PENDING (VM exists at 192.168.86.40, needs TrueNAS install)
+1. **NAS** -- IN PROGRESS (VM exists at 192.168.86.40, needs TrueNAS install)
 2. **Proxmox Backups** -- PENDING (blocked on TrueNAS NFS share)
 3. **ARR stack** -- DONE (LXC with Docker Compose, NFS media mount)
 4. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough for hardware transcoding)

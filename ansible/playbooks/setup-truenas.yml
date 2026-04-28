@@ -21,10 +21,11 @@
 - name: Configure TrueNAS Scale via REST API
   hosts: localhost
   gather_facts: false
+  become: false
   vars:
-    truenas_host: "http://192.168.86.40"
+    truenas_host: "https://192.168.86.40"
     truenas_api: "{{ truenas_host }}/api/v2.0"
-    truenas_user: "root"
+    truenas_user: "admin"
     truenas_password: ""  # Required: pass via --extra-vars
     api_headers:
       Content-Type: "application/json"
@@ -110,6 +111,16 @@
       when: pool_create is changed and pool_job.json[0].state == 'FAILED'
 
     # --- Datasets ---
+    - name: Get existing datasets
+      ansible.builtin.uri:
+        url: "{{ truenas_api }}/pool/dataset"
+        method: GET
+        url_username: "{{ truenas_user }}"
+        url_password: "{{ truenas_password }}"
+        force_basic_auth: true
+        validate_certs: false
+      register: existing_datasets
+
     - name: Create datasets
       ansible.builtin.uri:
         url: "{{ truenas_api }}/pool/dataset"
@@ -123,16 +134,20 @@
           name: "{{ pool_name }}/{{ item.name }}"
           comments: "{{ item.comment }}"
           compression: "LZ4"
-        status_code: [200, 422]  # 422 = already exists
+        status_code: [200]
         validate_certs: false
       loop:
-        - { name: "media",   comment: "Media library root" }
+        - { name: "media",           comment: "Media library root" }
         - { name: "media/movies",    comment: "Movies" }
         - { name: "media/tv",        comment: "TV shows" }
         - { name: "media/music",     comment: "Music" }
         - { name: "media/downloads", comment: "Download staging" }
-        - { name: "backups", comment: "Proxmox VM backups and Home Assistant backups" }
-        - { name: "isos",    comment: "Proxmox ISO images" }
+        - { name: "backups",         comment: "Proxmox VM backups and Home Assistant backups" }
+        - { name: "isos",            comment: "Proxmox ISO images" }
+      when: >
+        existing_datasets.json |
+        selectattr('name', 'equalto', pool_name + '/' + item.name) |
+        list | length == 0
 
     # --- NFS Service ---
     - name: Enable NFS service
