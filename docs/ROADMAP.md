@@ -433,8 +433,8 @@ container in its own LXC or in the Traefik LXC.
 
 ## Implementation Priority
 
-1. **NAS** -- IN PROGRESS (VM exists at 192.168.86.40, needs TrueNAS install)
-2. **Proxmox Backups** -- PENDING (blocked on TrueNAS NFS share)
+1. **NAS** -- DONE (TrueNAS Scale 24.04, ZFS pool `tank` on 2TB Ceph RBD, NFS shares for media/backups/isos)
+2. **Proxmox Backups** -- DONE (truenas-backups NFS storage added, nightly 02:00 snapshot job, 7-day retention)
 3. **ARR stack** -- DONE (LXC with Docker Compose, NFS via Proxmox host bind-mount; gluetun needs VPN creds)
 4. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough, NFS via Proxmox host bind-mount)
 5. **Home Assistant** -- DONE (HAOS VM, UEFI boot, qcow2 import)
