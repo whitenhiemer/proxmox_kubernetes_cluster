@@ -18,16 +18,22 @@ variable "truenas_cores" {
   default     = 4
 }
 
+variable "truenas_node" {
+  description = "Proxmox node to run TrueNAS on (tower1 has more RAM headroom than thinkcentres)"
+  type        = string
+  default     = "tower1"
+}
+
 variable "truenas_memory" {
-  description = "Memory in MB for TrueNAS (8192 minimum, ZFS ARC uses ~1GB per TB of storage)"
+  description = "Memory in MB for TrueNAS (16384 recommended, ZFS ARC uses ~1GB per TB of storage)"
   type        = number
-  default     = 8192
+  default     = 16384
 }
 
 variable "truenas_balloon" {
   description = "Minimum guaranteed RAM in MB for TrueNAS (balloon floor, ZFS ARC shrinks gracefully)"
   type        = number
-  default     = 4096
+  default     = 8192
 }
 
 variable "truenas_disk_size" {

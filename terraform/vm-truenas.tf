@@ -25,7 +25,7 @@
 
 resource "proxmox_virtual_environment_vm" "truenas" {
   name      = "truenas"
-  node_name = var.proxmox_node
+  node_name = var.truenas_node
   vm_id     = var.truenas_vmid
   tags      = ["infrastructure", "storage", "truenas"]
 
