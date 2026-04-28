@@ -260,6 +260,8 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
 | 192.168.86.41     | Home Assistant       | VM   | 301   |
 | 192.168.86.131    | Piboard dashboard    | Pi   | --    |
+| 192.168.86.134    | Klipper Ender 3      | Pi   | --    |
+| 192.168.86.136    | Klipper Ender 5 Pro  | Pi   | --    |
 | 192.168.86.100    | K8s API VIP          | VIP  | --    |
 | 192.168.86.101    | K8s control plane    | VM   | 400   |
 | 192.168.86.111-112| K8s workers          | VM   | 410+  |
@@ -442,6 +444,7 @@ container in its own LXC or in the Traefik LXC.
 7. **WireGuard VPN** -- DONE (LXC, UDP 51820, split tunnel to LAN)
 8. **Resource Balancing** -- DONE (tower1 added, Talos VMs redistributed across nodes)
 9. **Piboard Dashboard** -- DONE (Raspberry Pi 3B + Waveshare 5" HDMI, Go + SSE + Prometheus)
+10. **Klipper 3D Printing** -- IN PROGRESS (Ender 5 Pro on Pi 3B with MainsailOS, Ender 3 planned)
 
 ## Hardware Considerations
 

@@ -83,6 +83,7 @@ Traefik must be running before any HTTP/HTTPS service is reachable. The K8s clus
 - TrueNAS VM: `.40` | Home Assistant VM: `.41`
 - K8s VIP: `.100` | control plane: `.101` | workers: `.111`, `.112`
 - Piboard (Pi 3B): `.131` (standalone monitoring dashboard, not Proxmox-managed)
+- Klipper Ender 5 Pro (Pi 3B): `.136` (MainsailOS, 3D printer control, WiFi)
 - MetalLB pool: `.150`–`.199`
 
 **Talos/K8s:** Immutable OS, API-driven. Config lives in `talos/talconfig.yaml` (reference) and `talos/patches/`. Generated secrets/configs go to `talos/_out/` (gitignored).

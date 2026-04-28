@@ -98,11 +98,12 @@ and resource allocation.
             |
           +------- Standalone Devices (not Proxmox-managed) -------+
           |                                                         |
-     +----+----------+
-     | Piboard       |  Raspberry Pi 3B + Waveshare 5" HDMI
-     | 192.168.86.131|  Go dashboard (SSE) -> Prometheus API
-     | :8080         |  Chromium kiosk, auto-login
-     +---------------+
+     +----+----------+     +----------------+
+     | Piboard       |     | Klipper        |  Raspberry Pi 3B
+     | 192.168.86.131|     | Ender 5 Pro    |  MainsailOS + Klipper
+     | :8080         |     | 192.168.86.136 |  Moonraker + Mainsail
+     | Waveshare 5"  |     | :80 :7125      |  USB -> printer MCU
+     +---------------+     +----------------+
             |
     +-------+-------+
     | Traefik       |
@@ -148,6 +149,7 @@ and resource allocation.
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
 | 192.168.86.131     | piboard          | Pi     | --    | Raspberry Pi 3B monitoring dashboard|
+| 192.168.86.136     | klipper-ender5pro| Pi     | --    | Klipper 3D printer (Ender 5 Pro)    |
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
 | 192.168.86.101     | talos-cp-0       | VM     | 400   | K8s control plane (Talos Linux)     |
 | 192.168.86.111-112 | talos-worker-*   | VM     | 410+  | K8s workers (Talos Linux)           |
@@ -505,6 +507,7 @@ in parallel after the host is ready.
 | Device            | Cores | RAM (MB) | Disk   | Notes                              |
 |-------------------|-------|----------|--------|------------------------------------|
 | Piboard (Pi 3B)   | 4     | 1024     | 32 GB  | Waveshare 5" HDMI, Chromium kiosk  |
+| Klipper Ender 5 Pro (Pi 3B) | 4 | 1024 | 16 GB | MainsailOS, USB to printer MCU  |
 
 ### Total resource budget (all services running)
 

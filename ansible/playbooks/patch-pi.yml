@@ -6,10 +6,11 @@
 # Usage:
 #   cd ansible && ansible-playbook playbooks/patch-pi.yml
 #   cd ansible && ansible-playbook playbooks/patch-pi.yml --limit piboard
+#   cd ansible && ansible-playbook playbooks/patch-pi.yml --limit klipper
 
 ---
 - name: Patch Raspberry Pi devices
-  hosts: raspberry_pi
+  hosts: raspberry_pi:klipper
   become: true
   gather_facts: true
 
