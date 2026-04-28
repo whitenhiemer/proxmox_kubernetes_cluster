@@ -435,8 +435,8 @@ container in its own LXC or in the Traefik LXC.
 
 1. **NAS** -- IN PROGRESS (VM exists at 192.168.86.40, needs TrueNAS install)
 2. **Proxmox Backups** -- PENDING (blocked on TrueNAS NFS share)
-3. **ARR stack** -- DONE (LXC with Docker Compose, NFS media mount)
-4. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough for hardware transcoding)
+3. **ARR stack** -- DONE (LXC with Docker Compose, NFS via Proxmox host bind-mount; gluetun needs VPN creds)
+4. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough, NFS via Proxmox host bind-mount)
 5. **Home Assistant** -- DONE (HAOS VM, UEFI boot, qcow2 import)
 6. **Authelia SSO** -- DONE (deployed at auth.woodhead.tech)
 7. **WireGuard VPN** -- DONE (LXC, UDP 51820, split tunnel to LAN)

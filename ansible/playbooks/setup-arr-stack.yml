@@ -141,8 +141,6 @@
       ansible.builtin.file:
         path: "{{ media_mount }}/{{ item }}"
         state: directory
-        owner: "{{ arr_user }}"
-        group: "{{ arr_user }}"
         mode: "0775"
       loop:
         - downloads/complete
@@ -152,33 +150,10 @@
         - music
         - books
 
-    # NFS mount from TrueNAS (only when nfs_server is provided)
-    - name: Mount NFS media share from TrueNAS
-      ansible.posix.mount:
-        src: "{{ nfs_server }}:{{ nfs_share }}"
-        path: "{{ media_mount }}"
-        fstype: nfs
-        opts: "rw,soft,intr,rsize=8192,wsize=8192"
-        state: mounted
-      when: nfs_server != "" and nfs_share != ""
-
-    - name: Add NFS mount to fstab
-      ansible.posix.mount:
-        src: "{{ nfs_server }}:{{ nfs_share }}"
-        path: "{{ media_mount }}"
-        fstype: nfs
-        opts: "rw,soft,intr,rsize=8192,wsize=8192"
-        state: present
-      when: nfs_server != "" and nfs_share != ""
-
-    - name: Note about NFS
-      ansible.builtin.debug:
-        msg: >
-          NFS not configured. Using local /media directory.
-          After TrueNAS is deployed, re-run with:
-          ansible-playbook playbooks/setup-arr-stack.yml
-            --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
-      when: nfs_server == ""
+    # NFS is bind-mounted into the LXC via the Proxmox host (pct set -mp0).
+    # Unprivileged LXCs cannot run mount.nfs directly; the host mounts
+    # 192.168.86.40:/mnt/tank/media at /mnt/truenas-media and the LXC sees
+    # it as /media through the bind mount configured in the LXC's .conf file.
 
     # --- Deploy Docker Compose ---
     - name: Copy Docker Compose file

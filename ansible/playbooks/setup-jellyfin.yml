@@ -27,7 +27,7 @@
 ---
 # --- Play 1: Configure GPU passthrough on the Proxmox host ---
 - name: Configure iGPU passthrough for Jellyfin LXC
-  hosts: proxmox[0]
+  hosts: pve3
   vars:
     jellyfin_vmid: 204
     gpu_passthrough: true
@@ -58,7 +58,7 @@
   handlers:
     - name: Restart Jellyfin LXC
       ansible.builtin.command:
-        cmd: "pct restart {{ jellyfin_vmid }}"
+        cmd: "bash -c 'pct stop {{ jellyfin_vmid }} && sleep 3 && pct start {{ jellyfin_vmid }}'"
       changed_when: true
 
 # --- Play 2: Install Jellyfin inside the LXC ---
@@ -142,32 +142,10 @@
         state: directory
         mode: "0755"
 
-    # NFS mount from TrueNAS (only when nfs_server is provided)
-    - name: Mount NFS media share from TrueNAS
-      ansible.posix.mount:
-        src: "{{ nfs_server }}:{{ nfs_share }}"
-        path: "{{ media_mount }}"
-        fstype: nfs
-        opts: "ro,soft,intr,rsize=8192,wsize=8192"
-        state: mounted
-      when: nfs_server != "" and nfs_share != ""
-
-    - name: Add NFS mount to fstab
-      ansible.posix.mount:
-        src: "{{ nfs_server }}:{{ nfs_share }}"
-        path: "{{ media_mount }}"
-        fstype: nfs
-        opts: "ro,soft,intr,rsize=8192,wsize=8192"
-        state: present
-      when: nfs_server != "" and nfs_share != ""
-
-    - name: Note about NFS
-      ansible.builtin.debug:
-        msg: >
-          NFS not configured. Add media later with:
-          ansible-playbook playbooks/setup-jellyfin.yml
-            --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
-      when: nfs_server == ""
+    # NFS is bind-mounted into the LXC via the Proxmox host (pct set -mp0).
+    # Unprivileged LXCs cannot run mount.nfs directly; the host mounts
+    # 192.168.86.40:/mnt/tank/media at /mnt/truenas-media and the LXC sees
+    # it as /media through the bind mount configured in the LXC's .conf file.
 
     # --- Verify GPU access (if passthrough was configured) ---
     - name: Check for GPU device inside container
