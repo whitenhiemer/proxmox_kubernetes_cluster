@@ -98,6 +98,16 @@ scrape_configs:
   #       labels:
   #         cluster: "talos-proxmox"
 
+  # ===== Dexcom Glucose Monitoring =====
+
+  # Dexcom exporter: polls Dexcom Share API every 5 minutes
+  - job_name: "dexcom"
+    scrape_interval: 60s
+    static_configs:
+      - targets: ["dexcom-exporter:9666"]
+        labels:
+          instance: "dexcom"
+
   # ===== Service Health Probes =====
 
   # HTTP probes: checks that services respond with 2xx

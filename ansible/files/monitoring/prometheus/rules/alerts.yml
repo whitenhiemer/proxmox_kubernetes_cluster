@@ -128,6 +128,64 @@ groups:
           summary: "TLS cert expiring in {{ $value | printf \"%.0f\" }} days"
           description: "A Traefik TLS certificate will expire within 14 days. Check ACME renewal."
 
+  # --- Glucose Monitoring (Dexcom CGM) ---
+  - name: glucose
+    rules:
+      # Glucose critically low (<55 mg/dL) -- urgent
+      - alert: GlucoseCriticalLow
+        expr: dexcom_glucose_mgdl < 55
+        for: 0m
+        labels:
+          severity: critical
+          channel: glucose
+        annotations:
+          summary: "URGENT LOW glucose: {{ $value | printf \"%.0f\" }} mg/dL"
+          description: "Glucose has dropped below 55 mg/dL. Immediate attention needed."
+
+      # Glucose low (<70 mg/dL)
+      - alert: GlucoseLow
+        expr: dexcom_glucose_mgdl >= 55 and dexcom_glucose_mgdl < 70
+        for: 5m
+        labels:
+          severity: warning
+          channel: glucose
+        annotations:
+          summary: "Low glucose: {{ $value | printf \"%.0f\" }} mg/dL"
+          description: "Glucose has been below 70 mg/dL for 5 minutes."
+
+      # Glucose high (>250 mg/dL)
+      - alert: GlucoseHigh
+        expr: dexcom_glucose_mgdl > 250
+        for: 15m
+        labels:
+          severity: warning
+          channel: glucose
+        annotations:
+          summary: "High glucose: {{ $value | printf \"%.0f\" }} mg/dL"
+          description: "Glucose has been above 250 mg/dL for 15 minutes."
+
+      # Glucose critically high (>350 mg/dL)
+      - alert: GlucoseCriticalHigh
+        expr: dexcom_glucose_mgdl > 350
+        for: 5m
+        labels:
+          severity: critical
+          channel: glucose
+        annotations:
+          summary: "URGENT HIGH glucose: {{ $value | printf \"%.0f\" }} mg/dL"
+          description: "Glucose has been above 350 mg/dL for 5 minutes. Immediate attention needed."
+
+      # Dexcom exporter hasn't reported a reading in 15 minutes
+      - alert: DexcomStaleReading
+        expr: time() - dexcom_reading_timestamp_seconds > 900
+        for: 5m
+        labels:
+          severity: warning
+          channel: glucose
+        annotations:
+          summary: "Dexcom reading stale ({{ $value | printf \"%.0f\" }}s old)"
+          description: "No new glucose reading in over 15 minutes. Sensor may be disconnected."
+
   # --- Kubernetes (uncomment after deploying kube-state-metrics) ---
   # - name: kubernetes
   #   rules:

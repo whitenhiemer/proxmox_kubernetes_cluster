@@ -51,9 +51,13 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_ROOT_URL=https://grafana.woodhead.tech
+      # Custom branding (woodhead.tech logo)
+      - GF_APP_MODE=production
+      - GF_ANALYTICS_REPORTING_ENABLED=false
     volumes:
       - /opt/monitoring/grafana/data:/var/lib/grafana
       - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - /opt/monitoring/grafana/branding:/usr/share/grafana/public/img/branding:ro
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -129,6 +133,35 @@ services:
       - /opt/monitoring/pve-exporter/pve.env
     ports:
       - "9221:9221"
+    restart: unless-stopped
+
+  # --- Dexcom Exporter: Glucose Monitoring ---
+  # Polls the Dexcom Share/Follow API every 5 minutes and exposes glucose
+  # readings as Prometheus metrics. Requires DEXCOM_USERNAME and DEXCOM_PASSWORD
+  # in /opt/monitoring/dexcom-exporter/dexcom.env.
+  dexcom-exporter:
+    build:
+      context: /opt/monitoring/dexcom-exporter/build
+    container_name: dexcom-exporter
+    env_file:
+      - /opt/monitoring/dexcom-exporter/dexcom.env
+    ports:
+      - "9666:9666"
+    restart: unless-stopped
+
+  # --- Twilio SMS Relay: Glucose Alert SMS ---
+  # Receives Alertmanager webhook POSTs and sends SMS via Twilio API.
+  # Requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER,
+  # and SMS_TO_NUMBER in /opt/monitoring/dexcom-exporter/twilio.env.
+  twilio-relay:
+    build:
+      context: /opt/monitoring/dexcom-exporter/build
+      dockerfile: Dockerfile.twilio
+    container_name: twilio-relay
+    env_file:
+      - /opt/monitoring/dexcom-exporter/twilio.env
+    ports:
+      - "9667:9667"
     restart: unless-stopped
 
   # --- Loki: Log Aggregation (v2 -- uncomment when ready) ---

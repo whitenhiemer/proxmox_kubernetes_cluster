@@ -28,6 +28,24 @@ route:
   receiver: "discord"
 
   routes:
+    # Glucose alerts: SMS + Alexa + Discord
+    - match:
+        channel: glucose
+      receiver: "glucose-alerts"
+      group_wait: 0s
+      repeat_interval: 15m
+      routes:
+        # Critical glucose: no delay, 15m repeat
+        - match:
+            severity: critical
+          receiver: "glucose-alerts"
+          repeat_interval: 15m
+        # Warning glucose: 30m repeat
+        - match:
+            severity: warning
+          receiver: "glucose-alerts"
+          repeat_interval: 30m
+
     # Critical alerts: more frequent repeat
     - match:
         severity: critical
@@ -48,17 +66,23 @@ receivers:
       - webhook_url: "DISCORD_WEBHOOK_URL"
         send_resolved: true
 
+  # Glucose alerts: SMS via Twilio + Alexa via Home Assistant + Discord
+  # Webhook URLs replaced at deploy time via --extra-vars
+  - name: "glucose-alerts"
+    discord_configs:
+      - webhook_url: "DISCORD_WEBHOOK_URL"
+        send_resolved: true
+    webhook_configs:
+      # Twilio SMS -- relay container converts Alertmanager JSON to Twilio SMS
+      - url: "http://twilio-relay:9667"
+        send_resolved: true
+      # Home Assistant -- triggers an automation that announces on Alexa
+      # Webhook ID injected at deploy time via --extra-vars
+      - url: "HA_GLUCOSE_WEBHOOK_URL"
+        send_resolved: true
+
   # Null receiver (swallows alerts -- used for info severity)
   - name: "null"
-
-  # Uncomment for Slack
-  # - name: "slack"
-  #   slack_configs:
-  #     - api_url: "SLACK_WEBHOOK_URL"
-  #       channel: "#homelab-alerts"
-  #       send_resolved: true
-  #       title: '{{ template "slack.default.title" . }}'
-  #       text: '{{ template "slack.default.text" . }}'
 
 # --- Inhibition Rules ---
 # Suppress warning alerts when a critical alert fires for the same instance

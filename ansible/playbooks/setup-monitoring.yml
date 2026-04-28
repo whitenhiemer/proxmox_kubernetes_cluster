@@ -40,6 +40,7 @@
     alertmanager_src: "{{ playbook_dir }}/../files/monitoring/alertmanager"
     blackbox_src: "{{ playbook_dir }}/../files/monitoring/blackbox"
     grafana_src: "{{ playbook_dir }}/../files/monitoring/grafana"
+    dexcom_src: "{{ playbook_dir }}/../files/monitoring/dexcom-exporter"
     # Optional: set via --extra-vars
     grafana_password: "admin"
     discord_webhook: ""
@@ -48,6 +49,11 @@
     pve_token_name: ""
     pve_token_value: ""
     pve_host: "192.168.86.29"
+    # Dexcom exporter credentials (set via --extra-vars)
+    dexcom_username: ""
+    dexcom_password: ""
+    # Home Assistant glucose webhook URL (set via --extra-vars)
+    ha_glucose_webhook: ""
 
   tasks:
     # --- System Setup ---
@@ -154,6 +160,9 @@
         - alertmanager/data
         - blackbox
         - pve-exporter
+        - dexcom-exporter
+        - dexcom-exporter/build
+        - grafana/branding
 
     # --- Deploy Config Files ---
     - name: Copy Docker Compose file
@@ -271,6 +280,82 @@
         mode: "0600"
       when: pve_user == "" or pve_token_name == "" or pve_token_value == ""
 
+    # --- Branding ---
+    - name: Copy woodhead.tech logo assets for Grafana
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../assets/{{ item }}"
+        dest: "{{ mon_base_dir }}/grafana/branding/{{ item }}"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      loop:
+        - logo.png
+        - logo-192.png
+        - logo-512.png
+        - favicon-32.png
+      notify: Restart monitoring stack
+
+    # --- Dexcom Exporter ---
+    - name: Copy Dexcom exporter build context
+      ansible.builtin.copy:
+        src: "{{ dexcom_src }}/{{ item }}"
+        dest: "{{ mon_base_dir }}/dexcom-exporter/build/{{ item }}"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+      loop:
+        - Dockerfile
+        - Dockerfile.twilio
+        - exporter.py
+        - twilio-relay.py
+        - requirements.txt
+      notify: Restart monitoring stack
+
+    - name: Create Dexcom exporter environment file
+      ansible.builtin.copy:
+        content: |
+          DEXCOM_USERNAME={{ dexcom_username }}
+          DEXCOM_PASSWORD={{ dexcom_password }}
+          POLL_INTERVAL=300
+          EXPORTER_PORT=9666
+        dest: "{{ mon_base_dir }}/dexcom-exporter/dexcom.env"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0600"
+      when: dexcom_username != "" and dexcom_password != ""
+
+    - name: Create placeholder Dexcom exporter env file
+      ansible.builtin.copy:
+        content: |
+          # Dexcom Share credentials
+          # Re-run playbook with --extra-vars to configure:
+          #   --extra-vars "dexcom_username=user dexcom_password=pass"
+          DEXCOM_USERNAME=REPLACE_ME
+          DEXCOM_PASSWORD=REPLACE_ME
+          POLL_INTERVAL=300
+          EXPORTER_PORT=9666
+        dest: "{{ mon_base_dir }}/dexcom-exporter/dexcom.env"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0600"
+      when: dexcom_username == "" or dexcom_password == ""
+
+    - name: Create placeholder Twilio environment file
+      ansible.builtin.copy:
+        content: |
+          # Twilio SMS credentials
+          # Edit this file directly or re-run playbook to configure
+          TWILIO_ACCOUNT_SID=REPLACE_ME
+          TWILIO_AUTH_TOKEN=REPLACE_ME
+          TWILIO_FROM_NUMBER=+1XXXXXXXXXX
+          SMS_TO_NUMBER=+1XXXXXXXXXX
+          RELAY_PORT=9667
+        dest: "{{ mon_base_dir }}/dexcom-exporter/twilio.env"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0600"
+        force: false
+
     # Discord webhook URL in Alertmanager config
     - name: Configure Discord webhook in Alertmanager
       ansible.builtin.replace:
@@ -278,6 +363,14 @@
         regexp: 'DISCORD_WEBHOOK_URL'
         replace: "{{ discord_webhook }}"
       when: discord_webhook != ""
+      notify: Restart monitoring stack
+
+    - name: Configure Home Assistant glucose webhook in Alertmanager
+      ansible.builtin.replace:
+        path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        regexp: 'HA_GLUCOSE_WEBHOOK_URL'
+        replace: "{{ ha_glucose_webhook }}"
+      when: ha_glucose_webhook != ""
       notify: Restart monitoring stack
 
     # --- Start Stack ---
