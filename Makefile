@@ -27,7 +27,7 @@
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
-        docs-build docs-dev
+        docs-build docs-dev resume-build
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -190,6 +190,9 @@ docs-build: ## Build the Docusaurus docs site (static output in docs-site/build/
 
 docs-dev: ## Start Docusaurus dev server (hot reload)
 	cd docs-site && npm start
+
+resume-build: ## Build the Hugo resume site (static output in resume-site/public/)
+	cd resume-site && hugo --minify
 
 # ===== Phase 4: Talos K8s Cluster =====
 
