@@ -164,6 +164,17 @@ services:
       - "9667:9667"
     restart: unless-stopped
 
+  # --- Docs Site: Docusaurus Static Site ---
+  # Pre-built Docusaurus output served by nginx. Build context is
+  # copied to the LXC by the monitoring playbook (html/ directory).
+  docs-site:
+    build:
+      context: /opt/monitoring/docs-site/build
+    container_name: docs-site
+    ports:
+      - "8081:80"
+    restart: unless-stopped
+
   # --- Loki: Log Aggregation (v2 -- uncomment when ready) ---
   # Centralized log storage. Requires Promtail agents on each LXC/VM.
   # Deferred to reduce initial complexity.
