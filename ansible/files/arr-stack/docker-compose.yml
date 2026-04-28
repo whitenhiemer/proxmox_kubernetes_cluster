@@ -3,13 +3,8 @@
 # All services share the same Docker network and communicate via
 # container names (e.g., sonarr can reach prowlarr at http://prowlarr:9696).
 #
-# Media storage is mounted from the host at /media, which should be
-# an NFS mount from TrueNAS. Until the NAS is deployed, /media is a
-# local directory on the LXC disk.
-#
-# Download clients (SABnzbd) route through Gluetun VPN container.
-# To disable VPN, remove the gluetun service and change sabnzbd's
-# network_mode back to the default.
+# Media storage is mounted from the host at /media via NFS from TrueNAS
+# (bind-mounted into the LXC by the Proxmox host via pct set -mp0).
 #
 # Data persistence: Each service stores its config in /opt/arr/<service>/config.
 # These survive container rebuilds. Back up /opt/arr/ to preserve settings.
@@ -104,48 +99,17 @@ services:
       - "5055:5055"
     restart: unless-stopped
 
-  # --- Gluetun: VPN Container ---
-  # Routes download client traffic through a VPN tunnel.
-  # SABnzbd uses this container's network stack.
-  # Configure your VPN provider credentials in the environment variables below.
-  # See https://github.com/qdm12/gluetun-wiki for provider-specific config.
-  #
-  # IMPORTANT: Update VPN_SERVICE_PROVIDER and credentials before starting.
-  gluetun:
-    image: qmcgaw/gluetun:latest
-    container_name: gluetun
-    cap_add:
-      - NET_ADMIN
-    environment:
-      - VPN_SERVICE_PROVIDER=custom    # Change to your provider (mullvad, nordvpn, etc.)
-      - VPN_TYPE=wireguard             # or openvpn
-      # Provider-specific credentials -- see gluetun docs
-      # - WIREGUARD_PRIVATE_KEY=
-      # - WIREGUARD_ADDRESSES=
-      # - SERVER_COUNTRIES=
-      - TZ=America/Chicago
-    volumes:
-      - /opt/arr/gluetun/config:/gluetun
-    ports:
-      # SABnzbd port exposed through gluetun's network
-      - "8080:8080"
-    restart: unless-stopped
-
   # --- SABnzbd: Usenet Downloader ---
-  # Downloads via Usenet, routed through Gluetun VPN.
-  # Uses gluetun's network stack so all download traffic goes through VPN.
   sabnzbd:
     image: lscr.io/linuxserver/sabnzbd:latest
     container_name: sabnzbd
-    # Route all traffic through the VPN container
-    network_mode: "service:gluetun"
-    depends_on:
-      - gluetun
     environment:
       - PUID=1000
       - PGID=1000
       - TZ=America/Chicago
     volumes:
       - /opt/arr/sabnzbd/config:/config
-      - /media/downloads:/downloads    # Download location on NAS
+      - /media/downloads:/downloads
+    ports:
+      - "8080:8080"
     restart: unless-stopped
