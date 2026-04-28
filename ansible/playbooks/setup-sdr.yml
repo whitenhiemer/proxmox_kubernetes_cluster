@@ -112,6 +112,12 @@
         dest: /opt/sdr/trunk-recorder/config/config.json
         mode: "0644"
 
+    - name: Deploy SNO911 talkgroups
+      ansible.builtin.copy:
+        src: ../files/sdr/talkgroups.csv
+        dest: /opt/sdr/trunk-recorder/config/talkgroups.csv
+        mode: "0644"
+
     - name: Deploy upload script
       ansible.builtin.copy:
         src: ../files/sdr/upload.sh

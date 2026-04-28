@@ -1,0 +1,78 @@
+Decimal,Hex,Alpha Tag,Description,Tag,Group,Priority
+31,01f,Everett Fire,Everett Fire Dispatch,Fire Dispatch,Fire/EMS,0
+33,021,East Fire,East County Fire Districts Dispatch,Fire Dispatch,Fire/EMS,0
+35,023,North Fire,North County Fire Districts Dispatch,Fire Dispatch,Fire/EMS,0
+335,14f,South Fire,South County Fire Districts Dispatch,Fire Dispatch,Fire/EMS,0
+67,043,Fire Emerg,FD Emergency Button Activation,Fire-Talk,Fire/EMS,0
+37,025,Fire TAC 1,Everett/Marysville Fire Primary Response,Fire-Tac,Fire/EMS,0
+39,027,Fire TAC 2,South County Fire Districts Primary Response,Fire-Tac,Fire/EMS,0
+41,029,Fire TAC 3,North & East Fire Districts Primary Response,Fire-Tac,Fire/EMS,0
+43,02b,Fire TAC 4,Fire TAC 4,Fire-Tac,Fire/EMS,0
+45,02d,Fire TAC 5,Fire TAC 5,Fire-Tac,Fire/EMS,0
+47,02f,Fire TAC 6,Fire TAC 6,Fire-Tac,Fire/EMS,0
+339,153,Fire TAC 7,Fire TAC 7,Fire-Tac,Fire/EMS,0
+341,155,Fire TAC 8,Fire TAC 8,Fire-Tac,Fire/EMS,0
+343,157,Fire TAC 9,Fire TAC 9,Fire-Tac,Fire/EMS,0
+345,159,Fire TAC 10,Fire TAC 10,Fire-Tac,Fire/EMS,0
+619,26b,Fire TAC 11,Fire TAC 11,Fire-Tac,Fire/EMS,0
+621,26d,Fire TAC 12,Fire TAC 12,Fire-Tac,Fire/EMS,0
+623,26f,Fire TAC 13,Fire TAC 13,Fire-Tac,Fire/EMS,0
+625,271,Fire TAC 14,Fire TAC 14,Fire-Tac,Fire/EMS,0
+627,273,Fire TAC 15,Fire TAC 15,Fire-Tac,Fire/EMS,0
+191,0bf,Paine OPS 1,Paine Field Fire/Airport Operations,Fire-Tac,Fire/EMS,0
+193,0c1,Paine OPS 2,Paine Field Fire/Airport Operations,Fire-Tac,Fire/EMS,0
+195,0c3,Paine Tower,Paine Field Tower to FD Crash Alert,Fire-Talk,Fire/EMS,0
+3731,e93,Fire Train 1,Fire Training 1,Fire-Talk,Fire/EMS,0
+3733,e95,Fire Train 2,Fire Training 2,Fire-Talk,Fire/EMS,0
+3747,ea3,Fire Train 3,Fire Training 3,Fire-Talk,Fire/EMS,0
+3729,e91,Fire Train 4,Fire Training 4,Fire-Talk,Fire/EMS,0
+3755,eab,Hospital Cmn,Hospital Common,Emergency Ops,Hospital,0
+3757,ead,Stevens Hosp,Stevens Hospital,Emergency Ops,Hospital,0
+3759,eaf,Providence,Providence Hospital,Emergency Ops,Hospital,0
+3761,eb1,Valley Gen,Valley General Hospital,Emergency Ops,Hospital,0
+3763,eb3,Cascade Val,Cascade Valley Hospital,Emergency Ops,Hospital,0
+3765,eb5,Darrington,Darrington Clinic,Emergency Ops,Hospital,0
+3803,edb,DEM OPS,Department of Emergency Management,Emergency Ops,Emergency Mgmt,0
+3807,edf,EOC Hail,Emergency Operation Center Hail,Emergency Ops,Emergency Mgmt,0
+101,065,SO SAR,Sheriff Search & Rescue,Law-Talk,Law Enforcement,0
+3703,e77,SNO-CALL,SNO Interop Call,Interop,Interop,0
+3705,e79,SNO IO-02,SNO Interop 02,Interop,Interop,0
+3707,e7b,SNO IO-03,SNO Interop 03,Interop,Interop,0
+3711,e7f,SNO IO-04,SNO Interop 04,Interop,Interop,0
+3713,e81,SNO IO-05,SNO Interop 05,Interop,Interop,0
+3715,e83,SNO IO-06,SNO Interop 06,Interop,Interop,0
+3721,e89,SNO IO-07,SNO Interop 07,Interop,Interop,0
+3723,e8b,SNO IO-08,SNO Interop 08,Interop,Interop,0
+3725,e8d,SNO IO-09,SNO Interop 09,Interop,Interop,0
+3727,e8f,SNO IO-10,SNO Interop 10,Interop,Interop,0
+3735,e97,SNO IO-11,SNO Interop 11,Interop,Interop,0
+3737,e99,SNO IO-12,SNO Interop 12,Interop,Interop,0
+3739,e9b,SNO IO-13,SNO Interop 13,Interop,Interop,0
+3741,e9d,SNO IO-14,SNO Interop 14,Interop,Interop,0
+3743,e9f,SNO IO-15,SNO Interop 15,Interop,Interop,0
+91,05b,Radio Tech 91,Radio Techs 91,Public Works,Public Works,0
+94,05e,Radio Tech 94,Radio Techs 94,Public Works,Public Works,0
+671,29f,South SO Disp,South Sheriff Dispatch,Law Dispatch,Law Enforcement,0
+673,2a1,East SO Disp,East Sheriff Dispatch,Law Dispatch,Law Enforcement,0
+675,2a3,North SO Disp,North Sheriff Dispatch,Law Dispatch,Law Enforcement,0
+681,2a9,SO Courthouse,Sheriff Courthouse Ops,Law-Talk,Law Enforcement,0
+687,2af,SO South Tac,Sheriff South Tac,Law-Tac,Law Enforcement,0
+689,2b1,SO East Tac,Sheriff East Tac,Law-Tac,Law Enforcement,0
+691,2b3,SO North Tac,Sheriff North Tac,Law-Tac,Law Enforcement,0
+703,2bf,South PD 1,South Police 1 Dispatch,Law Dispatch,Law Enforcement,0
+705,2c1,South PD 1 Tac,South Police 1 Tac,Law-Tac,Law Enforcement,0
+707,2c3,South PD 2,South Police 2 Dispatch,Law Dispatch,Law Enforcement,0
+709,2c5,South PD 2 Tac,South Police 2 Tac,Law-Tac,Law Enforcement,0
+635,27b,Everett PD,Everett Police Dispatch,Law Dispatch,Law Enforcement,0
+637,27d,Everett Data,Everett Police Data,Law-Talk,Law Enforcement,0
+643,283,Everett Tac,Everett Police Tac,Law-Tac,Law Enforcement,0
+785,311,Everett ACT,Everett Police Anti Crime Team,Law-Tac,Law Enforcement,0
+735,2df,Marysville PD 1,Marysville Police 1 Dispatch,Law Dispatch,Law Enforcement,0
+737,2e1,Marysville PD 2,Marysville Police 2,Law-Talk,Law Enforcement,0
+739,2e3,Marysville Tac,Marysville Police Tac 1,Law-Tac,Law Enforcement,0
+649,289,Tulalip PD,Tulalip Police,Law Dispatch,Law Enforcement,0
+651,28b,Tulalip Tac,Tulalip Police Tac,Law-Tac,Law Enforcement,0
+921,399,SNO-OPS 11,Operations 11,Interop,Mutual Aid,0
+951,3b7,SNO-OPS 4,SNO OPS 4,Interop,Mutual Aid,0
+759,2f7,RT PROJECT,Radio Tech Project,Public Works,Public Works,0
+901,385,Demo 1,Demo 1,Public Works,Public Works,0
