@@ -27,6 +27,9 @@ services:
       POSTGRES_PASSWORD: ${PG_PASS}
       POSTGRES_USER: authentik
       POSTGRES_DB: authentik
+    # Loopback-only: lets the host-network server reach postgres via docker-proxy
+    ports:
+      - "127.0.0.1:5432:5432"
 
   redis:
     image: docker.io/library/redis:alpine
@@ -41,15 +44,21 @@ services:
       timeout: 3s
     volumes:
       - /opt/authentik/redis:/data
+    # Loopback-only: lets the host-network server reach redis via docker-proxy
+    ports:
+      - "127.0.0.1:6379:6379"
 
   server:
     image: ghcr.io/goauthentik/server:2024.12.3
     container_name: authentik-server
     restart: unless-stopped
     command: server
+    # Host networking bypasses Docker NAT so port 9000/9443 are reachable
+    # from other LXCs/hosts on the same bridge without hairpin NAT issues.
+    network_mode: host
     environment:
-      AUTHENTIK_REDIS__HOST: redis
-      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_REDIS__HOST: 127.0.0.1
+      AUTHENTIK_POSTGRESQL__HOST: 127.0.0.1
       AUTHENTIK_POSTGRESQL__USER: authentik
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
@@ -59,9 +68,6 @@ services:
     volumes:
       - /opt/authentik/media:/media
       - /opt/authentik/templates:/templates
-    ports:
-      - "9000:9000"
-      - "9443:9443"
     depends_on:
       postgresql:
         condition: service_healthy
