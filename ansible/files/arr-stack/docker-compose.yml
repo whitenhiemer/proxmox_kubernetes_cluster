@@ -46,6 +46,7 @@ services:
     volumes:
       - /opt/arr/sonarr/config:/config
       - /media:/media          # NFS mount from TrueNAS
+      - /media/downloads:/downloads  # Same path as SABnzbd for hardlink imports
     ports:
       - "8989:8989"
     restart: unless-stopped
@@ -62,6 +63,7 @@ services:
     volumes:
       - /opt/arr/radarr/config:/config
       - /media:/media
+      - /media/downloads:/downloads  # Same path as SABnzbd for hardlink imports
     ports:
       - "7878:7878"
     restart: unless-stopped
