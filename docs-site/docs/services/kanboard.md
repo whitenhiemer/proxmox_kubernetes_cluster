@@ -148,3 +148,9 @@ cd ~/WORKSPACE/clawbot && python health.py
 - **GitHub push fails**: Verify the classic PAT in `credentials.env` has `repo` scope and the `woodhead-tech` account is a collaborator on the target repo.
 - **Task stuck in In Progress**: Check `~/WORKSPACE/clawbot/logs/clawbot.log` for errors. The 10-minute timeout per task will kill hung Claude processes.
 - **No Discord notification**: Verify `CLAWBOT_DISCORD_WEBHOOK` is set in `credentials.env` and ClawBot was restarted after changes.
+
+## Version History
+
+| Version | Changes |
+|---------|---------|
+| v0.2.0  | Added Discord PR links, per-task budget cap, health check utility |
