@@ -22,6 +22,12 @@ entryPoints:
   # HTTPS entrypoint - all real traffic comes through here
   websecure:
     address: ":443"
+    forwardedHeaders:
+      trustedIPs:
+        - "127.0.0.1/32"
+        - "192.168.86.0/24"
+        - "10.0.0.0/8"
+        - "172.16.0.0/12"
 
   # Prometheus metrics endpoint (internal only, not port-forwarded)
   # Scraped by Prometheus at http://192.168.86.20:8082/metrics
@@ -74,4 +80,5 @@ log:
   level: INFO
 
 # Access logs for debugging and monitoring
-accessLog: {}
+accessLog:
+  filePath: "/var/log/traefik/access.log"
