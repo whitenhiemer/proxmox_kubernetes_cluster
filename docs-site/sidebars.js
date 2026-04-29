@@ -24,6 +24,8 @@ const sidebars = {
         'services/wireguard',
         'services/home-assistant',
         'services/authentik',
+        'services/kanboard',
+        'services/mailserver',
       ],
     },
     {
