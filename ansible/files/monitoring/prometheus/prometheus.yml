@@ -147,7 +147,7 @@ scrape_configs:
           - http://192.168.86.24:8096     # Jellyfin
           - http://192.168.86.25:3000     # Grafana
           - http://192.168.86.26:18789    # OpenClaw gateway
-          - http://192.168.86.27:8080     # Libby Alert
+          - http://192.168.86.27:8080/health  # Libby Alert (use /health to avoid triggering alerts)
           - http://192.168.86.28:9000     # Authentik
           - http://192.168.86.32:3000     # rdio-scanner (SDR)
           - http://192.168.86.41:8123     # Home Assistant
@@ -173,7 +173,7 @@ scrape_configs:
           - https://grafana.woodhead.tech  # Grafana (redirects to auth, expect 302->200)
           - https://traefik.woodhead.tech  # Traefik dashboard
           - https://scanner.woodhead.tech  # SDR scanner
-          - https://alert.woodhead.tech    # Libby Alert
+          - https://alert.woodhead.tech/health  # Libby Alert (use /health to avoid triggering alerts)
           - https://docs.woodhead.tech     # Docusaurus
           - https://resume.woodhead.tech   # Resume site
     relabel_configs:
