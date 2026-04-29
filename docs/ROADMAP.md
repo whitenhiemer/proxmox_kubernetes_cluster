@@ -431,7 +431,7 @@ for all `*.woodhead.tech` subdomains via a single Traefik `forwardAuth` middlewa
 7. **WireGuard VPN** -- DONE (LXC, UDP 51820, split tunnel to LAN)
 8. **Resource Balancing** -- DONE (tower1 added, Talos VMs redistributed across nodes)
 9. **Piboard Dashboard** -- DONE (Raspberry Pi 3B + Waveshare 5" HDMI, Go + SSE + Prometheus)
-10. **Klipper 3D Printing** -- IN PROGRESS (Ender 5 Pro on Pi 3B with MainsailOS, Ender 3 planned)
+10. **Klipper 3D Printing** -- DONE (Ender 5 Pro at ender5.woodhead.tech, Ender 3 at ender3.woodhead.tech; both Pi 3B running MainsailOS, routed via Traefik)
 11. **Talos K8s Cluster** -- DONE (3-node cluster bootstrapped: CP at 192.168.86.143, workers at .144/.145; Flannel CNI; namespaces: ingress-system, apps, monitoring; configs in talos/_out/)
 12. **SDR Scanner** -- DONE (LXC 210 on thinkcentre2, Trunk Recorder + rdio-scanner, RTL-SDR V4 USB passthrough, SNO911 P25 Phase II, scanner.woodhead.tech)
 13. **Dexcom Glucose Monitoring** -- IN PROGRESS (Python exporter -> Prometheus -> Grafana dashboard; Alertmanager routes to Twilio SMS + Home Assistant Alexa; needs Dexcom Share credentials + Twilio account)
