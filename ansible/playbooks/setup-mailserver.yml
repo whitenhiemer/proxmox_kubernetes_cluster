@@ -57,6 +57,7 @@
           - gnupg
           - wget
           - git
+          - jq
         state: present
 
     # --- Docker Installation ---
@@ -99,13 +100,28 @@
         enabled: true
         state: started
 
+    # --- Disable System Postfix ---
+    # Debian ships with Postfix which binds port 25 and conflicts with Mailcow
+    - name: Stop and disable system Postfix
+      ansible.builtin.systemd:
+        name: postfix
+        enabled: false
+        state: stopped
+      failed_when: false
+
     # --- Clone Mailcow ---
+    - name: Check if Mailcow is already cloned
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/docker-compose.yml"
+      register: mailcow_cloned
+
     - name: Clone Mailcow dockerized repository
       ansible.builtin.git:
         repo: "https://github.com/mailcow/mailcow-dockerized.git"
         dest: "{{ app_dir }}"
         version: master
         depth: 1
+      when: not mailcow_cloned.stat.exists
 
     # --- Generate Mailcow Config ---
     - name: Check if mailcow.conf already exists
@@ -116,15 +132,9 @@
     - name: Generate Mailcow configuration
       ansible.builtin.shell:
         cmd: |
-          MAILCOW_HOSTNAME="{{ mailcow_hostname }}" \
-          MAILCOW_TZ="{{ mailcow_timezone }}" \
-          ./generate_config.sh
+          echo -e "{{ mailcow_hostname }}\n{{ mailcow_timezone }}\n" | bash generate_config.sh
         chdir: "{{ app_dir }}"
-        stdin: ""
       when: not mailcow_conf.stat.exists
-      environment:
-        MAILCOW_HOSTNAME: "{{ mailcow_hostname }}"
-        MAILCOW_TZ: "{{ mailcow_timezone }}"
 
     # --- Configure SMTP Relay (Mailgun) ---
     - name: Configure Mailgun SMTP relay in mailcow.conf
