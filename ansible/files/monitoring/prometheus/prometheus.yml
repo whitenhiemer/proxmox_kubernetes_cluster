@@ -129,7 +129,7 @@ scrape_configs:
 
   # ===== Service Health Probes =====
 
-  # HTTP probes: checks that services respond with 2xx
+  # HTTP probes: checks that internal services respond with 2xx
   - job_name: "blackbox-http"
     metrics_path: /probe
     params:
@@ -137,11 +137,23 @@ scrape_configs:
     static_configs:
       - targets:
           - http://192.168.86.21:80       # Recipe site
-          - http://192.168.86.22:5055     # Overseerr
+          - http://192.168.86.22:5055     # Seerr
+          - http://192.168.86.22:8989     # Sonarr
+          - http://192.168.86.22:7878     # Radarr
+          - http://192.168.86.22:9696     # Prowlarr
+          - http://192.168.86.22:6767     # Bazarr
+          - http://192.168.86.22:8080     # SABnzbd (via gluetun)
           - http://192.168.86.23:32400    # Plex
           - http://192.168.86.24:8096     # Jellyfin
+          - http://192.168.86.25:3000     # Grafana
+          - http://192.168.86.26:18789    # OpenClaw gateway
+          - http://192.168.86.27:8080     # Libby Alert
+          - http://192.168.86.28:9000     # Authentik
+          - http://192.168.86.32:3000     # rdio-scanner (SDR)
           - http://192.168.86.41:8123     # Home Assistant
-          - http://192.168.86.26:18789   # OpenClaw gateway
+          - http://192.168.86.131:8080    # Piboard
+          - http://192.168.86.136:80      # Klipper Ender 5 Pro (Mainsail)
+          - http://192.168.86.138:80      # Klipper Ender 3 (Mainsail)
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -150,8 +162,30 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox-exporter:9115
 
-  # HTTPS probes: services with self-signed certs (skip TLS verify)
+  # HTTPS probes: external domain checks (end-to-end Traefik + TLS)
   - job_name: "blackbox-https"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - https://woodhead.tech          # Landing page
+          - https://grafana.woodhead.tech  # Grafana (redirects to auth, expect 302->200)
+          - https://traefik.woodhead.tech  # Traefik dashboard
+          - https://scanner.woodhead.tech  # SDR scanner
+          - https://alert.woodhead.tech    # Libby Alert
+          - https://docs.woodhead.tech     # Docusaurus
+          - https://resume.woodhead.tech   # Resume site
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # HTTPS insecure probes: self-signed certs
+  - job_name: "blackbox-https-insecure"
     metrics_path: /probe
     params:
       module: [https_insecure]
@@ -174,10 +208,16 @@ scrape_configs:
     static_configs:
       - targets:
           - 192.168.86.1     # Gateway (Google Nest WiFi Pro)
-          - 192.168.86.29    # Proxmox node 1 (thinkcentre1)
-          - 192.168.86.130   # Proxmox node 4 (tower1)
-          - 192.168.86.147   # Proxmox node 5 (zotac)
+          - 192.168.86.29    # thinkcentre1 (pve1)
+          - 192.168.86.30    # thinkcentre2 (pve2)
+          - 192.168.86.31    # thinkcentre3 (pve3)
+          - 192.168.86.130   # tower1 (pve4)
+          - 192.168.86.147   # zotac (pve5)
           - 192.168.86.40    # TrueNAS
+          - 192.168.86.41    # Home Assistant
+          - 192.168.86.131   # Piboard
+          - 192.168.86.136   # Klipper Ender 5 Pro
+          - 192.168.86.138   # Klipper Ender 3
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -185,3 +225,6 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox-exporter:9115
+
+  # ===== Klipper 3D Printers =====
+  # Moonraker /machine/metrics requires [prometheus] in moonraker.conf -- skipped for now
