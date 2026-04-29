@@ -15,31 +15,37 @@ LXC 202 | `192.168.86.22` | Docker Compose
 | Sonarr | 8989 | sonarr.woodhead.tech | TV show management |
 | Radarr | 7878 | radarr.woodhead.tech | Movie management |
 | Bazarr | 6767 | bazarr.woodhead.tech | Subtitle management |
-| Overseerr | 5055 | requests.woodhead.tech | User request portal |
-| SABnzbd | 8080 | sabnzbd.woodhead.tech | Usenet downloader |
-| Gluetun | -- | -- | VPN tunnel for downloads |
+| Seerr | 5055 | requests.woodhead.tech | User request portal |
+| SABnzbd | 8080 | sabnzbd.woodhead.tech | Usenet downloader (via VPN) |
+| Gluetun | -- | -- | WireGuard VPN killswitch for SABnzbd |
 
 All services run as PUID=1000, PGID=1000 using LinuxServer.io images.
 
 ## Deploy
 
 ```bash
-make arr-stack
+make arr-stack WG_PRIVATE_KEY=<privado_wireguard_private_key>
+```
 
-# With NFS media from TrueNAS
-cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
-  --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/tank/media"
+WireGuard key: download a `.conf` from my.privado.io and copy the `PrivateKey` field. The key is written to `/opt/arr/gluetun/wireguard_private_key` on the LXC and never committed to git.
+
+## VPN Killswitch
+
+SABnzbd runs inside gluetun's network namespace. All download traffic exits through PrivadoVPN WireGuard. If the VPN drops, SABnzbd loses connectivity entirely.
+
+When restarting gluetun, always recreate SABnzbd at the same time — they share a network namespace:
+```bash
+docker compose up -d --force-recreate gluetun sabnzbd
 ```
 
 ## Configuration Order
 
-1. Prowlarr -- Add indexers
-2. SABnzbd -- Configure Usenet server
-3. Sonarr -- Connect to Prowlarr + SABnzbd
-4. Radarr -- Connect to Prowlarr + SABnzbd
-5. Bazarr -- Connect to Sonarr + Radarr
-6. Overseerr -- Connect to Sonarr + Radarr
-7. Gluetun -- VPN provider credentials
+1. Prowlarr — Add indexers
+2. SABnzbd — Configure Usenet server
+3. Sonarr — Connect to Prowlarr + SABnzbd
+4. Radarr — Connect to Prowlarr + SABnzbd
+5. Bazarr — Connect to Sonarr + Radarr
+6. Seerr — Connect to Sonarr + Radarr
 
 ## Media Directory
 

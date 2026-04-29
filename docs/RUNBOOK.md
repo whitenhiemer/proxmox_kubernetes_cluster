@@ -388,41 +388,48 @@ cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
 
 ## Phase 6: ARR Media Stack
 
-### 6.1 Deploy (Without NFS)
+### 6.1 Deploy
 
-If TrueNAS isn't ready yet, the ARR stack uses local `/media` as a fallback:
+The ARR stack requires a PrivadoVPN WireGuard private key for the SABnzbd VPN killswitch.
+Download a WireGuard `.conf` from my.privado.io and copy the `PrivateKey` value:
+
 ```bash
-make arr-stack
+make arr-stack WG_PRIVATE_KEY=<privado_wireguard_private_key>
 ```
 
-### 6.2 Deploy (With NFS from TrueNAS)
+The key is written to `/opt/arr/gluetun/wireguard_private_key` on the LXC and never committed to git.
 
-After TrueNAS is configured with NFS shares:
+If TrueNAS NFS is ready, pass the mount details too:
 ```bash
 cd ansible && ansible-playbook playbooks/setup-arr-stack.yml \
-  --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
+  --extra-vars "wg_private_key=<key> nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
 ```
 
-### 6.3 Configure Services
+### 6.2 Configure Services
 
 Access each service via its web UI:
-| Service   | URL                        | First step                           |
-|-----------|----------------------------|--------------------------------------|
-| Prowlarr  | `http://192.168.86.22:9696`    | Add indexers                         |
-| SABnzbd   | `http://192.168.86.22:8080`    | Configure Usenet server              |
-| Sonarr    | `http://192.168.86.22:8989`    | Connect to Prowlarr + SABnzbd       |
-| Radarr    | `http://192.168.86.22:7878`    | Connect to Prowlarr + SABnzbd       |
-| Bazarr    | `http://192.168.86.22:6767`    | Connect to Sonarr + Radarr          |
-| Overseerr | `http://192.168.86.22:5055`    | Connect to Sonarr + Radarr          |
+| Service   | URL                             | First step                      |
+|-----------|---------------------------------|---------------------------------|
+| Prowlarr  | `http://192.168.86.22:9696`     | Add indexers                    |
+| SABnzbd   | `http://192.168.86.22:8080`     | Configure Usenet server         |
+| Sonarr    | `http://192.168.86.22:8989`     | Connect to Prowlarr + SABnzbd  |
+| Radarr    | `http://192.168.86.22:7878`     | Connect to Prowlarr + SABnzbd  |
+| Bazarr    | `http://192.168.86.22:6767`     | Connect to Sonarr + Radarr     |
+| Seerr     | `http://192.168.86.22:5055`     | Connect to Sonarr + Radarr     |
 
-### 6.4 Configure Gluetun VPN
+### 6.3 Gluetun VPN Killswitch
 
-Edit the Docker Compose file on the ARR LXC to add your VPN credentials:
+SABnzbd runs inside gluetun's network namespace (PrivadoVPN WireGuard). If the VPN drops, SABnzbd loses connectivity — intentional killswitch behavior.
+
+**Always recreate both containers together** when restarting gluetun, or SABnzbd's network namespace goes stale:
 ```bash
-ssh root@192.168.86.22
-vim /opt/arr/docker-compose.yml
-# Update gluetun environment: VPN_SERVICE_PROVIDER, WIREGUARD_PRIVATE_KEY, etc.
-docker compose -f /opt/arr/docker-compose.yml up -d gluetun
+cd /opt/arr && docker compose up -d --force-recreate gluetun sabnzbd
+```
+
+To rotate the WireGuard key:
+```bash
+printf '%s' 'NEW_PRIVATE_KEY' > /opt/arr/gluetun/wireguard_private_key
+docker compose up -d --force-recreate gluetun sabnzbd
 ```
 
 ### 6.5 Enable Traefik Routes (Optional)
@@ -769,37 +776,43 @@ curl -s http://192.168.86.25:9666/metrics | grep dexcom_glucose
 ### 10b.1 Deploy
 
 The SDR scanner decodes Snohomish County SNO911 P25 Phase II trunked radio
-using an RTL-SDR V4 USB dongle attached to thinkcentre2.
+using an RTL-SDR V4 USB dongle attached to thinkcentre2 (pve2).
 
 **Prerequisites:**
 - RTL-SDR V4 plugged into thinkcentre2 USB port
-- LXC 210 created via Terraform
+- LXC 210 created via Terraform (or already exists — import if needed)
 
 ```bash
-# Provision the LXC
+# If LXC doesn't exist yet, create it
 cd terraform && terraform apply -target=proxmox_virtual_environment_container.sdr
+
+# If LXC already exists but isn't in state, import it first
+cd terraform && terraform import proxmox_virtual_environment_container.sdr thinkcentre2/210
 
 # Deploy the stack (USB passthrough + Docker + Traefik route)
 make sdr
 ```
 
-**Note:** The LXC must be privileged for USB device passthrough. The Ansible playbook
-blacklists the `dvb_usb_rtl28xxu` kernel module on thinkcentre2 and configures cgroup
-rules for USB access. If the LXC is recreated, re-run `make sdr`.
+**Note:** The LXC must be privileged for USB device passthrough. `make sdr` configures
+cgroup rules on pve2 for USB access and restarts the LXC. The Traefik route is deployed
+with Authentik forward auth — no separate Authentik application is needed since the
+domain-level `woodhead-forward-auth` provider covers all `*.woodhead.tech` subdomains.
+
+If the LXC is recreated, re-run `make sdr` to reapply USB passthrough rules.
 
 ### 10b.2 Verify
 
 ```bash
 # Check containers are running
-ssh root@192.168.86.32 "docker ps"
+ssh -i ~/.ssh/id_ansible root@192.168.86.32 "docker ps"
 
-# Check trunk-recorder is decoding
-ssh root@192.168.86.32 "docker logs trunk-recorder --tail 10"
+# Check trunk-recorder is decoding (expect 4-10 msgs/sec from SNO911 control channel)
+ssh -i ~/.ssh/id_ansible root@192.168.86.32 "docker logs trunk-recorder --tail 10"
 
 # Check rdio-scanner web UI
 curl -s -o /dev/null -w "%{http_code}" http://192.168.86.32:3000/
 
-# Traefik route
+# Traefik + Authentik route (expect 302 redirect to auth.woodhead.tech)
 curl -I https://scanner.woodhead.tech
 ```
 
