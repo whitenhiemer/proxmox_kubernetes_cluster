@@ -164,6 +164,8 @@
         .icon-alert { background: #2d1f11; color: #f0a040; }
         .icon-ender { background: #162516; color: #3fb950; }
         .icon-piboard { background: #162231; color: #37b1e2; }
+        .icon-kanboard { background: #1a2535; color: #5ec4f0; }
+        .icon-mail { background: #162231; color: #37b1e2; }
 
         .card-label {
             font-size: 0.85em;
@@ -372,6 +374,18 @@
                 </div>
                 <div class="card-label">OpenClaw<span class="status"></span></div>
             </a>
+            <a href="https://tasks.woodhead.tech" class="card" data-name="kanboard tasks clawbot project management">
+                <div class="card-icon icon-kanboard">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h4v16H4V4zm6 0h4v12h-4V4zm6 0h4v8h-4V4z"/></svg>
+                </div>
+                <div class="card-label">Kanboard<span class="status"></span></div>
+            </a>
+            <a href="https://mail.woodhead.tech" class="card" data-name="mailcow email mail server">
+                <div class="card-icon icon-mail">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+                </div>
+                <div class="card-label">Mailcow<span class="status"></span></div>
+            </a>
             <a href="https://alert.woodhead.tech" class="card" data-name="libby alert emergency">
                 <div class="card-icon icon-alert">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
@@ -410,6 +424,12 @@
                 </div>
                 <div class="card-label">Ender 5 Pro<span class="status"></span></div>
             </a>
+            <a href="https://ender3.woodhead.tech" class="card" data-name="ender 3 3d printer klipper mainsail">
+                <div class="card-icon icon-ender">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M19 12V8.99h-2V12H5.83L4 6H2v2h1l3 8H2v2h4.42l.58 1.51A2.5 2.5 0 0 0 12 20.5V20h5.53l.97-3H19v-2h-.31l.62-1.92L19 12zm-9.5 6.5a.5.5 0 1 1 0-1 .5.5 0 0 1 0 1zM17 17H8l-1.5-4h12l-1.5 4z"/></svg>
+                </div>
+                <div class="card-label">Ender 3<span class="status"></span></div>
+            </a>
             <div class="card" data-name="piboard raspberry pi dashboard" style="cursor: default;">
                 <div class="card-icon icon-piboard">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/></svg>
@@ -422,7 +442,7 @@
 </div>
 
 <div class="footer">
-    4-node Proxmox cluster &middot; Ceph &middot; Talos K8s &middot; Traefik &middot; Cloudflare
+    5-node Proxmox cluster &middot; Ceph &middot; Talos K8s &middot; Traefik &middot; Cloudflare
     <br>
     <a href="https://github.com/whitenhiemer/proxmox_kubernetes_cluster">Source on GitHub</a>
 </div>
