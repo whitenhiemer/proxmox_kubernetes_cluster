@@ -105,7 +105,9 @@ services:
   # SABnzbd runs inside gluetun's network namespace. All SABnzbd download
   # traffic exits through PrivadoVPN. If the VPN drops, SABnzbd loses
   # connectivity entirely (built-in killswitch).
-  # Credentials passed via /opt/arr/.env (never committed to git).
+  # WireGuard private key stored in /opt/arr/gluetun/wireguard_private_key (never committed).
+  # SECRETFILE var reads from mounted file, keeping the key out of git.
+  # Public key, addresses, and endpoint are non-secret server config.
   gluetun:
     image: qmcgaw/gluetun:latest
     container_name: gluetun
@@ -114,11 +116,16 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     environment:
-      - VPN_SERVICE_PROVIDER=privado
-      - VPN_TYPE=openvpn
-      - OPENVPN_USER=${PRIVADO_USER}
-      - OPENVPN_PASSWORD=${PRIVADO_PASS}
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY_SECRETFILE=/run/secrets/wireguard_private_key
+      - WIREGUARD_PUBLIC_KEY=KgTUh3KLijVluDvNpzDCJJfrJ7EyLzYLmdHCksG4sRg=
+      - WIREGUARD_ADDRESSES=100.64.48.200/32
+      - WIREGUARD_ENDPOINT_IP=45.38.16.176
+      - WIREGUARD_ENDPOINT_PORT=51820
       - TZ=America/Chicago
+    volumes:
+      - /opt/arr/gluetun/wireguard_private_key:/run/secrets/wireguard_private_key:ro
     ports:
       - "8080:8080"  # SABnzbd port exposed through gluetun's network
     restart: unless-stopped

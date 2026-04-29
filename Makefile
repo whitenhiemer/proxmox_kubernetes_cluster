@@ -122,13 +122,13 @@ recipe-site: ## Deploy recipe site into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-recipe-site.yml
 
 arr-stack: ## Deploy ARR media stack (Sonarr, Radarr, Prowlarr, etc.) into its LXC
-	@if [ -z "$(PRIVADO_USER)" ] || [ -z "$(PRIVADO_PASS)" ]; then \
-		echo "Error: PrivadoVPN credentials required"; \
-		echo "Usage: make arr-stack PRIVADO_USER=<user> PRIVADO_PASS=<pass>"; \
+	@if [ -z "$(WG_PRIVATE_KEY)" ]; then \
+		echo "Error: WireGuard private key required"; \
+		echo "Usage: make arr-stack WG_PRIVATE_KEY=<key>"; \
 		exit 1; \
 	fi
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-arr-stack.yml \
-		--extra-vars "privado_user=$(PRIVADO_USER) privado_pass=$(PRIVADO_PASS)"
+		--extra-vars "wg_private_key=$(WG_PRIVATE_KEY)"
 
 plex: ## Deploy Plex Media Server into its LXC (with iGPU passthrough)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-plex.yml

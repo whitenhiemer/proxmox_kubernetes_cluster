@@ -13,11 +13,10 @@
 #   - Internet access for Docker image pulls
 #
 # Usage:
-#   ansible-playbook playbooks/setup-arr-stack.yml
-#
-# With NFS mount (after TrueNAS is deployed):
 #   ansible-playbook playbooks/setup-arr-stack.yml \
-#     --extra-vars "nfs_server=192.168.86.40 nfs_share=/mnt/pool/media"
+#     --extra-vars "wg_private_key=<privado_wireguard_private_key>"
+#
+# WireGuard key from: my.privado.io → Downloads → WireGuard config → PrivateKey field
 ---
 - name: Deploy ARR media management stack
   hosts: lxc_services:&arr
@@ -31,9 +30,8 @@
     nfs_server: ""
     nfs_share: ""
     media_mount: /media
-    # PrivadoVPN credentials (required, set via --extra-vars, never committed)
-    privado_user: ""
-    privado_pass: ""
+    # PrivadoVPN WireGuard private key (required, set via --extra-vars, never committed)
+    wg_private_key: ""
 
   tasks:
     # --- System Setup ---
@@ -154,17 +152,15 @@
         - books
 
     # --- VPN Credentials ---
-    - name: Fail if PrivadoVPN credentials not provided
+    - name: Fail if WireGuard private key not provided
       ansible.builtin.fail:
-        msg: "PrivadoVPN credentials required. Run: make arr-stack PRIVADO_USER=... PRIVADO_PASS=..."
-      when: privado_user == "" or privado_pass == ""
+        msg: "WireGuard private key required. Run: make arr-stack WG_PRIVATE_KEY=<key>"
+      when: wg_private_key == ""
 
-    - name: Write PrivadoVPN credentials to .env
+    - name: Write WireGuard private key secret file
       ansible.builtin.copy:
-        dest: "{{ arr_base_dir }}/.env"
-        content: |
-          PRIVADO_USER={{ privado_user }}
-          PRIVADO_PASS={{ privado_pass }}
+        dest: "{{ arr_base_dir }}/gluetun/wireguard_private_key"
+        content: "{{ wg_private_key }}"
         owner: root
         group: root
         mode: "0600"
