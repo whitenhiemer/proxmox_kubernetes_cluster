@@ -327,6 +327,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.28     | Authentik            | LXC  | 207   |
 | 192.168.86.32     | SDR Scanner          | LXC  | 210   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
+| 192.168.86.27     | Libby Alert          | LXC  | 209   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
 | 192.168.86.41     | Home Assistant       | VM   | 301   |
 | 192.168.86.131    | Piboard dashboard    | Pi   | --    |
@@ -339,122 +340,38 @@ Keeping track of allocated IPs to avoid conflicts:
 
 ---
 
-### Google OAuth / SSO
+### Authentik SSO
 
-**Type**: Traefik middleware + per-service configuration
-**Goal**: Single sign-on via Google accounts for all externally-exposed services.
-Eliminates per-service passwords for family/friends and adds a security layer
-in front of services that don't have strong built-in auth.
+**Status**: DONE
 
-**Approach**: Deploy [Authelia](https://www.authelia.com/) or
-[OAuth2-proxy](https://oauth2-proxy.github.io/oauth2-proxy/) as a Traefik
-`forwardAuth` middleware. Every request to a protected subdomain hits the auth
-proxy first. If the user has a valid session cookie, the request passes through
-to the backend. If not, they're redirected to Google sign-in.
+**Type**: LXC 207 | `192.168.86.28` | Docker Compose
+**Domain**: `auth.woodhead.tech`
 
-**Architecture**:
-```
-Client -> Traefik -> forwardAuth middleware -> Authelia/OAuth2-proxy
-                                                |
-                                          Google OAuth2
-                                          (consent screen)
-                                                |
-                                          Session cookie set
-                                                |
-Client -> Traefik -> forwardAuth (cookie valid) -> Backend service
-```
+Authentik replaced the originally planned Authelia. It provides domain-level forward auth
+for all `*.woodhead.tech` subdomains via a single Traefik `forwardAuth` middleware (`authentik@file`).
 
-**Google Cloud setup required**:
-1. Create a project in Google Cloud Console
-2. Configure OAuth consent screen (External, limited to specific Google accounts)
-3. Create OAuth 2.0 Client ID (Web application)
-4. Authorized redirect URI: `https://auth.woodhead.tech/oauth2/callback`
-5. Note the Client ID and Client Secret
+**Current setup**:
+- Single `woodhead-forward-auth` proxy provider in `forward_domain` mode covering `woodhead.tech`
+- `admins` group — full access to all services (bwoodwar@gmail.com, lips42@gmail.com)
+- Google OAuth source configured for login
+- Outpost embedded in Authentik server container
 
-**Service compatibility**:
-
-| Service       | OAuth Support                | Implementation                          |
-|---------------|------------------------------|-----------------------------------------|
-| Overseerr     | Built-in Google OAuth        | Configure in Settings > General         |
-| Jellyfin      | OIDC plugin (SSO-Auth)       | Install plugin, configure OIDC provider |
-| Home Assistant | Google sign-in integration   | Custom integration or auth proxy        |
-| Traefik dash  | No built-in auth             | Protect with forwardAuth middleware     |
-| Sonarr/Radarr | No OAuth support             | Protect with forwardAuth middleware     |
-| Prowlarr      | No OAuth support             | Protect with forwardAuth middleware     |
-| Bazarr        | No OAuth support             | Protect with forwardAuth middleware     |
-| SABnzbd       | No OAuth support             | Protect with forwardAuth middleware     |
-| TrueNAS       | No OAuth support             | Protect with forwardAuth middleware     |
-| Plex          | Uses Plex accounts           | No change needed (own auth system)      |
-
-**Authelia vs OAuth2-proxy**:
-- **Authelia** -- More features (2FA, access control policies, LDAP), heavier,
-  needs Redis + storage backend. Better if you want per-user access control
-  (e.g., friends can access Overseerr but not Sonarr).
-- **OAuth2-proxy** -- Simpler, stateless, just validates Google identity. Good
-  enough if you only need "is this person in my allowed list?" gating.
-
-**Recommended: Authelia** for the access control policies. Run it as a Docker
-container in its own LXC or in the Traefik LXC.
-
-**Implementation plan**:
-
-1. **Create `auth.woodhead.tech` subdomain** -- points to Traefik (already covered by wildcard)
-2. **Deploy Authelia** in the Traefik LXC (or a dedicated LXC)
-   - Terraform: `terraform/lxc-authelia.tf` (VM ID 207, 192.168.86.28)
-   - Ansible: `ansible/playbooks/setup-authelia.yml`
-   - Config: `ansible/files/authelia/configuration.yml`
-3. **Configure Google OAuth2** in Authelia's identity provider settings
-4. **Add Traefik forwardAuth middleware** to `ansible/files/traefik/traefik.yml`:
-   ```yaml
-   http:
-     middlewares:
-       authelia:
-         forwardAuth:
-           address: "http://192.168.86.20:9091/api/verify?rd=https://auth.woodhead.tech"
-           trustForwardHeader: true
-           authResponseHeaders:
-             - Remote-User
-             - Remote-Groups
-   ```
-5. **Apply middleware to routes** -- add `middlewares: [authelia]` to each
-   service's Traefik dynamic config
-6. **Configure per-service access policies** in Authelia:
-   ```yaml
-   access_control:
-     rules:
-       # Friends/family can access request portal
-       - domain: requests.woodhead.tech
-         policy: one_factor
-         subject: "group:media-users"
-       # Admin-only services
-       - domain:
-           - sonarr.woodhead.tech
-           - radarr.woodhead.tech
-           - prowlarr.woodhead.tech
-         policy: two_factor
-         subject: "group:admins"
-   ```
-7. **Allowlist Google accounts** -- only specific email addresses can sign in
-
-**Files to create (when implementing)**:
+**Files**:
 | File | Purpose |
 |------|---------|
-| `terraform/lxc-authelia.tf` | LXC container (optional, can share Traefik LXC) |
-| `ansible/playbooks/setup-authelia.yml` | Install + configure Authelia |
-| `ansible/files/authelia/configuration.yml` | Authelia config (OAuth, policies) |
-| `ansible/files/traefik/dynamic/authelia.yml` | Traefik forwardAuth middleware |
+| `terraform/lxc-authentik.tf` | LXC container (VM ID 207) |
+| `ansible/playbooks/setup-authentik.yml` | Install + configure Authentik |
+| `ansible/files/traefik/dynamic/authentik.yml` | Traefik forwardAuth middleware |
 
-**Prerequisites**:
-- Google Cloud project with OAuth2 credentials
-- Traefik running with valid TLS
-- Cloudflare DNS active (for `auth.woodhead.tech`)
-
-**Security notes**:
-- Authelia session secrets and Google client secret must be stored securely
-  (Ansible vault or environment variables, not committed to git)
-- Enable 2FA in Authelia for admin-level services
-- Rate limit the auth endpoint to prevent brute force
-- Regularly audit the allowed email list
+**Service protection** — add `middlewares: [authentik@file]` to any Traefik route to protect it:
+| Service | Protected |
+|---------|-----------|
+| Sonarr, Radarr, Prowlarr, Bazarr | Yes |
+| SABnzbd, Seerr | Yes |
+| TrueNAS (`nas.woodhead.tech`) | Yes |
+| SDR Scanner (`scanner.woodhead.tech`) | Yes |
+| Grafana, docs, resume | Yes |
+| Plex | No (uses Plex accounts) |
 
 ---
 
@@ -495,7 +412,7 @@ container in its own LXC or in the Traefik LXC.
 | 207 | authentik              | thinkcentre1  |
 | 208 | wireguard              | thinkcentre1  |
 | 209 | libby-alert            | thinkcentre1  |
-| 300 | truenas                | thinkcentre1  |
+| 300 | truenas                | tower1        |
 | 301 | homeassistant          | thinkcentre1  |
 | 400 | talos-proxmox-cp-0     | tower1        |
 | 410 | talos-proxmox-worker-0 | tower1        |
@@ -507,7 +424,7 @@ container in its own LXC or in the Traefik LXC.
 
 1. **NAS** -- DONE (TrueNAS Scale 24.04, ZFS pool `tank` on 2TB Ceph RBD, NFS shares for media/backups/isos)
 2. **Proxmox Backups** -- DONE (truenas-backups NFS storage added, nightly 02:00 snapshot job, 7-day retention)
-3. **ARR stack** -- DONE (LXC with Docker Compose, NFS via Proxmox host bind-mount; gluetun needs VPN creds)
+3. **ARR stack** -- DONE (LXC with Docker Compose, NFS via Proxmox host bind-mount; gluetun WireGuard VPN killswitch for SABnzbd via PrivadoVPN)
 4. **Plex / Jellyfin** -- DONE (LXCs with iGPU passthrough, NFS via Proxmox host bind-mount)
 5. **Home Assistant** -- DONE (HAOS VM at 192.168.86.41, trusted_proxies configured, home.woodhead.tech via Traefik)
 6. **Authentik SSO** -- DONE (deployed at auth.woodhead.tech; admins + media-users groups; access policy restricts admin services; Google OAuth source configured)
@@ -518,8 +435,8 @@ container in its own LXC or in the Traefik LXC.
 11. **Talos K8s Cluster** -- DONE (3-node cluster bootstrapped: CP at 192.168.86.143, workers at .144/.145; Flannel CNI; namespaces: ingress-system, apps, monitoring; configs in talos/_out/)
 12. **SDR Scanner** -- DONE (LXC 210 on thinkcentre2, Trunk Recorder + rdio-scanner, RTL-SDR V4 USB passthrough, SNO911 P25 Phase II, scanner.woodhead.tech)
 13. **Dexcom Glucose Monitoring** -- IN PROGRESS (Python exporter -> Prometheus -> Grafana dashboard; Alertmanager routes to Twilio SMS + Home Assistant Alexa; needs Dexcom Share credentials + Twilio account)
-14. **Docusaurus Docs Site** -- PLANNED (docs.woodhead.tech; runbooks, architecture docs, user guides; Docusaurus static site in LXC or K8s)
-15. **Resume Site** -- PLANNED (resume.woodhead.tech; personal resume/portfolio site)
+14. **Docusaurus Docs Site** -- DONE (docs.woodhead.tech; deployed on monitoring LXC; Traefik route + Authentik SSO)
+15. **Resume Site** -- DONE (resume.woodhead.tech; Hugo static site deployed on monitoring LXC)
 
 ## Hardware Considerations
 
