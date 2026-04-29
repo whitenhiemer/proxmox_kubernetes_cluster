@@ -54,6 +54,12 @@ services:
       # Custom branding (woodhead.tech logo)
       - GF_APP_MODE=production
       - GF_ANALYTICS_REPORTING_ENABLED=false
+      # Authentik proxy auth — auto-login via X-authentik-username header
+      - GF_AUTH_PROXY_ENABLED=true
+      - GF_AUTH_PROXY_HEADER_NAME=X-authentik-username
+      - GF_AUTH_PROXY_HEADER_PROPERTY=username
+      - GF_AUTH_PROXY_AUTO_SIGN_UP=true
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
     volumes:
       - /opt/monitoring/grafana/data:/var/lib/grafana
       - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
