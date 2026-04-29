@@ -135,8 +135,8 @@ services:
   pve-exporter:
     image: prompve/prometheus-pve-exporter:latest
     container_name: pve-exporter
-    env_file:
-      - /opt/monitoring/pve-exporter/pve.env
+    volumes:
+      - /opt/monitoring/pve-exporter/pve.yml:/etc/prometheus/pve.yml:ro
     ports:
       - "9221:9221"
     restart: unless-stopped
