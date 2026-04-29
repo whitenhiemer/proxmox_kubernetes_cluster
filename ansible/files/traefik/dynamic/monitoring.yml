@@ -12,6 +12,8 @@ http:
       service: grafana
       tls:
         certResolver: cloudflare
+      middlewares:
+        - authentik@file
 
     # Prometheus UI (admin access only -- protected by Authelia 2FA)
     prometheus:
