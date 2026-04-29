@@ -498,6 +498,52 @@ curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"moveTaskPosition","id":
 
 ---
 
+### UPS Monitoring Dashboard
+
+**Type**: Grafana dashboard + Prometheus alert rules (no new infrastructure)
+**Goal**: Centralized visibility into UPS health across all Proxmox nodes so you
+know at a glance if batteries are degrading, loads are unbalanced, or a UPS is
+on battery power.
+
+**What already exists**:
+- 3 NUT exporters running on the monitoring LXC (Docker Compose):
+  - `nut-exporter-tc3` (:9199) -> thinkcentre3 (192.168.86.31:3493)
+  - `nut-exporter-tower1` (:9198) -> tower1 (192.168.86.130)
+  - `nut-exporter-zotac` (:9197) -> zotac (192.168.86.147)
+- Prometheus scrape job `nut` collecting metrics at `/ups_metrics`
+- Metrics available: `ups_battery_charge`, `ups_battery_voltage`,
+  `ups_load`, `ups_battery_runtime_seconds`, `ups_status`, `ups_input_voltage`,
+  `ups_output_voltage`, `ups_temperature`
+
+**Grafana dashboard** (`ansible/files/monitoring/grafana/dashboards/ups-monitoring.json`):
+- Row per UPS (tc3, tower1, zotac) with:
+  - Battery charge gauge (0-100%, color thresholds at 50%/80%)
+  - Load percentage gauge (warn >70%, critical >90%)
+  - Runtime remaining (minutes, with low threshold marker)
+  - Input/output voltage graph (24h history)
+  - Battery voltage graph (24h, detects degradation over time)
+  - UPS status indicator (OL = online, OB = on battery, LB = low battery)
+- Summary row at top with stat panels for all 3 UPS units
+
+**Alert rules** (add to `ansible/files/monitoring/prometheus/rules/alerts.yml`):
+- `UpsOnBattery` -- UPS status is OB (on battery) for >30s (critical)
+- `UpsLowBattery` -- battery charge <50% (warning), <20% (critical)
+- `UpsHighLoad` -- load >80% for 5 min (warning), >90% (critical)
+- `UpsLowRuntime` -- runtime remaining <10 min (critical)
+- `UpsExporterDown` -- NUT exporter unreachable for 2 min (warning)
+
+**Implementation plan**:
+1. Create Grafana dashboard JSON (`ups-monitoring.json`)
+2. Add alert rules to `alerts.yml`
+3. Redeploy monitoring stack (`make monitoring`)
+4. Dashboard auto-provisions via Grafana provisioning config
+
+**Requirements**:
+- No new infrastructure -- everything runs on existing monitoring LXC (205)
+- NUT exporters already deployed and scraping
+
+---
+
 ### Proxmox Backups via TrueNAS NFS
 
 **Blocked on**: TrueNAS setup (NFS share must exist first)
@@ -561,6 +607,7 @@ curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"moveTaskPosition","id":
 15. **Resume Site** -- DONE (resume.woodhead.tech; Hugo static site deployed on monitoring LXC)
 16. **Libby-Alert Glucose Graph** -- PLANNED (Chart.js glucose chart on libby.woodhead.tech; queries Prometheus for 3h of dexcom_glucose_value; blocked on Dexcom creds)
 17. **Kanboard / ClawBot** -- PLANNED (tasks.woodhead.tech; self-hosted Kanboard for async task delegation to ClawBot agent; SQLite-backed, Kanboard REST API)
+18. **UPS Monitoring Dashboard** -- PLANNED (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters already scraping tc3/tower1/zotac)
 
 ## Hardware Considerations
 
