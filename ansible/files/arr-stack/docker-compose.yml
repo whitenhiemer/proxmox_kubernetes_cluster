@@ -124,6 +124,7 @@ services:
       - WIREGUARD_ENDPOINT_IP=45.38.16.176
       - WIREGUARD_ENDPOINT_PORT=51820
       - TZ=America/Chicago
+      - FIREWALL_INPUT_PORTS=8080
     volumes:
       - /opt/arr/gluetun/wireguard_private_key:/run/secrets/wireguard_private_key:ro
     ports:
