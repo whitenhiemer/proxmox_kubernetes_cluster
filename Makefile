@@ -88,9 +88,9 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
 		-target=proxmox_virtual_environment_container.authelia \
-
 		-target=proxmox_virtual_environment_container.wireguard \
-		-target=proxmox_virtual_environment_container.libby_alert
+		-target=proxmox_virtual_environment_container.libby_alert \
+		-target=proxmox_virtual_environment_container.kanboard
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -102,9 +102,9 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.monitoring \
 		-target=proxmox_virtual_environment_container.openclaw \
 		-target=proxmox_virtual_environment_container.authelia \
-
 		-target=proxmox_virtual_environment_container.wireguard \
-		-target=proxmox_virtual_environment_container.libby_alert
+		-target=proxmox_virtual_environment_container.libby_alert \
+		-target=proxmox_virtual_environment_container.kanboard
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -178,6 +178,9 @@ libby-alert: ## Deploy Libby life alert QR website into its LXC
 		twilio_from_number=$(TWILIO_FROM) alert_phone_numbers=$(ALERT_PHONES) \
 		$(if $(DISCORD_WEBHOOK),discord_webhook=$(DISCORD_WEBHOOK)) \
 		$(if $(COOLDOWN),alert_cooldown_minutes=$(COOLDOWN))"
+
+kanboard: ## Deploy Kanboard project management into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-kanboard.yml
 
 sdr: ## Deploy SDR scanner stack (Trunk Recorder + rdio-scanner) for SNO911 fire/EMS
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-sdr.yml

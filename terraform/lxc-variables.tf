@@ -270,6 +270,26 @@ variable "sdr_ip" {
   default     = "192.168.86.32"
 }
 
+# --- Kanboard LXC ---
+variable "kanboard_vmid" {
+  description = "VM ID for the Kanboard project management LXC"
+  type        = number
+  default     = 211
+}
+
+variable "kanboard_ip" {
+  description = "Static IP for the Kanboard LXC"
+  type        = string
+  default     = "192.168.86.33"
+}
+
+variable "kanboard_root_password" {
+  description = "Temporary root password for console access during initial setup"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

@@ -1,0 +1,28 @@
+# docker-compose.yml - Kanboard project management
+#
+# Self-hosted Kanban board with JSON-RPC API for ClawBot integration.
+# SQLite database -- no external DB dependency.
+# Default admin login: admin/admin (change on first login).
+
+services:
+  kanboard:
+    image: kanboard/kanboard:latest
+    container_name: kanboard
+    ports:
+      - "8000:80"
+    volumes:
+      - kanboard_data:/var/www/app/data
+      - kanboard_plugins:/var/www/app/plugins
+    environment:
+      - PLUGIN_INSTALLER=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:80/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  kanboard_data:
+  kanboard_plugins:

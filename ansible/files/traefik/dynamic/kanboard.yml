@@ -1,0 +1,22 @@
+# kanboard.yml - Kanboard project management route
+#
+# Routes tasks.woodhead.tech to the Kanboard LXC.
+# Protected by Authentik -- admin-only access.
+
+http:
+  routers:
+    kanboard:
+      rule: "Host(`tasks.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: kanboard
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - authentik@file
+
+  services:
+    kanboard:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.33:8000"

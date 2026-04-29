@@ -326,6 +326,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.26     | OpenClaw             | LXC  | 206   |
 | 192.168.86.28     | Authentik            | LXC  | 207   |
 | 192.168.86.32     | SDR Scanner          | LXC  | 210   |
+| 192.168.86.33     | Kanboard             | LXC  | 211   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.27     | Libby Alert          | LXC  | 209   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
@@ -377,6 +378,126 @@ for all `*.woodhead.tech` subdomains via a single Traefik `forwardAuth` middlewa
 
 ---
 
+### Libby-Alert Glucose Graph
+
+**Type**: Feature addition to existing libby-alert Go web server (LXC 209)
+**Domain**: `libby.woodhead.tech` (existing)
+**Goal**: Display a 3-hour rolling glucose chart on Libby's emergency info page
+so anyone scanning the QR code (or visiting the site) can see recent readings.
+
+**Architecture**:
+```
+Dexcom Share API -> dexcom-exporter (monitoring LXC 205)
+    |
+    v
+Prometheus (192.168.86.25:9090)
+    |
+    | query_range (dexcom_glucose_value, last 3h)
+    |
+    v
+libby-alert Go server (LXC 209, :8080)
+    |
+    | JSON API endpoint -> Chart.js line graph
+    |
+    v
+Browser (libby.woodhead.tech)
+```
+
+**Implementation plan**:
+1. Add a `/api/glucose` endpoint to the libby-alert Go server that queries
+   Prometheus HTTP API: `query_range?query=dexcom_glucose_value&start=-3h`
+2. Return JSON array of `{timestamp, value}` pairs
+3. Add a Chart.js line graph to the frontend page (inline JS, no build step)
+4. Color-code the chart zones: red (<70 low), green (70-180 normal), yellow (>180 high), red (>250 critical)
+5. Auto-refresh every 5 minutes via `setInterval`
+6. Graceful fallback if Prometheus is unreachable or no data (show "No recent data")
+
+**Dependencies**:
+- Dexcom monitoring stack deployed and scraping (blocked on Dexcom Share creds)
+- Prometheus reachable from LXC 209 (same LAN, no firewall issues expected)
+
+**Requirements**:
+- No additional infrastructure -- runs on the existing libby-alert LXC
+- Prometheus HTTP API access from libby-alert LXC (192.168.86.25:9090)
+- Chart.js loaded from CDN or vendored
+
+---
+
+### Kanboard Task Queue (ClawBot)
+
+**Type**: LXC container with Docker Compose
+**Domain**: `tasks.woodhead.tech`
+**Goal**: Self-hosted Kanboard instance for leaving tasks that ClawBot (Claude Code
+agent) can pick up and process autonomously. Enables asynchronous task delegation --
+leave a card on the board before bed, ClawBot works it overnight.
+
+**Why Kanboard**: Lightweight (PHP + SQLite), simple REST API, no heavy dependencies
+(no Redis, no Postgres required). Easy for ClawBot to poll via API, parse task
+descriptions, and update status. Kanban board UI for visual task management.
+
+**Architecture**:
+```
+Brandon (browser / CLI)
+    |
+    | Create task card on Kanboard
+    |
+    v
+Kanboard (tasks.woodhead.tech)
+    |
+    | REST API poll (GET /api, jsonrpc)
+    |
+    v
+ClawBot (Claude Code agent, cron or long-running)
+    |
+    | Read task -> execute -> update card with results
+    |
+    v
+Kanboard (task moved to Done, comment with output)
+```
+
+**Requirements**:
+- 1 CPU core, 512MB RAM, 5GB disk (SQLite, minimal storage)
+- PHP 8.x + Apache/nginx (official Kanboard Docker image handles this)
+- Persistent volume for SQLite database + file attachments
+
+**Implementation plan**:
+1. `terraform/lxc-kanboard.tf` -- LXC container (allocate next VM ID + IP)
+2. `ansible/playbooks/setup-kanboard.yml` -- Deploy Kanboard via Docker Compose
+3. `ansible/files/kanboard/docker-compose.yml` -- Official Kanboard image + volume
+4. Traefik dynamic route: `tasks.woodhead.tech` -> Kanboard (:80)
+5. Authelia protection (admin-only access)
+6. Create a "ClawBot" project with columns: Backlog, In Progress, Review, Done
+7. Generate API token for ClawBot to authenticate
+
+**ClawBot integration (future)**:
+- Cron job or long-running process polls Kanboard API for new tasks in Backlog
+- Parses task title + description for instructions
+- Moves card to In Progress, executes work, posts results as comment
+- Moves card to Done (or Review if human check needed)
+- Could run as a Claude Code session with a wrapper script
+
+**Kanboard API examples**:
+```bash
+# List tasks in Backlog column
+curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"getAllTasks","id":1,"params":{"project_id":1,"status_id":1}}' \
+  https://tasks.woodhead.tech/jsonrpc.php
+
+# Update task status
+curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"moveTaskPosition","id":1,"params":{"project_id":1,"task_id":42,"column_id":3,"position":1}}' \
+  https://tasks.woodhead.tech/jsonrpc.php
+```
+
+**Files to create**:
+| File | Purpose |
+|------|---------|
+| `terraform/lxc-kanboard.tf` | LXC container |
+| `terraform/lxc-kanboard-variables.tf` | VM ID, IP variables |
+| `ansible/playbooks/setup-kanboard.yml` | Install + configure Kanboard |
+| `ansible/files/kanboard/docker-compose.yml` | Kanboard Docker stack |
+| `ansible/files/traefik/dynamic/kanboard.yml` | Traefik route |
+
+---
+
 ### Proxmox Backups via TrueNAS NFS
 
 **Blocked on**: TrueNAS setup (NFS share must exist first)
@@ -412,6 +533,7 @@ for all `*.woodhead.tech` subdomains via a single Traefik `forwardAuth` middlewa
 | 207 | authentik              | thinkcentre1  |
 | 208 | wireguard              | thinkcentre1  |
 | 209 | libby-alert            | thinkcentre1  |
+| 211 | kanboard               | thinkcentre1  |
 | 300 | truenas                | tower1        |
 | 301 | homeassistant          | thinkcentre1  |
 | 400 | talos-proxmox-cp-0     | tower1        |
@@ -437,6 +559,8 @@ for all `*.woodhead.tech` subdomains via a single Traefik `forwardAuth` middlewa
 13. **Dexcom Glucose Monitoring** -- IN PROGRESS (Python exporter -> Prometheus -> Grafana dashboard; Alertmanager routes to Twilio SMS + Home Assistant Alexa; needs Dexcom Share credentials + Twilio account)
 14. **Docusaurus Docs Site** -- DONE (docs.woodhead.tech; deployed on monitoring LXC; Traefik route + Authentik SSO)
 15. **Resume Site** -- DONE (resume.woodhead.tech; Hugo static site deployed on monitoring LXC)
+16. **Libby-Alert Glucose Graph** -- PLANNED (Chart.js glucose chart on libby.woodhead.tech; queries Prometheus for 3h of dexcom_glucose_value; blocked on Dexcom creds)
+17. **Kanboard / ClawBot** -- PLANNED (tasks.woodhead.tech; self-hosted Kanboard for async task delegation to ClawBot agent; SQLite-backed, Kanboard REST API)
 
 ## Hardware Considerations
 
