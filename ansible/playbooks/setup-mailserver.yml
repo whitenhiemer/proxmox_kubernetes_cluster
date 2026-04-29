@@ -1,0 +1,218 @@
+# setup-mailserver.yml - Deploy Mailcow email server
+#
+# This playbook configures the mailserver LXC container:
+#   1. Installs Docker CE and Docker Compose plugin
+#   2. Clones the Mailcow dockerized repo
+#   3. Runs generate_config.sh to create the Mailcow stack
+#   4. Configures Mailgun SMTP relay for outbound mail (ISP blocks port 25)
+#   5. Applies overrides (disable ClamAV to save RAM)
+#   6. Starts the full Mailcow stack
+#
+# Prerequisites:
+#   - mailserver LXC created via Terraform (make apply-lxc or make apply -target=...mailserver)
+#   - SSH access to the LXC
+#   - Internet access for Docker image pulls
+#   - Mailgun account with verified domain (for SMTP relay)
+#
+# Usage:
+#   ansible-playbook playbooks/setup-mailserver.yml \
+#     --extra-vars "mailcow_hostname=mail.woodhead.tech mailgun_user=postmaster@mg.woodhead.tech mailgun_password=<key>"
+---
+- name: Deploy Mailcow email server
+  hosts: lxc_services:&mailserver
+  vars:
+    app_dir: /opt/mailcow-dockerized
+    mailcow_hostname: "mail.woodhead.tech"
+    mailcow_timezone: "America/Los_Angeles"
+    # Mailgun SMTP relay credentials (pass via --extra-vars)
+    mailgun_user: ""
+    mailgun_password: ""
+
+  tasks:
+    # --- SSH Socket Activation Fix ---
+    - name: Disable SSH socket activation
+      ansible.builtin.systemd:
+        name: ssh.socket
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Ensure SSH listens on IPv4
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?ListenAddress "
+        line: "ListenAddress 0.0.0.0"
+        create: false
+
+    # --- System Setup ---
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - wget
+          - git
+        state: present
+
+    # --- Docker Installation ---
+    - name: Create Docker keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Set permissions on Docker GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/docker.gpg
+        mode: "0644"
+
+    - name: Add Docker repository
+      ansible.builtin.copy:
+        content: |
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable
+        dest: /etc/apt/sources.list.d/docker.list
+        mode: "0644"
+
+    - name: Install Docker CE and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # --- Clone Mailcow ---
+    - name: Clone Mailcow dockerized repository
+      ansible.builtin.git:
+        repo: "https://github.com/mailcow/mailcow-dockerized.git"
+        dest: "{{ app_dir }}"
+        version: master
+        depth: 1
+
+    # --- Generate Mailcow Config ---
+    - name: Check if mailcow.conf already exists
+      ansible.builtin.stat:
+        path: "{{ app_dir }}/mailcow.conf"
+      register: mailcow_conf
+
+    - name: Generate Mailcow configuration
+      ansible.builtin.shell:
+        cmd: |
+          MAILCOW_HOSTNAME="{{ mailcow_hostname }}" \
+          MAILCOW_TZ="{{ mailcow_timezone }}" \
+          ./generate_config.sh
+        chdir: "{{ app_dir }}"
+        stdin: ""
+      when: not mailcow_conf.stat.exists
+      environment:
+        MAILCOW_HOSTNAME: "{{ mailcow_hostname }}"
+        MAILCOW_TZ: "{{ mailcow_timezone }}"
+
+    # --- Configure SMTP Relay (Mailgun) ---
+    - name: Configure Mailgun SMTP relay in mailcow.conf
+      ansible.builtin.blockinfile:
+        path: "{{ app_dir }}/mailcow.conf"
+        marker: "# {mark} ANSIBLE MANAGED - SMTP RELAY"
+        block: |
+          # Outbound relay via Mailgun (ISP blocks port 25)
+          RELAYHOST=smtp.mailgun.org
+          RELAYHOST_PORT=587
+          RELAYHOST_AUTH_USER={{ mailgun_user }}
+          RELAYHOST_AUTH_PASSWORD={{ mailgun_password }}
+      when: mailgun_user | length > 0
+
+    # --- Disable ClamAV to save RAM ---
+    - name: Disable ClamAV in mailcow.conf
+      ansible.builtin.lineinfile:
+        path: "{{ app_dir }}/mailcow.conf"
+        regexp: "^SKIP_CLAMD="
+        line: "SKIP_CLAMD=y"
+
+    # --- Apply Docker Compose Override ---
+    - name: Copy Docker Compose override
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/mailserver/docker-compose.override.yml"
+        dest: "{{ app_dir }}/docker-compose.override.yml"
+        mode: "0644"
+      notify: Restart stack
+
+    # --- Configure Mailcow to use Traefik for TLS ---
+    # Disable Mailcow's built-in nginx HTTPS (Traefik handles TLS termination)
+    - name: Set HTTP bind port for Traefik proxying
+      ansible.builtin.lineinfile:
+        path: "{{ app_dir }}/mailcow.conf"
+        regexp: "^HTTP_PORT="
+        line: "HTTP_PORT=8080"
+
+    - name: Set HTTPS bind port for Traefik proxying
+      ansible.builtin.lineinfile:
+        path: "{{ app_dir }}/mailcow.conf"
+        regexp: "^HTTPS_PORT="
+        line: "HTTPS_PORT=8443"
+
+    # --- Pull and Start ---
+    - name: Pull Mailcow Docker images
+      ansible.builtin.command:
+        cmd: docker compose pull
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Start Mailcow stack
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    # --- Verify ---
+    - name: Wait for Mailcow to start
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Check Mailcow admin UI
+      ansible.builtin.uri:
+        url: "https://127.0.0.1:8443/"
+        return_content: false
+        status_code: [200, 302]
+        validate_certs: false
+      register: health_check
+      retries: 10
+      delay: 10
+      until: health_check.status in [200, 302]
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Mailcow deployed to {{ app_dir }}"
+          - "Admin UI: https://{{ ansible_host }}:8443"
+          - "External URL: https://mail.woodhead.tech (after Traefik route + DNS)"
+          - "Default admin: admin / moohoo (CHANGE IMMEDIATELY)"
+          - ""
+          - "Next steps:"
+          - "  1. Set up Cloudflare DNS: MX, SPF, DKIM, DMARC records"
+          - "  2. Create mailboxes via admin UI"
+          - "  3. Configure Mailgun verified domain for SMTP relay"
+          - "  4. Test send/receive"
+
+  handlers:
+    - name: Restart stack
+      ansible.builtin.command:
+        cmd: docker compose up -d --force-recreate
+        chdir: "{{ app_dir }}"

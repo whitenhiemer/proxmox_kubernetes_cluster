@@ -1,0 +1,21 @@
+# mailserver.yml - Mailcow webmail and admin UI route
+#
+# Routes mail.woodhead.tech to the Mailcow nginx container.
+# Protected by Authentik for the admin UI. SOGo webmail is
+# accessed directly (Mailcow handles its own auth for mailboxes).
+
+http:
+  routers:
+    mailcow:
+      rule: "Host(`mail.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: mailcow
+      tls:
+        certResolver: cloudflare
+
+  services:
+    mailcow:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.34:8443"

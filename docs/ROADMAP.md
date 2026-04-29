@@ -327,6 +327,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.28     | Authentik            | LXC  | 207   |
 | 192.168.86.32     | SDR Scanner          | LXC  | 210   |
 | 192.168.86.33     | Kanboard             | LXC  | 211   |
+| 192.168.86.34     | Mailcow email        | LXC  | 212   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.27     | Libby Alert          | LXC  | 209   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |

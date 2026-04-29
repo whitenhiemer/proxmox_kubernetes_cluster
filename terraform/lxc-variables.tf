@@ -290,6 +290,44 @@ variable "kanboard_root_password" {
   sensitive   = true
 }
 
+# --- Mailserver LXC ---
+variable "mailserver_vmid" {
+  description = "VM ID for the Mailcow email server LXC"
+  type        = number
+  default     = 212
+}
+
+variable "mailserver_ip" {
+  description = "Static IP for the Mailcow email server LXC"
+  type        = string
+  default     = "192.168.86.34"
+}
+
+variable "mailserver_cores" {
+  description = "CPU cores for Mailcow (Postfix, Dovecot, Rspamd, SOGo, MariaDB, Redis)"
+  type        = number
+  default     = 2
+}
+
+variable "mailserver_memory" {
+  description = "Memory in MB for Mailcow (recommend 2048-4096)"
+  type        = number
+  default     = 3072
+}
+
+variable "mailserver_disk_size" {
+  description = "Disk size in GB for Mailcow (mailbox storage + MariaDB)"
+  type        = number
+  default     = 20
+}
+
+variable "mailserver_root_password" {
+  description = "Temporary root password for console access during initial setup"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

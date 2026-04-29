@@ -24,7 +24,7 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr mailserver \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
         docs-build docs-dev resume-build
@@ -90,7 +90,8 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.authelia \
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert \
-		-target=proxmox_virtual_environment_container.kanboard
+		-target=proxmox_virtual_environment_container.kanboard \
+		-target=proxmox_virtual_environment_container.mailserver
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -104,7 +105,8 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.authelia \
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert \
-		-target=proxmox_virtual_environment_container.kanboard
+		-target=proxmox_virtual_environment_container.kanboard \
+		-target=proxmox_virtual_environment_container.mailserver
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -184,6 +186,14 @@ kanboard: ## Deploy Kanboard project management into its LXC
 
 sdr: ## Deploy SDR scanner stack (Trunk Recorder + rdio-scanner) for SNO911 fire/EMS
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-sdr.yml
+
+mailserver: ## Deploy Mailcow email server (Mailgun relay for outbound)
+	@if [ -z "$(MAILGUN_USER)" ] || [ -z "$(MAILGUN_PASSWORD)" ]; then \
+		echo "Warning: No Mailgun credentials provided. Outbound relay will not be configured."; \
+		echo "Usage: make mailserver MAILGUN_USER=postmaster@mg.woodhead.tech MAILGUN_PASSWORD=<key>"; \
+	fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-mailserver.yml \
+		$(if $(MAILGUN_USER),--extra-vars "mailgun_user=$(MAILGUN_USER) mailgun_password=$(MAILGUN_PASSWORD)")
 
 # ===== Documentation =====
 
