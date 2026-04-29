@@ -324,7 +324,7 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.24     | Jellyfin             | LXC  | 204   |
 | 192.168.86.25     | Monitoring           | LXC  | 205   |
 | 192.168.86.26     | OpenClaw             | LXC  | 206   |
-| 192.168.86.28     | Authelia             | LXC  | 207   |
+| 192.168.86.28     | Authentik            | LXC  | 207   |
 | 192.168.86.32     | SDR Scanner          | LXC  | 210   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
