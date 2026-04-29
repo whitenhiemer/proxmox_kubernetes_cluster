@@ -19,7 +19,7 @@
 
 # --- Play 1: USB passthrough on Proxmox host ---
 - name: Configure USB passthrough for RTL-SDR on Proxmox host
-  hosts: thinkcentre2
+  hosts: pve2
   tasks:
     - name: Get RTL-SDR USB bus/device numbers
       ansible.builtin.shell: |
