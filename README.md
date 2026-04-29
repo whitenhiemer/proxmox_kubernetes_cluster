@@ -19,15 +19,23 @@ ISP Modem/ONT
     |       +-- OpenClaw LXC (192.168.86.26) -- AI agent gateway
     |       +-- Libby Alert LXC (192.168.86.27) -- life alert QR site + SMS/Discord
     |       +-- Authentik LXC (192.168.86.28) -- identity provider (SSO, OIDC, forwardAuth)
+    |       +-- SDR Scanner LXC (192.168.86.32) -- Trunk Recorder + rdio-scanner
+    |       +-- Kanboard LXC (192.168.86.33) -- project management
+    |       +-- Mailserver LXC (192.168.86.34) -- Mailcow email server
     |       +-- K8s VIP (192.168.86.100)
     |
     +-- WireGuard LXC (192.168.86.39) -- VPN tunnel (UDP 51820)
     |
     +-- TrueNAS VM (192.168.86.40) -- NFS media storage for ARR/Plex/Jellyfin
-    +-- K8s Cluster (192.168.86.101, 192.168.86.111-112)
+    +-- K8s Cluster (192.168.86.101, 192.168.86.111-113)
+    |
+    +-- Standalone Devices (not Proxmox-managed)
+        +-- Piboard Pi 3B (192.168.86.131) -- monitoring dashboard kiosk
+        +-- Klipper Ender 5 Pro (192.168.86.136) -- MainsailOS 3D printer
+        +-- Klipper Ender 3 (192.168.86.138) -- MainsailOS 3D printer
 ```
 
-- **Proxmox VE 8.x** -- 2-3 node cluster with Ceph storage
+- **Proxmox VE 8.x** -- 5-node cluster with Ceph storage
 - **Talos Linux** -- immutable, API-driven Kubernetes OS (no SSH)
 - **Terraform** (bpg/proxmox provider) -- provisions VMs and LXC containers
 - **Ansible** -- configures Proxmox hosts, Traefik, and services
@@ -74,7 +82,7 @@ make arr-stack
 # 5. Bootstrap Kubernetes
 export CLUSTER_VIP="192.168.86.100"
 export CONTROLPLANE_IPS="192.168.86.101"
-export WORKER_IPS="192.168.86.111,192.168.86.112"
+export WORKER_IPS="192.168.86.111,192.168.86.112,192.168.86.113"
 make bootstrap
 
 # 6. Verify
@@ -111,14 +119,21 @@ make harden
 | `authelia`          | 3     | Deploy Authelia SSO gateway (requires password)|
 | `wireguard`         | 3     | Deploy WireGuard VPN tunnel for remote access  |
 | `libby-alert`       | 3     | Deploy Libby life alert site (requires Twilio + Discord creds)|
+| `kanboard`          | 3     | Deploy Kanboard project management              |
+| `mailserver`        | 3     | Deploy Mailcow email server (Mailgun relay)      |
+| `sdr`               | 3     | Deploy SDR scanner stack (Trunk Recorder)        |
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
 | `k8s-base`          | 4     | Apply base K8s manifests (namespaces)          |
 | `k8s-base-metallb`  | 4     | Apply base manifests + MetalLB                 |
+| `docs-build`        | --    | Build Docusaurus docs site                       |
+| `docs-dev`          | --    | Start Docusaurus dev server (hot reload)         |
+| `resume-build`      | --    | Build Hugo resume site                           |
 | `patch-proxmox`     | --    | Patch Proxmox VE hosts (serial, one at a time) |
 | `patch-lxc`         | --    | Patch Debian packages on all LXC containers    |
 | `patch-docker`      | --    | Pull latest Docker images, restart all stacks  |
+| `patch-pi`          | --    | Patch Raspberry Pi devices                       |
 | `harden`            | 5     | Security hardening (SSH, firewall, fail2ban)   |
 | `destroy`           | --    | Tear down K8s VMs and clean configs            |
 | `clean`             | --    | Remove generated Talos configs only            |
@@ -150,6 +165,9 @@ make harden
 │   ├── lxc-authelia.tf                  # Authentik identity provider LXC (Docker)
 │   ├── lxc-wireguard.tf                 # WireGuard VPN tunnel LXC
 │   ├── lxc-libby-alert.tf               # Libby life alert LXC (Docker)
+│   ├── lxc-sdr.tf                       # SDR scanner LXC
+│   ├── lxc-kanboard.tf                  # Kanboard project management LXC
+│   ├── lxc-mailserver.tf                # Mailcow email server LXC
 │   ├── lxc-ssh-hook.tf                  # Proxmox hookscript: fix Debian 12.12 SSH socket
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
 │   ├── vm-truenas-variables.tf           # TrueNAS variables
@@ -180,9 +198,13 @@ make harden
 │   │   ├── setup-authentik.yml          # Deploy Authentik identity provider (Docker)
 │   │   ├── setup-wireguard.yml          # Deploy WireGuard VPN tunnel
 │   │   ├── setup-libby-alert.yml        # Deploy Libby life alert site (Docker)
+│   │   ├── setup-kanboard.yml           # Deploy Kanboard
+│   │   ├── setup-sdr.yml               # Deploy SDR scanner
+│   │   ├── setup-mailserver.yml         # Deploy Mailcow email server
 │   │   ├── patch-proxmox.yml              # Patch Proxmox VE hosts
 │   │   ├── patch-lxc.yml                 # Patch Debian packages on LXCs
 │   │   ├── patch-docker.yml              # Update Docker images on all stacks
+│   │   ├── patch-pi.yml                 # Patch Raspberry Pi devices
 │   │   └── harden-proxmox.yml            # Security hardening
 │   └── files/
 │       ├── arr-stack/
@@ -193,6 +215,10 @@ make harden
 │       │   ├── docker-compose.yml        # Authelia SSO Docker Compose
 │       │   ├── configuration.yml         # Authelia server + access control config
 │       │   └── users_database.yml        # File-based user database template
+│       ├── kanboard/
+│       │   └── docker-compose.yml        # Kanboard Docker Compose
+│       ├── mailserver/
+│       │   └── docker-compose.override.yml # Mailcow override config
 │       ├── wireguard/
 │       │   ├── wg0.conf.j2              # Server config Jinja2 template
 │       │   └── client.conf.j2           # Client config Jinja2 template
@@ -216,8 +242,18 @@ make harden
 │               ├── monitoring.yml         # Routes: grafana/prometheus/alertmanager.*
 │               ├── openclaw.yml          # Route: claw.woodhead.tech
 │               ├── authelia.yml         # Route: auth.woodhead.tech + forwardAuth middleware
+│               ├── kanboard.yml          # Route: tasks.woodhead.tech
+│               ├── mailserver.yml        # Route: mail.woodhead.tech
+│               ├── sdr.yml              # Route: scanner.woodhead.tech
+│               ├── docs-site.yml        # Route: docs.woodhead.tech
+│               ├── resume-site.yml      # Route: resume.woodhead.tech
+│               ├── landing-site.yml     # Route: woodhead.tech landing page
+│               ├── klipper.yml          # Routes: ender5/ender3.woodhead.tech
+│               ├── truenas.yml          # Route: nas.woodhead.tech
 │               ├── k8s-ingress.yml       # Route: *.woodhead.tech -> K8s
 │               └── dashboard.yml         # Route: traefik.woodhead.tech
+├── docs-site/                            # Docusaurus docs site source
+├── resume-site/                          # Hugo resume site source
 ├── k8s/
 │   └── base/
 │       ├── namespace.yml                 # Base namespaces
@@ -283,6 +319,11 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | Authentik SSO    | LXC  | Ready       | `auth.woodhead.tech`       |
 | WireGuard VPN    | LXC  | Ready       | UDP 51820 (not HTTP)       |
 | Libby Alert      | LXC  | Ready       | `alert.woodhead.tech`      |
+| SDR Scanner      | LXC  | Ready       | `scanner.woodhead.tech`    |
+| Kanboard         | LXC  | Ready       | `tasks.woodhead.tech`      |
+| Email Server     | LXC  | Ready       | `mail.woodhead.tech`       |
+| Docusaurus       | LXC  | Ready       | `docs.woodhead.tech`       |
+| Resume Site      | LXC  | Ready       | `resume.woodhead.tech`     |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 

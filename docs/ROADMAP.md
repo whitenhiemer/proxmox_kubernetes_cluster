@@ -426,6 +426,8 @@ Browser (libby.woodhead.tech)
 
 ### Kanboard Task Queue (ClawBot)
 
+**Status**: DONE
+
 **Type**: LXC container with Docker Compose
 **Domain**: `tasks.woodhead.tech`
 **Goal**: Self-hosted Kanboard instance for leaving tasks that ClawBot (Claude Code
@@ -470,12 +472,12 @@ Kanboard (task moved to Done, comment with output)
 6. Create a "ClawBot" project with columns: Backlog, In Progress, Review, Done
 7. Generate API token for ClawBot to authenticate
 
-**ClawBot integration (future)**:
-- Cron job or long-running process polls Kanboard API for new tasks in Backlog
+**ClawBot integration**:
+- Python agent (`clawbot.py`) polls Kanboard JSON-RPC API every 5 minutes for tasks in Backlog
 - Parses task title + description for instructions
 - Moves card to In Progress, executes work, posts results as comment
 - Moves card to Done (or Review if human check needed)
-- Could run as a Claude Code session with a wrapper script
+- Runs as macOS launchd agent, executes tasks via `claude -p --dangerously-skip-permissions`
 
 **Kanboard API examples**:
 ```bash
@@ -488,7 +490,7 @@ curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"moveTaskPosition","id":
   https://tasks.woodhead.tech/jsonrpc.php
 ```
 
-**Files to create**:
+**Files**:
 | File | Purpose |
 |------|---------|
 | `terraform/lxc-kanboard.tf` | LXC container |
@@ -547,6 +549,8 @@ on battery power.
 
 ### Email Server (woodhead.tech)
 
+**Status**: DONE
+
 **Type**: LXC container with Docker Compose
 **Domain**: `mail.woodhead.tech`
 **Goal**: Self-hosted email for the `woodhead.tech` domain. Enables sending/receiving
@@ -557,9 +561,7 @@ Alertmanager), and eliminates reliance on third-party email for homelab comms.
 and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead.tech`,
 `alerts@woodhead.tech`) are free to create.
 
-**Recommended stack**: [Mailcow](https://mailcow.email/) or [Docker Mailserver](https://docker-mailserver.github.io/docker-mailserver/latest/)
-- **Mailcow**: Full-featured (SOGo webmail, Rspamd spam filter, admin UI), heavier (~2GB RAM)
-- **Docker Mailserver**: Lighter, no web UI out of the box, config-file driven (~512MB RAM)
+**Stack**: [Mailcow](https://mailcow.email/) (Postfix, Dovecot, Rspamd, SOGo, MariaDB, Redis)
 
 **Requirements**:
 - 2 CPU cores, 2-4GB RAM, 20GB disk (mailbox storage)
@@ -589,7 +591,11 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 7. Create mailboxes: `brandon@woodhead.tech`, `clawbot@woodhead.tech`, `alerts@woodhead.tech`
 8. Configure Alertmanager + ClawBot to send via local SMTP
 
-**Files to create**:
+**Notes**:
+- ClamAV disabled to save RAM (~1GB reduction); Rspamd handles spam filtering
+- Outbound mail relayed through Mailgun sandbox SMTP relay (ISP blocks port 25 outbound)
+
+**Files**:
 | File | Purpose |
 |------|---------|
 | `terraform/lxc-mailserver.tf` | LXC container |
@@ -662,9 +668,9 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 14. **Docusaurus Docs Site** -- DONE (docs.woodhead.tech; deployed on monitoring LXC; Traefik route + Authentik SSO)
 15. **Resume Site** -- DONE (resume.woodhead.tech; Hugo static site deployed on monitoring LXC)
 16. **Libby-Alert Glucose Graph** -- PLANNED (Chart.js glucose chart on libby.woodhead.tech; queries Prometheus for 3h of dexcom_glucose_value; blocked on Dexcom creds)
-17. **Kanboard / ClawBot** -- PLANNED (tasks.woodhead.tech; self-hosted Kanboard for async task delegation to ClawBot agent; SQLite-backed, Kanboard REST API)
+17. **Kanboard / ClawBot** -- DONE (tasks.woodhead.tech; Kanboard on LXC 211, ClawBot agent polls via JSON-RPC, Discord notifications with PR links, woodhead-tech GitHub account for PRs)
 18. **UPS Monitoring Dashboard** -- PLANNED (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters already scraping tc3/tower1/zotac)
-19. **Email Server** -- PLANNED (mail.woodhead.tech; self-hosted email for woodhead.tech domain; service accounts for ClawBot/Alertmanager; blocked on ISP port 25 verification)
+19. **Email Server** -- DONE (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
 
 ## Hardware Considerations
 

@@ -105,14 +105,23 @@ and resource allocation.
             |   | RTL-SDR  |
             |   +----------+
             |
+            |   +----------+   +----------+
+            |   | Kanboard |   | Mail-    |
+            |   | LXC 211  |   | server   |
+            |   | .33      |   | LXC 212  |
+            |   | :8000    |   | .34      |
+            |   +----------+   | :8080    |
+            |                  | SMTP:25  |
+            |                  +----------+
+            |
           +------- Standalone Devices (not Proxmox-managed) -------+
           |                                                         |
-     +----+----------+     +----------------+
-     | Piboard       |     | Klipper        |  Raspberry Pi 3B
-     | 192.168.86.131|     | Ender 5 Pro    |  MainsailOS + Klipper
-     | :8080         |     | 192.168.86.136 |  Moonraker + Mainsail
-     | Waveshare 5"  |     | :80 :7125      |  USB -> printer MCU
-     +---------------+     +----------------+
+     +----+----------+     +----------------+     +----------------+
+     | Piboard       |     | Klipper        |     | Klipper        |
+     | 192.168.86.131|     | Ender 5 Pro    |     | Ender 3        |  Raspberry Pi 3B
+     | :8080         |     | 192.168.86.136 |     | 192.168.86.138 |  MainsailOS + Klipper
+     | Waveshare 5"  |     | :80 :7125      |     | :80 :7125      |
+     +---------------+     +----------------+     +----------------+
             |
     +-------+-------+
     | Traefik       |
@@ -132,6 +141,10 @@ and resource allocation.
     |  grafana.*    +---> 192.168.86.25:3000
     |  prometheus.* +---> 192.168.86.25:9090
     |  scanner.*    +---> 192.168.86.32:3000
+    |  tasks.*      +---> 192.168.86.33:8000
+    |  mail.*       +---> 192.168.86.34:8080
+    |  docs.*       +---> 192.168.86.25:3080
+    |  ender3.*     +---> 192.168.86.138:80
     |  traefik.*    +---> dashboard (local)
     +---------------+
 ```
@@ -161,8 +174,11 @@ and resource allocation.
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
 | 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
 | 192.168.86.32      | sdr              | LXC    | 210   | SDR scanner (Trunk Recorder + rdio-scanner)|
+| 192.168.86.33      | kanboard         | LXC    | 211   | Kanboard task queue (ClawBot)       |
+| 192.168.86.34      | mailserver       | LXC    | 212   | Mailcow email (woodhead.tech)       |
 | 192.168.86.131     | piboard          | Pi     | --    | Raspberry Pi 3B monitoring dashboard|
 | 192.168.86.136     | klipper-ender5pro| Pi     | --    | Klipper 3D printer (Ender 5 Pro)    |
+| 192.168.86.138     | klipper-ender3   | Pi     | --    | Klipper 3D printer (Ender 3)        |
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
 | 192.168.86.101     | talos-cp-0       | VM     | 400   | K8s control plane (Talos Linux)     |
 | 192.168.86.111-112 | talos-worker-*   | VM     | 410+  | K8s workers (Talos Linux)           |
@@ -213,6 +229,10 @@ Configure via Google Home app > WiFi > Settings > Advanced Networking > Port Man
 | 80       | 192.168.86.20:80      | TCP      | HTTP -> Traefik       |
 | 443      | 192.168.86.20:443     | TCP      | HTTPS -> Traefik      |
 | 51820    | 192.168.86.39:51820   | UDP      | WireGuard VPN tunnel  |
+| 25       | 192.168.86.34:25      | TCP      | SMTP inbound -> Mailcow |
+| 465      | 192.168.86.34:465     | TCP      | SMTPS -> Mailcow      |
+| 587      | 192.168.86.34:587     | TCP      | SMTP Submission -> Mailcow |
+| 993      | 192.168.86.34:993     | TCP      | IMAPS -> Mailcow      |
 
 ---
 
@@ -421,6 +441,8 @@ in parallel after the host is ready.
 | auto  | WireGuard LXC        | 208   | --     | Starts on boot, VPN tunnel                  |
 | auto  | Libby Alert LXC      | 209   | --     | Starts on boot, Go web app + alert service  |
 | auto  | SDR Scanner LXC      | 210   | --     | Starts on boot, privileged, RTL-SDR USB     |
+| auto  | Kanboard LXC         | 211   | --     | Starts on boot, task queue for ClawBot      |
+| auto  | Mailserver LXC       | 212   | --     | Starts on boot, Mailcow email stack         |
 | manual| K8s Cluster          | 400+  | --     | Bootstrapped via `make bootstrap`           |
 
 ---
@@ -497,6 +519,8 @@ in parallel after the host is ready.
 | WireGuard LXC     | 1     | 256      | --       | Kernel WireGuard, privileged LXC|
 | Libby Alert LXC   | 1     | 512      | --       | Docker: Go web server, SMS/Discord alerts|
 | SDR Scanner LXC   | 2     | 2048     | --       | Trunk Recorder + rdio-scanner, privileged (USB) |
+| Kanboard LXC      | 1     | 512      | --       | PHP + SQLite (lightweight)      |
+| Mailserver LXC    | 2     | 3072     | --       | Mailcow stack (Postfix, Dovecot, Rspamd, MariaDB) |
 | ARR Stack LXC     | 2     | 4096     | --       | 7 Docker containers             |
 
 ### Disk
@@ -518,6 +542,8 @@ in parallel after the host is ready.
 | WireGuard LXC     | 2 GB   | local-lvm   | --        | WireGuard tools + configs                |
 | Libby Alert LXC   | 8 GB   | local-lvm   | --        | Docker + Go binary + config              |
 | SDR Scanner LXC   | 20 GB  | local-lvm   | --        | Docker + recordings + Trunk Recorder |
+| Kanboard LXC      | 5 GB   | local-lvm   | --        | Docker + SQLite DB + attachments |
+| Mailserver LXC    | 20 GB  | local-lvm   | --        | Docker + Mailcow + mailbox storage |
 | ARR Stack LXC     | 20 GB  | local-lvm   | --        | Docker + configs (media on NAS) |
 
 ### Standalone Devices (not Proxmox-managed)
@@ -531,9 +557,9 @@ in parallel after the host is ready.
 
 | Resource | Total       | Notes                                      |
 |----------|-------------|--------------------------------------------|
-| CPU      | ~28 cores   | Shared across Proxmox nodes                |
-| RAM      | ~39.25 GB   | TrueNAS benefits from more (ZFS ARC)       |
-| local-lvm| ~146 GB     | OS disks for VMs + all LXCs                |
+| CPU      | ~31 cores   | Shared across Proxmox nodes                |
+| RAM      | ~42.75 GB   | TrueNAS benefits from more (ZFS ARC)       |
+| local-lvm| ~171 GB     | OS disks for VMs + all LXCs                |
 | ceph-pool| ~250 GB raw | K8s VMs (3x replication = ~750 GB physical) |
 
 ### Resource Balancing
@@ -600,6 +626,8 @@ consume no CPU regardless of weight.
 | `proxmox_virtual_environment_container.wireguard` | lxc-wireguard.tf            | LXC  | 208 |
 | `proxmox_virtual_environment_container.libby_alert`| lxc-libby-alert.tf         | LXC  | 209 |
 | `proxmox_virtual_environment_container.sdr`       | lxc-sdr.tf                  | LXC  | 210 |
+| `proxmox_virtual_environment_container.kanboard`  | lxc-kanboard.tf             | LXC  | 211 |
+| `proxmox_virtual_environment_container.mailserver` | lxc-mailserver.tf          | LXC  | 212 |
 | `proxmox_virtual_environment_file.lxc_ssh_fix`    | lxc-ssh-hook.tf             | File | --  |
 | `proxmox_virtual_environment_vm.truenas`          | vm-truenas.tf               | VM   | 300 |
 | `proxmox_virtual_environment_vm.homeassistant`    | vm-homeassistant.tf         | VM   | 301 |
@@ -652,6 +680,11 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | ender5.woodhead.tech   | 192.168.86.136       | 80    | klipper.yml           | Active    |
 | ender3.woodhead.tech   | 192.168.86.138       | 80    | klipper.yml           | Active    |
 | scanner.woodhead.tech  | 192.168.86.32        | 3000  | sdr.yml               | Active (Authentik SSO) |
+| tasks.woodhead.tech    | 192.168.86.33        | 8000  | kanboard.yml          | Active    |
+| mail.woodhead.tech     | 192.168.86.34        | 8080  | mailserver.yml        | Active    |
+| docs.woodhead.tech     | 192.168.86.25        | 3080  | docs-site.yml         | Active (Authentik SSO) |
+| resume.woodhead.tech   | 192.168.86.25        | 3081  | resume-site.yml       | Active (Authentik SSO) |
+| ender3.woodhead.tech   | 192.168.86.138       | 80    | klipper.yml           | Active    |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authentik SSO) |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 
@@ -834,6 +867,10 @@ Configured via Google Home app > WiFi > Advanced Networking > Port Management.
 | 80       | 192.168.86.20:80      | TCP      | HTTP -> Traefik       |
 | 443      | 192.168.86.20:443     | TCP      | HTTPS -> Traefik      |
 | 51820    | 192.168.86.39:51820   | UDP      | WireGuard VPN tunnel  |
+| 25       | 192.168.86.34:25      | TCP      | SMTP inbound -> Mailcow |
+| 465      | 192.168.86.34:465     | TCP      | SMTPS -> Mailcow      |
+| 587      | 192.168.86.34:587     | TCP      | SMTP Submission -> Mailcow |
+| 993      | 192.168.86.34:993     | TCP      | IMAPS -> Mailcow      |
 
 Google Nest handles NAT and basic firewall (blocks unsolicited inbound by default).
 No advanced firewall rules, IDS/IPS, or VPN server available on consumer hardware.
