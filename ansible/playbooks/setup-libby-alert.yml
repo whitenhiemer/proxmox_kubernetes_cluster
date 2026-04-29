@@ -143,11 +143,16 @@
       ansible.builtin.file:
         path: "{{ app_dir }}/src"
         state: directory
-        owner: "{{ app_user }}"
-        group: "{{ app_user }}"
+        owner: root
+        group: root
         mode: "0755"
 
     # --- Clone and Build ---
+    - name: Mark src directory as git safe
+      ansible.builtin.command:
+        cmd: git config --global --add safe.directory {{ app_dir }}/src
+      changed_when: false
+
     - name: Clone libby-alert repository
       ansible.builtin.git:
         repo: "{{ app_repo }}"

@@ -169,9 +169,8 @@ truenas: ## Configure TrueNAS Scale via REST API (post-install: ZFS pool, datase
 		--extra-vars "truenas_password=$(TRUENAS_PASSWORD)"
 
 libby-alert: ## Deploy Libby life alert QR website into its LXC
-	@if [ -z "$(TWILIO_SID)" ] || [ -z "$(TWILIO_TOKEN)" ] || [ -z "$(TWILIO_FROM)" ] || [ -z "$(ALERT_PHONES)" ]; then \
-		echo "Error: Required vars: TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM, ALERT_PHONES"; \
-		echo "Usage: make libby-alert TWILIO_SID=ACxxx TWILIO_TOKEN=xxx TWILIO_FROM=+1xxx ALERT_PHONES=+1xxx,+1yyy DISCORD_WEBHOOK=https://..."; \
+	@if [ -z "$(DISCORD_WEBHOOK)" ] && ([ -z "$(TWILIO_SID)" ] || [ -z "$(TWILIO_TOKEN)" ] || [ -z "$(TWILIO_FROM)" ] || [ -z "$(ALERT_PHONES)" ]); then \
+		echo "Error: provide DISCORD_WEBHOOK and/or all Twilio vars (TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM, ALERT_PHONES)"; \
 		exit 1; \
 	fi
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-libby-alert.yml \
