@@ -203,6 +203,15 @@ services:
       - "8083:80"
     restart: unless-stopped
 
+  # --- Homelab in a Claude: Hugo documentation site ---
+  homelab-site:
+    build:
+      context: /opt/monitoring/homelab-site/build
+    container_name: homelab-site
+    ports:
+      - "8084:80"
+    restart: unless-stopped
+
   # --- NUT Exporter: UPS Metrics ---
   # Queries NUT server on thinkcentre3 (192.168.86.31:3493) and exposes
   # UPS metrics (battery charge, load, runtime, voltage) for Prometheus.

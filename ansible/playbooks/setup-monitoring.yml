@@ -170,6 +170,8 @@
         - resume-site/build
         - landing-site
         - landing-site/build
+        - homelab-site
+        - homelab-site/build
 
     # --- Deploy Config Files ---
     - name: Copy Docker Compose file
@@ -525,6 +527,24 @@
         rsync_opts:
           - "--no-perms"
       become: false
+      notify: Restart monitoring stack
+
+    # --- Homelab Site ---
+    - name: Create homelab site build context directory
+      ansible.builtin.file:
+        path: "{{ mon_base_dir }}/homelab-site/build/html"
+        state: directory
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0755"
+
+    - name: Copy homelab site Dockerfile
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/monitoring/homelab-site/Dockerfile"
+        dest: "{{ mon_base_dir }}/homelab-site/build/Dockerfile"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
       notify: Restart monitoring stack
 
     # --- Start Stack ---

@@ -1,0 +1,15 @@
+http:
+  routers:
+    homelab-site:
+      rule: "Host(`homelab.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: homelab-site
+      tls:
+        certResolver: cloudflare
+
+  services:
+    homelab-site:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.25:8084"
