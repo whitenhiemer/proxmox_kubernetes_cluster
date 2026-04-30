@@ -143,7 +143,7 @@ scrape_configs:
           - http://192.168.86.22:9696     # Prowlarr
           - http://192.168.86.22:6767     # Bazarr
           - http://192.168.86.22:8080     # SABnzbd (via gluetun)
-          - http://192.168.86.23:32400    # Plex
+          - http://192.168.86.23:32400/web/index.html    # Plex (root returns 401, use /web/index.html)
           - http://192.168.86.24:8096     # Jellyfin
           - http://192.168.86.25:3000     # Grafana
           - http://192.168.86.26:18789    # OpenClaw gateway
