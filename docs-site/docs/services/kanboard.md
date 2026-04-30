@@ -154,3 +154,4 @@ cd ~/WORKSPACE/clawbot && python health.py
 | Version | Changes |
 |---------|---------|
 | v0.2.0  | Added Discord PR links, per-task budget cap, health check utility |
+| v0.2.1  | Rotated GitHub PAT, batch test validation |
