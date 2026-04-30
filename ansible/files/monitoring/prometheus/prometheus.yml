@@ -70,6 +70,16 @@ scrape_configs:
       - target_label: __address__
         replacement: pve-exporter:9221
 
+  # ===== Ceph =====
+
+  # Ceph MGR Prometheus module: cluster health, OSD, pool, and RBD metrics.
+  # Active MGR runs on thinkcentre1 (pve1). Standby MGRs don't export metrics.
+  - job_name: "ceph"
+    static_configs:
+      - targets: ["192.168.86.29:9283"]
+        labels:
+          instance: "ceph"
+
   # ===== Traefik =====
 
   # Built-in Prometheus metrics endpoint (requires metrics entrypoint in traefik.yml)
