@@ -373,6 +373,8 @@ for all `*.woodhead.tech` subdomains via a single Traefik `forwardAuth` middlewa
 | TrueNAS (`nas.woodhead.tech`) | Yes |
 | SDR Scanner (`scanner.woodhead.tech`) | Yes |
 | Grafana, docs, resume | Yes |
+| Klipper Ender 5 (`ender5.woodhead.tech`) | Yes |
+| Klipper Ender 3 (`ender3.woodhead.tech`) | Yes |
 | Plex | No (uses Plex accounts) |
 
 ---

@@ -12,6 +12,8 @@ http:
       entryPoints:
         - websecure
       service: klipper-ender5pro
+      middlewares:
+        - authentik@file
       tls:
         certResolver: cloudflare
 
@@ -21,6 +23,8 @@ http:
       entryPoints:
         - websecure
       service: klipper-ender3
+      middlewares:
+        - authentik@file
       tls:
         certResolver: cloudflare
 

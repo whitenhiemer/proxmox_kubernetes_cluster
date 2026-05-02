@@ -43,6 +43,8 @@
         ip: "10.10.0.2"
       - name: brandon-phone
         ip: "10.10.0.3"
+      - name: mango-travel
+        ip: "10.10.0.10"
 
     wg_config_dir: /etc/wireguard
     wg_client_dir: /etc/wireguard/clients
