@@ -162,6 +162,7 @@ and resource allocation.
 | 192.168.86.130     | tower1           | Host   | --    | Proxmox node 4 (tower)              |
 | 192.168.86.147     | zotac            | Host   | --    | Proxmox node 5 (Zotac mini PC)      |
 | 192.168.86.20      | traefik          | LXC    | 200   | Reverse proxy, TLS termination      |
+| 192.168.86.35      | adguard          | LXC    | 213   | AdGuard Home DNS + ad blocking      |
 | 192.168.86.21      | recipe-site      | LXC    | 201   | Go + SQLite recipe app              |
 | 192.168.86.22      | arr-stack        | LXC    | 202   | Docker: Sonarr, Radarr, etc.        |
 | 192.168.86.23      | plex             | LXC    | 203   | Plex Media Server + iGPU            |
@@ -178,7 +179,10 @@ and resource allocation.
 | 192.168.86.34      | mailserver       | LXC    | 212   | Mailcow email (woodhead.tech)       |
 | 192.168.86.131     | piboard          | Pi     | --    | Raspberry Pi 3B monitoring dashboard|
 | 192.168.86.136     | klipper-ender5pro| Pi     | --    | Klipper 3D printer (Ender 5 Pro)    |
+| 192.168.86.137     | ubuntu-laptop    | Client | --    | Ubuntu laptop (workstation)         |
 | 192.168.86.138     | klipper-ender3   | Pi     | --    | Klipper 3D printer (Ender 3)        |
+| 192.168.86.152     | lenovo-go (wifi) | Client | --    | Lenovo Legion Go (CachyOS, wireless)|
+| 192.168.86.154     | lenovo-go (eth)  | Client | --    | Lenovo Legion Go (CachyOS, wired)   |
 | 192.168.86.100     | k8s-vip          | VIP    | --    | Kubernetes API endpoint             |
 | 192.168.86.101     | talos-cp-0       | VM     | 400   | K8s control plane (Talos Linux)     |
 | 192.168.86.111-112 | talos-worker-*   | VM     | 410+  | K8s workers (Talos Linux)           |
@@ -552,6 +556,9 @@ in parallel after the host is ready.
 |-------------------|-------|----------|--------|------------------------------------|
 | Piboard (Pi 3B)   | 4     | 1024     | 32 GB  | Waveshare 5" HDMI, Chromium kiosk  |
 | Klipper Ender 5 Pro (Pi 3B) | 4 | 1024 | 16 GB | MainsailOS, USB to printer MCU  |
+| Klipper Ender 3 (Pi 3B) | 4 | 1024 | 16 GB | MainsailOS, USB to printer MCU    |
+| Lenovo Legion Go  | --    | --       | --     | CachyOS deckify; wired .154, wifi .152 |
+| Ubuntu Laptop     | --    | --       | --     | Ubuntu; .137                       |
 
 ### Total resource budget (all services running)
 
@@ -685,6 +692,8 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | docs.woodhead.tech     | 192.168.86.25        | 3080  | docs-site.yml         | Active (Authentik SSO) |
 | resume.woodhead.tech   | 192.168.86.25        | 3081  | resume-site.yml       | Active (Authentik SSO) |
 | ender3.woodhead.tech   | 192.168.86.138       | 80    | klipper.yml           | Active    |
+| adguard.woodhead.tech  | 192.168.86.35        | 80    | adguard.yml           | Active (Authentik SSO) |
+| proxmox.woodhead.tech  | 192.168.86.29        | 8006  | proxmox.yml           | Active (Authentik SSO) |
 | traefik.woodhead.tech  | localhost (dashboard) | --    | dashboard.yml         | Active (Authentik SSO) |
 | *.woodhead.tech        | K8s VIP (192.168.86.100) | 80 | k8s-ingress.yml      | Commented |
 

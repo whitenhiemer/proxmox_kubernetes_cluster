@@ -12,7 +12,7 @@ set -euo pipefail
 # --- Configuration (override via environment or edit here) ---
 CLUSTER_NAME="${CLUSTER_NAME:-talos-proxmox}"
 CLUSTER_VIP="${CLUSTER_VIP:?Set CLUSTER_VIP to your API server VIP}"
-TALOS_VERSION="${TALOS_VERSION:-v1.9.0}"
+TALOS_VERSION="${TALOS_VERSION:-v1.12.5}"
 CONTROLPLANE_IPS="${CONTROLPLANE_IPS:?Set CONTROLPLANE_IPS as comma-separated list}"
 WORKER_IPS="${WORKER_IPS:?Set WORKER_IPS as comma-separated list}"
 

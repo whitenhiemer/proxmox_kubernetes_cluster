@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  step-ca:
+    image: smallstep/step-ca:latest
+    container_name: step-ca
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./data:/home/step
+    environment:
+      - DOCKER_STEPCA_INIT_NAME=Woodhead Home CA
+      - DOCKER_STEPCA_INIT_DNS_NAMES=step-ca,step-ca.woodhead.tech,192.168.86.36
+      - DOCKER_STEPCA_INIT_PROVISIONER_NAME=admin@woodhead.tech
+      - DOCKER_STEPCA_INIT_SSH=true
+    restart: always

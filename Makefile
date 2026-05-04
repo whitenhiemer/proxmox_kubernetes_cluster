@@ -24,9 +24,9 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr mailserver \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr mailserver adguard \
         bootstrap kubeconfig health k8s-base harden \
-        patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
+        patch-proxmox patch-lxc patch-docker patch-pi patch-workstations destroy clean help \
         docs-build docs-dev resume-build
 
 TERRAFORM_DIR := terraform
@@ -91,7 +91,9 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert \
 		-target=proxmox_virtual_environment_container.kanboard \
-		-target=proxmox_virtual_environment_container.mailserver
+		-target=proxmox_virtual_environment_container.mailserver \
+		-target=proxmox_virtual_environment_container.adguard \
+		-target=proxmox_virtual_environment_container.step_ca
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -106,7 +108,9 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert \
 		-target=proxmox_virtual_environment_container.kanboard \
-		-target=proxmox_virtual_environment_container.mailserver
+		-target=proxmox_virtual_environment_container.mailserver \
+		-target=proxmox_virtual_environment_container.adguard \
+		-target=proxmox_virtual_environment_container.step_ca
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -180,6 +184,12 @@ libby-alert: ## Deploy Libby life alert QR website into its LXC
 		twilio_from_number=$(TWILIO_FROM) alert_phone_numbers=$(ALERT_PHONES) \
 		$(if $(DISCORD_WEBHOOK),discord_webhook=$(DISCORD_WEBHOOK)) \
 		$(if $(COOLDOWN),alert_cooldown_minutes=$(COOLDOWN))"
+
+adguard: ## Deploy AdGuard Home DNS server into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-adguard.yml
+
+step-ca: ## Deploy Smallstep step-ca SSH Certificate Authority into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-step-ca.yml
 
 kanboard: ## Deploy Kanboard project management into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-kanboard.yml

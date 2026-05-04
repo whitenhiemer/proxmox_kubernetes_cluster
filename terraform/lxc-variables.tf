@@ -328,6 +328,32 @@ variable "mailserver_root_password" {
   sensitive   = true
 }
 
+# --- AdGuard Home LXC ---
+variable "adguard_vmid" {
+  description = "VM ID for the AdGuard Home DNS server LXC"
+  type        = number
+  default     = 213
+}
+
+variable "adguard_ip" {
+  description = "Static IP for the AdGuard Home LXC (set as upstream DNS on Google Nest)"
+  type        = string
+  default     = "192.168.86.35"
+}
+
+# --- Step-CA LXC ---
+variable "step_ca_vmid" {
+  description = "VM ID for the Smallstep step-ca LXC"
+  type        = number
+  default     = 214
+}
+
+variable "step_ca_ip" {
+  description = "Static IP for the Step-CA LXC"
+  type        = string
+  default     = "192.168.86.36"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

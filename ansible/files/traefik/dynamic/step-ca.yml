@@ -1,0 +1,26 @@
+# step-ca.yml - Traefik route for Smallstep step-ca API
+# Exposes step-ca.woodhead.tech to the public internet for SSH SSO login.
+
+http:
+  routers:
+    step-ca:
+      rule: "Host(`step-ca.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: step-ca
+      tls:
+        certResolver: cloudflare
+
+  services:
+    step-ca:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.86.36:9000"
+        # Since step-ca uses its own internal self-signed or CA-signed cert,
+        # we need to tell Traefik to trust it or skip validation.
+        # For simplicity in this homelab, we skip validation for the backend.
+        transport: step-ca-transport
+
+  serversTransports:
+    step-ca-transport:
+      insecureSkipVerify: true
