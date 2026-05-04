@@ -1,0 +1,205 @@
+# setup-minecraft.yml - Deploy Minecraft Java Edition server (PaperMC)
+#
+# Deploys itzg/minecraft-server in a Docker Compose stack on the minecraft LXC.
+# World data is stored in /opt/minecraft/data (persists across container restarts).
+#
+# Prerequisites:
+#   - minecraft LXC created via Terraform (make apply-lxc or terraform apply -target=...minecraft)
+#   - Port forward TCP 25565 on Google Nest -> 192.168.86.37
+#
+# Usage:
+#   ansible-playbook playbooks/setup-minecraft.yml
+#   ansible-playbook playbooks/setup-minecraft.yml -e "rcon_password=mysecret ops=AnnieMC"
+---
+- name: Deploy Minecraft server
+  hosts: minecraft
+  vars:
+    app_user: minecraft
+    app_uid: 1000
+    app_gid: 1000
+    app_dir: /opt/minecraft
+    compose_src: "{{ playbook_dir }}/../files/minecraft/docker-compose.yml"
+    rcon_password: "changeme"
+    ops: ""
+
+  tasks:
+    # --- SSH Socket Fix (Debian 12) ---
+    - name: Disable SSH socket activation
+      ansible.builtin.systemd:
+        name: ssh.socket
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Ensure SSH listens on IPv4
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?ListenAddress "
+        line: "ListenAddress 0.0.0.0"
+        create: false
+
+    # --- System Setup ---
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - wget
+        state: present
+
+    # --- Docker Installation ---
+    - name: Create Docker keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Set permissions on Docker GPG key
+      ansible.builtin.file:
+        path: /etc/apt/keyrings/docker.gpg
+        mode: "0644"
+
+    - name: Add Docker repository
+      ansible.builtin.copy:
+        content: |
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable
+        dest: /etc/apt/sources.list.d/docker.list
+        mode: "0644"
+
+    - name: Install Docker CE and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Configure Docker log rotation
+      ansible.builtin.copy:
+        content: |
+          {
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "10m",
+              "max-file": "3"
+            }
+          }
+        dest: /etc/docker/daemon.json
+        mode: "0644"
+      notify: Restart Docker
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # --- App User ---
+    - name: Create minecraft group
+      ansible.builtin.group:
+        name: "{{ app_user }}"
+        gid: "{{ app_gid }}"
+
+    - name: Create minecraft user
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        uid: "{{ app_uid }}"
+        group: "{{ app_user }}"
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Add minecraft user to docker group
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        groups: docker
+        append: true
+
+    # --- Directory Structure ---
+    - name: Create app directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0755"
+
+    - name: Create data directory (world saves, plugins, config)
+      ansible.builtin.file:
+        path: "{{ app_dir }}/data"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0755"
+
+    # --- Deploy ---
+    - name: Copy Docker Compose file
+      ansible.builtin.copy:
+        src: "{{ compose_src }}"
+        dest: "{{ app_dir }}/docker-compose.yml"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0644"
+
+    - name: Set RCON password and ops in compose file
+      ansible.builtin.replace:
+        path: "{{ app_dir }}/docker-compose.yml"
+        regexp: "{{ item.regexp }}"
+        replace: "{{ item.replace }}"
+      loop:
+        - regexp: 'RCON_PASSWORD: "changeme"'
+          replace: 'RCON_PASSWORD: "{{ rcon_password }}"'
+        - regexp: 'OPS: ""'
+          replace: 'OPS: "{{ ops }}"'
+      when: rcon_password != "changeme" or ops != ""
+
+    - name: Start Minecraft stack
+      ansible.builtin.command:
+        cmd: docker compose up -d
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    # --- Verify ---
+    - name: Wait for server to initialize (PaperMC first-run takes ~60s)
+      ansible.builtin.pause:
+        seconds: 60
+
+    - name: Check container is running
+      ansible.builtin.command:
+        cmd: docker compose ps --format json
+        chdir: "{{ app_dir }}"
+      register: compose_ps
+      changed_when: false
+
+    - name: Confirm minecraft container is up
+      ansible.builtin.assert:
+        that: '"running" in compose_ps.stdout'
+        fail_msg: "Minecraft container is not running — check 'docker compose logs' in {{ app_dir }}"
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Minecraft server deployed at {{ app_dir }}"
+          - "Game port: {{ ansible_host }}:25565 (TCP) — forward this on Google Nest"
+          - "RCON port: {{ ansible_host }}:25575 (internal admin only)"
+          - "Logs: ssh root@{{ ansible_host }} 'docker compose -C /opt/minecraft logs -f'"
+          - "Console: ssh root@{{ ansible_host }} 'docker attach minecraft' (Ctrl-p Ctrl-q to detach)"
+          - "World saves: {{ app_dir }}/data/world"
+
+  handlers:
+    - name: Restart Docker
+      ansible.builtin.systemd:
+        name: docker
+        state: restarted

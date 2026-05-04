@@ -354,6 +354,19 @@ variable "step_ca_ip" {
   default     = "192.168.86.36"
 }
 
+# --- Minecraft LXC ---
+variable "minecraft_vmid" {
+  description = "VM ID for the Minecraft Java Edition server LXC"
+  type        = number
+  default     = 215
+}
+
+variable "minecraft_ip" {
+  description = "Static IP for the Minecraft LXC"
+  type        = string
+  default     = "192.168.86.37"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

@@ -1,0 +1,41 @@
+services:
+  minecraft:
+    image: itzg/minecraft-server:latest
+    container_name: minecraft
+    tty: true
+    stdin_open: true
+    ports:
+      - "25565:25565"
+    environment:
+      EULA: "TRUE"
+      TYPE: PAPER
+      VERSION: "LATEST"
+      MEMORY: "3G"
+      # Server identity
+      MOTD: "§aAnnie’s Minecraft Server §r| woodhead.tech"
+      SERVER_NAME: "Annie's Server"
+      DIFFICULTY: normal
+      MAX_PLAYERS: "10"
+      # Family-friendly defaults
+      WHITELIST_ENABLED: "false"   # set to true + add WHITELIST=user1,user2 to lock it down
+      ONLINE_MODE: "true"          # requires valid Minecraft account (anti-grief)
+      PVP: "true"
+      ALLOW_NETHER: "true"
+      ALLOW_END: "true"
+      # Performance
+      VIEW_DISTANCE: "8"
+      SIMULATION_DISTANCE: "6"
+      # RCON for remote admin (talosctl-style console access)
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: "changeme"    # override at deploy time
+      RCON_PORT: "25575"
+      # Ops — comma-separated Minecraft usernames to grant operator access
+      OPS: ""
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
