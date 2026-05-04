@@ -328,6 +328,9 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.32     | SDR Scanner          | LXC  | 210   |
 | 192.168.86.33     | Kanboard             | LXC  | 211   |
 | 192.168.86.34     | Mailcow email        | LXC  | 212   |
+| 192.168.86.35     | AdGuard Home         | LXC  | 213   |
+| 192.168.86.36     | step-ca              | LXC  | 214   |
+| 192.168.86.37     | Minecraft            | LXC  | 215   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.27     | Libby Alert          | LXC  | 209   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
@@ -501,6 +504,83 @@ curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"moveTaskPosition","id":
 
 ---
 
+### Minecraft Server
+
+**Type**: LXC container with Docker Compose
+**Domain**: `minecraft.woodhead.tech` (web map/console); game connects directly via IP/port
+**Goal**: Family Minecraft server for Annie and friends. Always-on, auto-restarts on crash,
+persistent world saved to TrueNAS.
+
+**Edition choice**: Run **Java Edition** (PC) and/or **Bedrock Edition** (Xbox, Switch, iOS, Android, Windows).
+If Annie plays on a console, tablet, or phone → Bedrock. If on PC only → Java. Both can run side-by-side.
+
+**Stack**: [`itzg/minecraft-server`](https://github.com/itzg/docker-minecraft-server) (Java)
+and/or [`itzg/minecraft-bedrock-server`](https://github.com/itzg/docker-minecraft-bedrock-server) (Bedrock).
+These are the canonical community images — handle JVM tuning, auto-restart, EULA acceptance,
+plugin/mod support, and rcon.
+
+**Requirements**:
+- 2 CPU cores, 4GB RAM (comfortable for ~5 players), 10GB disk (world saves go to TrueNAS)
+- NFS mount from TrueNAS for persistent world data (survives LXC rebuilds)
+- Port forward on Google Nest:
+  - Java: TCP 25565 → Minecraft LXC
+  - Bedrock: UDP 19132 → Minecraft LXC
+- No Traefik needed for game traffic (raw TCP/UDP, not HTTP)
+- Optional: Traefik route for web map (`minecraft.woodhead.tech` → map viewer)
+
+**Terraform**: `terraform/lxc-minecraft.tf` (VM ID: 215, IP: 192.168.86.37)
+**Traefik route**: optional, for Dynmap/BlueMap web viewer only
+
+**Docker Compose** (Java + Dynmap example):
+```yaml
+services:
+  minecraft:
+    image: itzg/minecraft-server
+    environment:
+      EULA: "TRUE"
+      TYPE: PAPER          # PaperMC — better performance than vanilla
+      VERSION: "LATEST"
+      MEMORY: "3G"
+      DIFFICULTY: normal
+      MOTD: "Annie's Minecraft Server"
+      MAX_PLAYERS: 10
+      ALLOW_NETHER: "true"
+      OPS: ""              # comma-separated operator usernames
+    ports:
+      - "25565:25565"
+    volumes:
+      - /mnt/minecraft/data:/data   # NFS mount from TrueNAS
+    restart: unless-stopped
+```
+
+**Implementation plan**:
+1. `terraform/lxc-minecraft.tf` — LXC container (VM ID 215, .37)
+2. `ansible/playbooks/setup-minecraft.yml` — install Docker, deploy Compose stack, configure NFS mount
+3. TrueNAS: create dataset `tank/minecraft`, NFS export to LAN
+4. Port forward TCP 25565 on Google Nest → 192.168.86.37
+5. Optional: add BlueMap or Dynmap plugin for browser-based world map
+6. Optional: `ansible/files/traefik/dynamic/minecraft.yml` for web map route
+
+**Connecting**:
+- Java: add server `<your-public-ip>:25565` or `woodhead.tech:25565` in Minecraft multiplayer
+- Bedrock: add server with same IP/hostname, port 19132
+
+**Nice-to-have additions**:
+- BlueMap: renders a live 3D web map of the world at `minecraft.woodhead.tech`
+- Whitelist: `WHITELIST_ENABLED=true` + comma-separated `WHITELIST` env var (recommended for family server)
+- Discord bot: notify when players join/leave (msmcords or similar)
+- Automatic daily world backup to TrueNAS snapshot
+
+**Files**:
+| File | Purpose |
+|------|---------|
+| `terraform/lxc-minecraft.tf` | LXC container (VM ID 215) |
+| `ansible/playbooks/setup-minecraft.yml` | Install + configure Minecraft |
+| `ansible/files/minecraft/docker-compose.yml` | Server Docker stack |
+| `ansible/files/traefik/dynamic/minecraft.yml` | Traefik route (web map only) |
+
+---
+
 ### UPS Monitoring Dashboard
 
 **Type**: Grafana dashboard + Prometheus alert rules (no new infrastructure)
@@ -670,7 +750,10 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 16. **Libby-Alert Glucose Graph** -- PLANNED (Chart.js glucose chart on libby.woodhead.tech; queries Prometheus for 3h of dexcom_glucose_value; blocked on Dexcom creds)
 17. **Kanboard / ClawBot** -- DONE (tasks.woodhead.tech; Kanboard on LXC 211, ClawBot agent polls via JSON-RPC, Discord notifications with PR links, woodhead-tech GitHub account for PRs)
 18. **UPS Monitoring Dashboard** -- PLANNED (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters already scraping tc3/tower1/zotac)
-19. **Email Server** -- DONE (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
+19. **Email Server** -- DONE
+20. **AdGuard Home DNS** -- PLANNED (LXC 213 at .35; Terraform + playbook ready; needs onsite deploy + router DNS cutover)
+21. **step-ca SSH CA** -- PLANNED (LXC 214 at .36; Terraform + playbook ready)
+22. **Minecraft Server** -- PLANNED (LXC 215 at .37; Java Edition PaperMC for Annie + friends; needs TrueNAS dataset + port forward) (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
 
 ## Hardware Considerations
 
