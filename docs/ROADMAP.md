@@ -328,6 +328,8 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.32     | SDR Scanner          | LXC  | 210   |
 | 192.168.86.33     | Kanboard             | LXC  | 211   |
 | 192.168.86.34     | Mailcow email        | LXC  | 212   |
+| 192.168.86.35     | PXE boot server      | LXC  | 213   |
+| 192.168.86.36     | Zigbee2MQTT          | LXC  | 214   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.27     | Libby Alert          | LXC  | 209   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
@@ -501,6 +503,94 @@ curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"moveTaskPosition","id":
 
 ---
 
+### Zigbee2MQTT (Zigbee Dongle on Zotac)
+
+**Type**: LXC container on zotac (192.168.86.147)
+**Domain**: none (internal service only)
+**Goal**: Bridge the Zigbee USB dongle attached to zotac into Home Assistant via
+Zigbee2MQTT + Mosquitto. USB passthrough can only go to a VM/LXC on the same
+physical host as the USB device — the HA VM lives on thinkcentre1, so a dedicated
+Zigbee2MQTT LXC on zotac is required.
+
+**Architecture**:
+```
+Zigbee device (sensor/switch/bulb)
+    |
+    | Zigbee RF
+    |
+    v
+USB Zigbee dongle (zotac, /dev/ttyUSB0 or /dev/ttyACM0)
+    |
+    | USB passthrough via cgroup rules in /etc/pve/lxc/<vmid>.conf
+    |
+    v
+Zigbee2MQTT LXC (192.168.86.36, zotac)
+    |
+    | MQTT (192.168.86.36:1883)
+    |
+    v
+Home Assistant VM (192.168.86.41, thinkcentre1)
+    |
+    | MQTT integration -> entities, automations
+    |
+    v
+home.woodhead.tech
+```
+
+**USB passthrough for LXC** — add to `/etc/pve/lxc/<vmid>.conf` on zotac:
+```
+lxc.cgroup2.devices.allow: c <major>:<minor> rwm
+lxc.mount.entry: /dev/ttyACM0 dev/ttyACM0 none bind,optional,create=file
+```
+
+Find the device major/minor: `ls -la /dev/ttyACM0` or `ls -la /dev/ttyUSB0` on zotac.
+
+**Requirements**:
+- 1 CPU core, 256MB RAM, 4GB disk
+- LXC pinned to zotac (`node_name = "zotac"` in Terraform)
+- USB device passthrough via cgroup rules (same pattern as SDR scanner LXC 210)
+- Zigbee2MQTT + Mosquitto (MQTT broker) in Docker Compose
+- Home Assistant MQTT integration pointed at LXC IP
+
+**Zigbee2MQTT config** (`/opt/zigbee2mqtt/data/configuration.yaml`):
+```yaml
+homeassistant: true
+mqtt:
+  server: mqtt://localhost
+serial:
+  port: /dev/ttyACM0  # or /dev/ttyUSB0 — check after passthrough
+```
+
+**Home Assistant setup**:
+1. Settings -> Devices & Services -> Add Integration -> MQTT
+2. Broker: `192.168.86.36`, port `1883`
+3. Devices auto-discovered via HA discovery topic
+
+**Implementation plan**:
+1. Identify dongle device path on zotac: `ls /dev/ttyACM* /dev/ttyUSB*`
+2. `terraform/lxc-zigbee2mqtt.tf` -- LXC on zotac (VM ID 214, IP 192.168.86.36)
+3. `ansible/playbooks/setup-zigbee2mqtt.yml` -- Docker Compose with Zigbee2MQTT + Mosquitto
+4. USB passthrough cgroup rules in LXC config on zotac (same pattern as LXC 210 on pve2)
+5. Configure Home Assistant MQTT integration
+6. Pair Zigbee devices via Zigbee2MQTT web UI (port 8080)
+
+**Files**:
+| File | Purpose |
+|------|---------|
+| `terraform/lxc-zigbee2mqtt.tf` | LXC on zotac (VM ID 214) |
+| `ansible/playbooks/setup-zigbee2mqtt.yml` | Install Zigbee2MQTT + Mosquitto |
+| `ansible/files/zigbee2mqtt/docker-compose.yml` | Zigbee2MQTT + Mosquitto stack |
+
+**Notes**:
+- Zigbee2MQTT supports Sonoff Zigbee 3.0 USB Dongle Plus, HUSBZB-1, CC2652, ConBee II, and others
+- Check dongle vendor ID: `lsusb` on zotac — needed to verify it's detected before starting LXC work
+- No Traefik route needed; Zigbee2MQTT frontend (port 8080) can be accessed directly or left LAN-only
+- Zigbee2MQTT preferred over ZHA (Home Assistant's built-in Zigbee) because it keeps the radio
+  attached to a fixed LXC — if the HA VM is ever migrated to a different host, the bridge stays
+  on zotac and HA just reconnects to the MQTT broker
+
+---
+
 ### UPS Monitoring Dashboard
 
 **Type**: Grafana dashboard + Prometheus alert rules (no new infrastructure)
@@ -671,6 +761,7 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 17. **Kanboard / ClawBot** -- DONE (tasks.woodhead.tech; Kanboard on LXC 211, ClawBot agent polls via JSON-RPC, Discord notifications with PR links, woodhead-tech GitHub account for PRs)
 18. **UPS Monitoring Dashboard** -- PLANNED (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters already scraping tc3/tower1/zotac)
 19. **Email Server** -- DONE (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
+20. **Zigbee2MQTT** -- PLANNED (LXC 214 on zotac at 192.168.86.36; USB passthrough for Zigbee dongle; Mosquitto MQTT broker; HA connects via MQTT integration)
 
 ## Hardware Considerations
 
