@@ -372,6 +372,37 @@ variable "zigbee2mqtt_ip" {
   default     = "192.168.86.36"
 }
 
+# --- Claude OS LXC ---
+variable "claude_os_vmid" {
+  description = "VM ID for the Claude OS LXC"
+  type        = number
+  default     = 215
+}
+
+variable "claude_os_ip" {
+  description = "Static IP for the Claude OS LXC"
+  type        = string
+  default     = "192.168.86.37"
+}
+
+variable "claude_os_cores" {
+  description = "CPU cores for Claude OS (Python API + Node.js frontend + optional Ollama)"
+  type        = number
+  default     = 4
+}
+
+variable "claude_os_memory" {
+  description = "Memory in MB for Claude OS (2GB min for OpenAI, 4GB+ for local Ollama lite)"
+  type        = number
+  default     = 4096
+}
+
+variable "claude_os_disk_size" {
+  description = "Disk size in GB for Claude OS (repo + venv + SQLite DB + optional Ollama models)"
+  type        = number
+  default     = 20
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"
