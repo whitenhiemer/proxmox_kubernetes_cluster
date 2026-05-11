@@ -148,6 +148,7 @@ and resource allocation.
 | 192.168.86.41 | homeassistant | VM | 301 | Home Assistant OS, smart home |
 | 192.168.86.131 | piboard | Pi | -- | Raspberry Pi 3B monitoring dashboard |
 | 192.168.86.136 | klipper-ender5pro | Pi | -- | Klipper 3D printer (Ender 5 Pro) |
+| 192.168.86.138 | klipper-ender3 | Pi | -- | Klipper 3D printer (Ender 3) |
 | 192.168.86.100 | k8s-vip | VIP | -- | Kubernetes API endpoint |
 | 192.168.86.101 | talos-cp-0 | VM | 400 | K8s control plane (Talos Linux) |
 | 192.168.86.111-113 | talos-worker-* | VM | 410-412 | K8s workers (Talos Linux, 3 nodes) |
@@ -374,14 +375,20 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | home.woodhead.tech | 192.168.86.41 | 8123 | Active |
 | grafana.woodhead.tech | 192.168.86.25 | 3000 | Active |
 | prometheus.woodhead.tech | 192.168.86.25 | 9090 | Active (Authentik SSO) |
-| scanner.woodhead.tech | 192.168.86.32 | 3000 | Active (Authentik SSO) |
-| auth.woodhead.tech | 192.168.86.28 | 9000 | Active |
+| alertmanager.woodhead.tech | 192.168.86.25 | 9093 | Active |
 | docs.woodhead.tech | 192.168.86.25 | 8081 | Active |
 | resume.woodhead.tech | 192.168.86.25 | 8082 | Active |
-| woodhead.tech | 192.168.86.25 | 8083 | Active |
-| ender5.woodhead.tech | 192.168.86.136 | 80 | Active |
-| traefik.woodhead.tech | localhost | -- | Active (Authentik SSO) |
+| woodhead.tech / www.woodhead.tech | 192.168.86.25 | 8083 | Active |
+| homelab.woodhead.tech | 192.168.86.25 | 8084 | Active |
+| scanner.woodhead.tech | 192.168.86.32 | 3000 | Active (Authentik SSO) |
+| auth.woodhead.tech | 192.168.86.28 | 9000 | Active |
+| claw.woodhead.tech | 192.168.86.26 | 18789 | Active |
+| alert.woodhead.tech | 192.168.86.27 | 8080 | Active |
+| mail.woodhead.tech | 192.168.86.34 | 8080 | Active |
 | tasks.woodhead.tech | 192.168.86.33 | 8000 | Active |
+| ender5.woodhead.tech | 192.168.86.136 | 80 | Active |
+| ender3.woodhead.tech | 192.168.86.138 | 80 | Active |
+| traefik.woodhead.tech | localhost | -- | Active (Authentik SSO) |
 | claude-os.woodhead.tech | 192.168.86.37 | 5173 | Active |
 | claude-os-api.woodhead.tech | 192.168.86.37 | 8051 | Active |
 
