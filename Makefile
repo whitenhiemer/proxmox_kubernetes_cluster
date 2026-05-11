@@ -24,7 +24,7 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr pxe mailserver zigbee2mqtt claude-os \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr pxe mailserver zigbee2mqtt claude-os pwnagotchi \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
         docs-build docs-dev resume-build
@@ -94,7 +94,8 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.mailserver \
 		-target=proxmox_virtual_environment_container.pxe \
 		-target=proxmox_virtual_environment_container.zigbee2mqtt \
-		-target=proxmox_virtual_environment_container.claude_os
+		-target=proxmox_virtual_environment_container.claude_os \
+		-target=proxmox_virtual_environment_container.pwnagotchi
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -112,7 +113,8 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.mailserver \
 		-target=proxmox_virtual_environment_container.pxe \
 		-target=proxmox_virtual_environment_container.zigbee2mqtt \
-		-target=proxmox_virtual_environment_container.claude_os
+		-target=proxmox_virtual_environment_container.claude_os \
+		-target=proxmox_virtual_environment_container.pwnagotchi
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -198,6 +200,10 @@ pxe: ## Deploy PXE boot server (proxy-DHCP + TFTP + HTTP for LAN network install
 
 zigbee2mqtt: ## Deploy Zigbee2MQTT + Mosquitto on zotac (Zigbee USB dongle bridge for Home Assistant)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-zigbee2mqtt.yml
+
+pwnagotchi: ## Deploy pwnagotchi WiFi learning device (LXC 216 on pve3, RTL8188EUS dongle)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-pwnagotchi.yml \
+		$(if $(WEB_PASSWORD),--extra-vars "web_password=$(WEB_PASSWORD)")
 
 claude-os: ## Deploy Claude OS AI memory system (OpenAI: OPENAI_API_KEY=sk-..., local: INSTALL_OLLAMA=true)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-claude-os.yml \

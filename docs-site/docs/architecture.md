@@ -143,6 +143,7 @@ and resource allocation.
 | 192.168.86.35 | pxe-server | LXC | 213 | PXE boot server (proxy-DHCP + TFTP + HTTP) |
 | 192.168.86.36 | zigbee2mqtt | LXC | 214 | Zigbee2MQTT + Mosquitto (on zotac) |
 | 192.168.86.37 | claude-os | LXC | 215 | Claude OS AI memory/MCP server |
+| 192.168.86.38 | pwnagotchi | LXC | 216 | Pwnagotchi passive WiFi capture (pve3, RTL8188EUS) |
 | 192.168.86.39 | wireguard | LXC | 208 | WireGuard VPN tunnel (UDP 51820) |
 | 192.168.86.40 | truenas | VM | 300 | NAS, ZFS, NFS/SMB shares |
 | 192.168.86.41 | homeassistant | VM | 301 | Home Assistant OS, smart home |
@@ -348,6 +349,7 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | PXE Server LXC | 1 | 256 | dnsmasq + nginx |
 | Zigbee2MQTT LXC | 1 | 512 | Zigbee2MQTT + Mosquitto |
 | Claude OS LXC | 4 | 4096 | FastAPI + Redis + RQ + Vite |
+| Pwnagotchi LXC | 1 | 1024 | bettercap + pwnagotchi Python |
 
 ### Total Budget
 
@@ -391,6 +393,7 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | traefik.woodhead.tech | localhost | -- | Active (Authentik SSO) |
 | claude-os.woodhead.tech | 192.168.86.37 | 5173 | Active |
 | claude-os-api.woodhead.tech | 192.168.86.37 | 8051 | Active |
+| pwnagotchi.woodhead.tech | 192.168.86.38 | 8080 | Active |
 
 ## Terraform Resource Map
 
@@ -412,6 +415,7 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | `proxmox_virtual_environment_container.pxe` | lxc-pxe.tf | LXC | 213 |
 | `proxmox_virtual_environment_container.zigbee2mqtt` | lxc-zigbee2mqtt.tf | LXC | 214 |
 | `proxmox_virtual_environment_container.claude_os` | lxc-claude-os.tf | LXC | 215 |
+| `proxmox_virtual_environment_container.pwnagotchi` | lxc-pwnagotchi.tf | LXC | 216 |
 | `proxmox_virtual_environment_vm.truenas` | vm-truenas.tf | VM | 300 |
 | `proxmox_virtual_environment_vm.homeassistant` | vm-homeassistant.tf | VM | 301 |
 | `proxmox_virtual_environment_vm.controlplane[*]` | control-plane.tf | VM | 400+ |

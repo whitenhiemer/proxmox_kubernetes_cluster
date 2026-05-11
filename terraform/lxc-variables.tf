@@ -403,6 +403,19 @@ variable "claude_os_disk_size" {
   default     = 20
 }
 
+# --- Pwnagotchi LXC ---
+variable "pwnagotchi_vmid" {
+  description = "VM ID for the Pwnagotchi LXC (must be on pve3 where WiFi dongle is attached)"
+  type        = number
+  default     = 216
+}
+
+variable "pwnagotchi_ip" {
+  description = "Static IP for the Pwnagotchi LXC"
+  type        = string
+  default     = "192.168.86.38"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"
