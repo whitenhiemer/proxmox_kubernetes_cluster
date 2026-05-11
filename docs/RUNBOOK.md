@@ -570,6 +570,16 @@ export WORKER_IPS="192.168.86.111,192.168.86.112"
 make bootstrap
 ```
 
+> **SeaBIOS + Talos ISO caveat:** These VMs use SeaBIOS (not OVMF/UEFI). Talos writes an MBR bootloader to disk during installation, which SeaBIOS will prefer over the IDE CD-ROM even when the Proxmox boot order lists `ide2` first. If you need to boot from the ISO (e.g. for re-bootstrap), you must wipe the first ~100 MB of each VM's disk before starting:
+> ```bash
+> # Stop the VM first, then on the Proxmox node that hosts it:
+> rbd map thinkCentreCeph/vm-400-disk-0
+> DEV=$(rbd showmapped | grep vm-400-disk-0 | awk '{print $5}')
+> dd if=/dev/zero of=$DEV bs=1M count=100
+> rbd unmap $DEV
+> ```
+> Also note: in maintenance mode (no config applied), Talos nodes obtain IPs via DHCP rather than the static IPs in `terraform.tfvars`. Scan for port 50000 across the subnet to find them, then use those DHCP IPs for `talosctl apply-config --insecure`.
+
 ### 9.3 Verify
 
 ```bash
@@ -1083,6 +1093,8 @@ make apply     # Recreate VMs
 make bootstrap # Re-bootstrap cluster
 ```
 
+If re-bootstrapping without destroying/recreating the VMs (e.g. recovering from lost talosconfig), you must wipe the VM disks first — see "Talos VMs won't boot from ISO (SeaBIOS)" in the Troubleshooting section.
+
 ### Scaling K8s
 
 Update `terraform.tfvars`:
@@ -1113,6 +1125,24 @@ Then: `make apply` and `make bootstrap`
 ### Talos nodes stuck in maintenance
 - Check talosctl: `TALOSCONFIG=talos/_out/talosconfig talosctl dmesg --nodes 192.168.86.101`
 - Verify Proxmox console: check the VM serial console in Proxmox web UI
+
+### Talos VMs won't boot from ISO (SeaBIOS)
+These VMs use SeaBIOS. Talos writes an MBR bootloader to disk on first install; SeaBIOS will always prefer it over the CD-ROM regardless of the Proxmox boot order setting.
+
+**Fix:** Wipe the disk before booting from ISO. SSH to the Proxmox node hosting the VM, stop the VM, then:
+```bash
+rbd map thinkCentreCeph/vm-<VMID>-disk-0
+DEV=$(rbd showmapped | grep vm-<VMID>-disk-0 | awk '{print $5}')
+dd if=/dev/zero of=$DEV bs=1M count=100
+rbd unmap $DEV
+```
+Set boot order to `ide2` only in Proxmox, then start the VM. It will boot from the Talos ISO into maintenance mode.
+
+**Finding nodes in maintenance mode:** Nodes get DHCP IPs (not their static .101/.111/.112) until a config is applied. Find them by scanning for port 50000:
+```bash
+for i in $(seq 1 254); do (nc -z -w 1 192.168.86.$i 50000 2>/dev/null && echo "192.168.86.$i") & done; wait
+```
+Apply config to the DHCP IP with `--insecure`, then immediately flip the Proxmox boot order back to `scsi0` before the node reboots from disk.
 
 ### Recipe site not reachable
 - Check service: `ssh root@192.168.86.21 "systemctl status recipe-site"`
