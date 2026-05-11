@@ -24,7 +24,7 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr pxe mailserver \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr pxe mailserver zigbee2mqtt \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
         docs-build docs-dev resume-build
@@ -91,7 +91,9 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert \
 		-target=proxmox_virtual_environment_container.kanboard \
-		-target=proxmox_virtual_environment_container.mailserver
+		-target=proxmox_virtual_environment_container.mailserver \
+		-target=proxmox_virtual_environment_container.pxe \
+		-target=proxmox_virtual_environment_container.zigbee2mqtt
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -106,7 +108,9 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.wireguard \
 		-target=proxmox_virtual_environment_container.libby_alert \
 		-target=proxmox_virtual_environment_container.kanboard \
-		-target=proxmox_virtual_environment_container.mailserver
+		-target=proxmox_virtual_environment_container.mailserver \
+		-target=proxmox_virtual_environment_container.pxe \
+		-target=proxmox_virtual_environment_container.zigbee2mqtt
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -189,6 +193,9 @@ sdr: ## Deploy SDR scanner stack (Trunk Recorder + rdio-scanner) for SNO911 fire
 
 pxe: ## Deploy PXE boot server (proxy-DHCP + TFTP + HTTP for LAN network installs)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-pxe.yml
+
+zigbee2mqtt: ## Deploy Zigbee2MQTT + Mosquitto on zotac (Zigbee USB dongle bridge for Home Assistant)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-zigbee2mqtt.yml
 
 mailserver: ## Deploy Mailcow email server (Mailgun relay for outbound)
 	@if [ -z "$(MAILGUN_USER)" ] || [ -z "$(MAILGUN_PASSWORD)" ]; then \

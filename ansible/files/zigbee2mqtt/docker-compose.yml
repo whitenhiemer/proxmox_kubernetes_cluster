@@ -1,0 +1,23 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: always
+    ports:
+      - "1883:1883"
+    volumes:
+      - /opt/zigbee2mqtt/mosquitto/config:/mosquitto/config:ro
+      - /opt/zigbee2mqtt/mosquitto/data:/mosquitto/data
+
+  zigbee2mqtt:
+    image: koenkk/zigbee2mqtt:latest
+    restart: always
+    depends_on:
+      - mosquitto
+    ports:
+      - "8080:8080"
+    volumes:
+      - /opt/zigbee2mqtt/z2m-data:/app/data
+      - /dev/ttyACM0:/dev/ttyACM0
+    privileged: true
+    environment:
+      - TZ=America/Los_Angeles

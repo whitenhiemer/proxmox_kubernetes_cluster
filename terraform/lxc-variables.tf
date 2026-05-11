@@ -359,6 +359,19 @@ variable "pxe_disk_size" {
   default     = 8
 }
 
+# --- Zigbee2MQTT LXC ---
+variable "zigbee2mqtt_vmid" {
+  description = "VM ID for the Zigbee2MQTT LXC (must live on zotac with the USB dongle)"
+  type        = number
+  default     = 214
+}
+
+variable "zigbee2mqtt_ip" {
+  description = "Static IP for the Zigbee2MQTT LXC"
+  type        = string
+  default     = "192.168.86.36"
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

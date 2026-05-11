@@ -1,0 +1,12 @@
+homeassistant: true
+permit_join: true
+mqtt:
+  server: mqtt://mosquitto
+serial:
+  port: /dev/ttyACM0
+  adapter: ember
+frontend:
+  port: 8080
+advanced:
+  log_level: warn
+  network_key: GENERATE
