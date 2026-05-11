@@ -53,22 +53,21 @@
         dest: "{{ iso_dest }}"
         timeout: 3600
         mode: "0644"
-      args:
-        creates: "{{ tftp_root }}/cachyos/vmlinuz-linux-cachyos"
+        force: false
 
     - name: Extract kernel from ISO
       shell: >
-        bsdtar -O -xf {{ iso_dest }} arch/boot/x86_64/vmlinuz-linux-cachyos
-        > {{ tftp_root }}/cachyos/vmlinuz-linux-cachyos
+        bsdtar -O -xf {{ iso_dest }} arch/boot/x86_64/vmlinuz-linux-cachyos-deckify
+        > {{ tftp_root }}/cachyos/vmlinuz-linux-cachyos-deckify
       args:
-        creates: "{{ tftp_root }}/cachyos/vmlinuz-linux-cachyos"
+        creates: "{{ tftp_root }}/cachyos/vmlinuz-linux-cachyos-deckify"
 
     - name: Extract initramfs from ISO
       shell: >
-        bsdtar -O -xf {{ iso_dest }} arch/boot/x86_64/initramfs-linux-cachyos.img
-        > {{ tftp_root }}/cachyos/initramfs-linux-cachyos.img
+        bsdtar -O -xf {{ iso_dest }} arch/boot/x86_64/initramfs-linux-cachyos-deckify.img
+        > {{ tftp_root }}/cachyos/initramfs-linux-cachyos-deckify.img
       args:
-        creates: "{{ tftp_root }}/cachyos/initramfs-linux-cachyos.img"
+        creates: "{{ tftp_root }}/cachyos/initramfs-linux-cachyos-deckify.img"
 
     - name: Extract airootfs (erofs) from ISO
       shell: >
@@ -159,8 +158,8 @@
       register: tftp_files
       loop:
         - "{{ tftp_root }}/EFI/BOOT/grubx64.efi"
-        - "{{ tftp_root }}/cachyos/vmlinuz-linux-cachyos"
-        - "{{ tftp_root }}/cachyos/initramfs-linux-cachyos.img"
+        - "{{ tftp_root }}/cachyos/vmlinuz-linux-cachyos-deckify"
+        - "{{ tftp_root }}/cachyos/initramfs-linux-cachyos-deckify.img"
 
     - name: Assert TFTP files exist
       assert:

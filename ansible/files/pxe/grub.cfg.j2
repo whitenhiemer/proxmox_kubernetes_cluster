@@ -2,10 +2,10 @@ set default=0
 set timeout=15
 
 menuentry "CachyOS Handheld 2026-04-26 (Network Boot)" {
-    linuxefi /cachyos/vmlinuz-linux-cachyos \
+    linuxefi /cachyos/vmlinuz-linux-cachyos-deckify \
         archisobasedir=arch \
         archiso_http_srv=http://{{ ansible_host }}/ \
         copytoram \
         ip=dhcp
-    initrdefi /cachyos/initramfs-linux-cachyos.img
+    initrdefi /cachyos/initramfs-linux-cachyos-deckify.img
 }

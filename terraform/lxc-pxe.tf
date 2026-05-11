@@ -14,6 +14,10 @@ resource "proxmox_virtual_environment_container" "pxe" {
   started       = true
   start_on_boot = true
 
+  features {
+    nesting = true
+  }
+
   operating_system {
     template_file_id = var.debian_template
     type             = "debian"
