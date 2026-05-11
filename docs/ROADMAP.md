@@ -759,9 +759,9 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 15. **Resume Site** -- DONE (resume.woodhead.tech; Hugo static site deployed on monitoring LXC)
 16. **Libby-Alert Glucose Graph** -- PLANNED (Chart.js glucose chart on libby.woodhead.tech; queries Prometheus for 3h of dexcom_glucose_value; blocked on Dexcom creds)
 17. **Kanboard / ClawBot** -- DONE (tasks.woodhead.tech; Kanboard on LXC 211, ClawBot agent polls via JSON-RPC, Discord notifications with PR links, woodhead-tech GitHub account for PRs)
-18. **UPS Monitoring Dashboard** -- PLANNED (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters already scraping tc3/tower1/zotac)
+18. **UPS Monitoring Dashboard** -- DONE (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters scraping tc3/tower1/zotac; battery charge, load, runtime, voltage, status per UPS)
 19. **Email Server** -- DONE (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
-20. **Zigbee2MQTT** -- PLANNED (LXC 214 on zotac at 192.168.86.36; USB passthrough for Zigbee dongle; Mosquitto MQTT broker; HA connects via MQTT integration)
+20. **Zigbee2MQTT** -- DONE (LXC 214 on zotac at 192.168.86.36; SONOFF Zigbee Dongle Lite via USB passthrough; Zigbee2MQTT 2.10.1 + Mosquitto on :1883; HA connects via MQTT integration at 192.168.86.36:1883)
 
 ## Hardware Considerations
 
