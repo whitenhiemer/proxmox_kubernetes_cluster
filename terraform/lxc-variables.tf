@@ -328,6 +328,37 @@ variable "mailserver_root_password" {
   sensitive   = true
 }
 
+# --- PXE Boot Server LXC ---
+variable "pxe_vmid" {
+  description = "VM ID for the PXE boot server LXC (dnsmasq + nginx)"
+  type        = number
+  default     = 213
+}
+
+variable "pxe_ip" {
+  description = "Static IP for the PXE boot server LXC"
+  type        = string
+  default     = "192.168.86.35"
+}
+
+variable "pxe_cores" {
+  description = "CPU cores for the PXE server (file serving is lightweight)"
+  type        = number
+  default     = 1
+}
+
+variable "pxe_memory" {
+  description = "Memory in MB for the PXE server (dnsmasq + nginx are tiny)"
+  type        = number
+  default     = 512
+}
+
+variable "pxe_disk_size" {
+  description = "Disk size in GB for the PXE server (kernel + initramfs + airootfs per ISO)"
+  type        = number
+  default     = 8
+}
+
 # --- Domain ---
 variable "domain" {
   description = "Base domain name for services"

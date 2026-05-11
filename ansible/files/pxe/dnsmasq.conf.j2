@@ -1,0 +1,24 @@
+# dnsmasq - PXE boot server
+# Proxy-DHCP mode: responds to PXE boot requests without replacing the router's DHCP server.
+
+# Bind only to the LAN interface to avoid interfering with other services
+bind-interfaces
+interface=eth0
+
+# Proxy-DHCP: respond to DHCP requests but do not assign addresses
+dhcp-range={{ ansible_host }},proxy,255.255.255.0
+
+# TFTP
+enable-tftp
+tftp-root=/srv/tftp
+
+# UEFI 64-bit (client-arch 7 = EFI x86-64)
+dhcp-match=set:efi-x86_64,option:client-arch,7
+dhcp-boot=tag:efi-x86_64,EFI/BOOT/grubx64.efi
+
+# Legacy BIOS fallback
+dhcp-boot=pxelinux.0
+
+# Logging
+log-dhcp
+log-facility=/var/log/dnsmasq.log

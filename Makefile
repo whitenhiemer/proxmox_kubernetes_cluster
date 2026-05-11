@@ -24,7 +24,7 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr mailserver \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr pxe mailserver \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
         docs-build docs-dev resume-build
@@ -186,6 +186,9 @@ kanboard: ## Deploy Kanboard project management into its LXC
 
 sdr: ## Deploy SDR scanner stack (Trunk Recorder + rdio-scanner) for SNO911 fire/EMS
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-sdr.yml
+
+pxe: ## Deploy PXE boot server (proxy-DHCP + TFTP + HTTP for LAN network installs)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-pxe.yml
 
 mailserver: ## Deploy Mailcow email server (Mailgun relay for outbound)
 	@if [ -z "$(MAILGUN_USER)" ] || [ -z "$(MAILGUN_PASSWORD)" ]; then \
