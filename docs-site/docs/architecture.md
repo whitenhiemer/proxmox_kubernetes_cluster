@@ -89,6 +89,25 @@ and resource allocation.
             |   | RTL-SDR  |
             |   +----------+
             |
+            |   +----------+   +----------+   +----------+
+            |   | Kanboard |   | PXE      |   | Claude   |
+            |   | LXC 211  |   | Server   |   | OS       |
+            |   | .33      |   | LXC 213  |   | LXC 215  |
+            |   | :8000    |   | .35      |   | .37      |
+            |   +----------+   | TFTP/HTTP|   | :8051    |
+            |                  +----------+   | :5173    |
+            |                                 +----------+
+            |
+            |   +----------+
+            |   | Zigbee   |
+            |   | 2MQTT    |
+            |   | LXC 214  |
+            |   | .36      |
+            |   | :8080    |
+            |   | :1883    |
+            |   | (zotac)  |
+            |   +----------+
+            |
           +------- Standalone Devices (not Proxmox-managed) -------+
           |                                                         |
      +----+----------+     +----------------+
@@ -119,6 +138,11 @@ and resource allocation.
 | 192.168.86.27 | libby-alert | LXC | 209 | Libby life alert QR site + alerts |
 | 192.168.86.28 | authentik | LXC | 207 | Identity provider (Authentik SSO, OIDC) |
 | 192.168.86.32 | sdr | LXC | 210 | SDR scanner (Trunk Recorder + rdio-scanner) |
+| 192.168.86.33 | kanboard | LXC | 211 | Kanboard project management + ClawBot agent |
+| 192.168.86.34 | mailserver | LXC | 212 | Mailcow email server (Mailgun relay) |
+| 192.168.86.35 | pxe-server | LXC | 213 | PXE boot server (proxy-DHCP + TFTP + HTTP) |
+| 192.168.86.36 | zigbee2mqtt | LXC | 214 | Zigbee2MQTT + Mosquitto (on zotac) |
+| 192.168.86.37 | claude-os | LXC | 215 | Claude OS AI memory/MCP server |
 | 192.168.86.39 | wireguard | LXC | 208 | WireGuard VPN tunnel (UDP 51820) |
 | 192.168.86.40 | truenas | VM | 300 | NAS, ZFS, NFS/SMB shares |
 | 192.168.86.41 | homeassistant | VM | 301 | Home Assistant OS, smart home |
@@ -319,6 +343,10 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | Authentik LXC | 2 | 2048 | Postgres + Redis + server + worker |
 | SDR Scanner LXC | 2 | 2048 | Trunk Recorder + rdio-scanner |
 | WireGuard LXC | 1 | 256 | Kernel WireGuard |
+| Kanboard LXC | 1 | 512 | Kanboard + SQLite |
+| PXE Server LXC | 1 | 256 | dnsmasq + nginx |
+| Zigbee2MQTT LXC | 1 | 512 | Zigbee2MQTT + Mosquitto |
+| Claude OS LXC | 4 | 4096 | FastAPI + Redis + RQ + Vite |
 
 ### Total Budget
 
@@ -353,6 +381,9 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | woodhead.tech | 192.168.86.25 | 8083 | Active |
 | ender5.woodhead.tech | 192.168.86.136 | 80 | Active |
 | traefik.woodhead.tech | localhost | -- | Active (Authentik SSO) |
+| tasks.woodhead.tech | 192.168.86.33 | 8000 | Active |
+| claude-os.woodhead.tech | 192.168.86.37 | 5173 | Active |
+| claude-os-api.woodhead.tech | 192.168.86.37 | 8051 | Active |
 
 ## Terraform Resource Map
 
@@ -369,6 +400,11 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | `proxmox_virtual_environment_container.wireguard` | lxc-wireguard.tf | LXC | 208 |
 | `proxmox_virtual_environment_container.libby_alert` | lxc-libby-alert.tf | LXC | 209 |
 | `proxmox_virtual_environment_container.sdr` | lxc-sdr.tf | LXC | 210 |
+| `proxmox_virtual_environment_container.kanboard` | lxc-kanboard.tf | LXC | 211 |
+| `proxmox_virtual_environment_container.mailserver` | lxc-mailserver.tf | LXC | 212 |
+| `proxmox_virtual_environment_container.pxe` | lxc-pxe.tf | LXC | 213 |
+| `proxmox_virtual_environment_container.zigbee2mqtt` | lxc-zigbee2mqtt.tf | LXC | 214 |
+| `proxmox_virtual_environment_container.claude_os` | lxc-claude-os.tf | LXC | 215 |
 | `proxmox_virtual_environment_vm.truenas` | vm-truenas.tf | VM | 300 |
 | `proxmox_virtual_environment_vm.homeassistant` | vm-homeassistant.tf | VM | 301 |
 | `proxmox_virtual_environment_vm.controlplane[*]` | control-plane.tf | VM | 400+ |
