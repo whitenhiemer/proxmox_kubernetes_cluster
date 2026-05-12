@@ -5,8 +5,18 @@
 #   Basking lamp         : switch.gutgrinda_basking_lamp (Matter, plug 3016-351-2379)
 #   Ambient light        : switch.gutgrinda_ambient_light (Matter, plug 2201-851-2373)
 #
-# Deploy: make beardie (copies this file to /config/packages/beardie.yaml on HAOS)
-# After deploy: Developer Tools > YAML > Check Configuration, then restart HA.
+# Notifications go to Discord via rest_command.gutgrinda_discord.
+# The webhook URL is stored in /config/secrets.yaml as gutgrinda_discord_webhook.
+#
+# Deploy: make beardie
+
+rest_command:
+  gutgrinda_discord:
+    url: !secret gutgrinda_discord_webhook
+    method: POST
+    headers:
+      Content-Type: application/json
+    payload: '{"content": "{{ message }}"}'
 
 input_number:
   gutgrinda_basking_temp_on:
@@ -118,18 +128,12 @@ automation:
         above: input_number.gutgrinda_alert_temp_max
         for: "00:05:00"
     action:
-      - service: persistent_notification.create
+      - service: rest_command.gutgrinda_discord
         data:
-          title: "WAAAGH! Gutgrinda iz too HOT!"
-          message: >
-            Da warboss iz roastin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F —
+          message: >-
+            WAAAGH! Gutgrinda iz too HOT! Da warboss iz roastin' at
+            {{ states('sensor.0xa4c13874d0343902_temperature') }}°F —
             above da {{ states('input_number.gutgrinda_alert_temp_max') | int }}°F limit. TURN IT OFF!
-          notification_id: gutgrinda_too_hot
-      # Uncomment and set your mobile app notifier if using HA Companion:
-      # - service: notify.mobile_app_YOUR_PHONE
-      #   data:
-      #     title: "WAAAGH! Gutgrinda iz too HOT!"
-      #     message: "Da warboss iz roastin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F"
 
   # Alert — enclosure too cold for 10 minutes
   - id: gutgrinda_alert_too_cold
@@ -140,17 +144,12 @@ automation:
         below: input_number.gutgrinda_alert_temp_min
         for: "00:10:00"
     action:
-      - service: persistent_notification.create
+      - service: rest_command.gutgrinda_discord
         data:
-          title: "Gutgrinda iz FREEZIN'!"
-          message: >
-            Da warboss iz shiverin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F —
+          message: >-
+            Gutgrinda iz FREEZIN'! Da warboss iz shiverin' at
+            {{ states('sensor.0xa4c13874d0343902_temperature') }}°F —
             below da {{ states('input_number.gutgrinda_alert_temp_min') | int }}°F limit. GET DA BURNA!
-          notification_id: gutgrinda_too_cold
-      # - service: notify.mobile_app_YOUR_PHONE
-      #   data:
-      #     title: "Gutgrinda iz FREEZIN'!"
-      #     message: "Da warboss iz shiverin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F"
 
   # Alert — sensor offline for 15 minutes
   - id: gutgrinda_alert_sensor_offline
@@ -161,12 +160,6 @@ automation:
         to: "unavailable"
         for: "00:15:00"
     action:
-      - service: persistent_notification.create
+      - service: rest_command.gutgrinda_discord
         data:
-          title: "Da Gubbinz iz Broken!"
-          message: "Gutgrinda'z temperature sensor iz offline — check da Zigbee2MQTT at 192.168.86.36:8080, ya grot!"
-          notification_id: gutgrinda_sensor_offline
-      # - service: notify.mobile_app_YOUR_PHONE
-      #   data:
-      #     title: "Da Gubbinz iz Broken!"
-      #     message: "Check Zigbee2MQTT, ya grot!"
+          message: "Da Gubbinz iz Broken! Gutgrinda'z temperature sensor iz offline — check da Zigbee2MQTT at 192.168.86.36:8080, ya grot!"

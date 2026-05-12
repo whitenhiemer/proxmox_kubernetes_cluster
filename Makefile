@@ -169,7 +169,7 @@ homeassistant: ## Deploy Traefik route for Home Assistant (post-onboarding confi
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml \
 		$(if $(HA_TOKEN),--extra-vars "ha_token=$(HA_TOKEN)")
 
-beardie: ## Deploy bearded dragon enclosure automation package to HAOS (requires SSH addon)
+beardie: ## Deploy Gutgrinda enclosure automation to HAOS (GUTGRINDA_DISCORD_WEBHOOK= HA_TOKEN= optional)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml --tags packages
 
 truenas: ## Configure TrueNAS Scale via REST API (post-install: ZFS pool, datasets, NFS shares)
