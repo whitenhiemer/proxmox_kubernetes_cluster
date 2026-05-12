@@ -1,0 +1,50 @@
+# group-status.yml - Show running status of all service groups
+#
+# Queries the Proxmox cluster API for live VM/LXC status and prints
+# a summary for each group.
+#
+# Usage:
+#   cd ansible && ansible-playbook playbooks/group-status.yml
+#   make group-status
+
+---
+- name: Service group status
+  hosts: pve1
+  gather_facts: false
+  vars_files:
+    - ../vars/service_groups.yml
+
+  tasks:
+    - name: Discover VM/LXC status across cluster
+      ansible.builtin.shell: pvesh get /cluster/resources --type vm --output-format json
+      register: cluster_raw
+      changed_when: false
+
+    - name: Build vmid→status lookup
+      ansible.builtin.set_fact:
+        vm_status: "{{ dict(resources | map(attribute='vmid') | map('string') | zip(resources | map(attribute='status'))) }}"
+      vars:
+        resources: "{{ cluster_raw.stdout | from_json }}"
+
+    - name: Print group status
+      ansible.builtin.debug:
+        msg: |
+          [{{ overall }}] {{ item.key }}  ({{ item.value.description | default('') }}){% for flag in flags %}  [{{ flag }}]{% endfor %}
+          {% for m in item.value.members %}  {{ '%-22s' | format(m.name + '(' + m.vmid | string + ')') }}  {{ vm_status[m.vmid | string] | default('not found') }}
+          {% endfor %}
+      loop: "{{ service_groups | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      vars:
+        member_statuses: "{{ item.value.members | map(attribute='vmid') | map('string') | map('extract', vm_status) | list }}"
+        running_count: "{{ member_statuses | select('equalto', 'running') | list | length | int }}"
+        total: "{{ item.value.members | length | int }}"
+        overall: >-
+          {%- if running_count | int == total | int -%}RUNNING
+          {%- elif running_count | int == 0 -%}STOPPED
+          {%- else -%}PARTIAL{%- endif -%}
+        flags: >-
+          {{
+            (['always-on'] if item.value.always_on | default(false) else []) +
+            (['hardware-bound'] if item.value.hardware_bound | default(false) else [])
+          }}

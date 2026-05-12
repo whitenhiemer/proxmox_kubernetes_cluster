@@ -27,7 +27,8 @@
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant beardie truenas sdr pxe mailserver zigbee2mqtt claude-os pwnagotchi \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
-        docs-build docs-dev resume-build
+        docs-build docs-dev resume-build \
+        group-status group-start group-stop
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -289,3 +290,18 @@ destroy: ## Tear down VMs and clean generated configs
 clean: ## Remove generated Talos configs (does not destroy VMs)
 	rm -rf $(TALOS_OUT)
 	@echo "Cleaned generated configs."
+
+# ===== Service Group Management =====
+
+group-status: ## Show running status of all service groups
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/group-status.yml
+
+group-start: ## Start a service group: make group-start GROUP=media
+	@if [ -z "$(GROUP)" ]; then echo "Usage: make group-start GROUP=<name>"; exit 1; fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/group-start.yml \
+		--extra-vars "target_group=$(GROUP)"
+
+group-stop: ## Stop a service group: make group-stop GROUP=media
+	@if [ -z "$(GROUP)" ]; then echo "Usage: make group-stop GROUP=<name>"; exit 1; fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/group-stop.yml \
+		--extra-vars "target_group=$(GROUP)"

@@ -742,6 +742,94 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 
 ---
 
+### Piboard Touchscreen Integration
+
+**Status**: PLANNED (verify)
+
+**Type**: Hardware + software — Waveshare 5-inch HDMI display (already installed on piboard Pi 3B)
+**Goal**: Enable the resistive touchscreen on the Waveshare display so the piboard dashboard can respond to touch input. The display hardware supports touch via XPT2046 SPI, and SPI is already enabled in `deploy/setup-pi.sh` via `/boot/firmware/config.txt`.
+
+**What to verify**:
+1. Touch device appears: `ls /dev/input/event*` on the Pi — should see an XPT2046 device
+2. Test raw touch: `evtest /dev/input/event0` (or whichever event node)
+3. Chromium kiosk calibration: may need `xinput_calibrator` if touch coordinates are off
+4. Consider interaction: tap to toggle full-screen, swipe for future panels, etc.
+
+**Potential blockers**:
+- XPT2046 overlay not loaded (add `dtoverlay=xpt2046,cs=0,penirq=17,speed=1000000,swapxy=0` to `/boot/firmware/config.txt`)
+- Touch events not reaching Chromium (Chromium needs `--touch-events=enabled` flag)
+- Coordinate calibration (calibration matrix in X11 `99-calibration.conf`)
+
+**Implementation**:
+1. SSH to Pi (`ssh pi@192.168.86.131`)
+2. Check `dmesg | grep -i xpt2046` and `ls /dev/input/`
+3. Add overlay if missing, reboot, re-verify
+4. Add `--touch-events=enabled` to `deploy/piboard-kiosk.service` Chromium flags
+5. Run `xinput_calibrator` via SSH with `DISPLAY=:0` to generate calibration config
+
+---
+
+### Grafana Cloud Paging / Alerting
+
+**Status**: PLANNED
+
+**Type**: Monitoring integration — Grafana Cloud (grafana.net account)
+**Goal**: Route critical homelab alerts (libby alerts, downed services, sensor failures) through Grafana Cloud's alerting and on-call paging infrastructure instead of raw Discord webhooks. Provides escalation policies, silences, acknowledgment, and mobile push/SMS paging.
+
+**Scope**:
+- Grafana Cloud connected to the self-hosted Prometheus at `192.168.86.25:9090` via Grafana Agent or remote_write
+- Existing Alertmanager rules forwarded to Grafana Cloud Alerting (or replaced by Grafana managed alerts)
+- PagerDuty/OpsGenie-style on-call routing for: Libby life alert triggers, service down (blackbox probe), enclosure temperature alerts, Dexcom glucose critical alerts
+
+**Key decisions**:
+- Push metrics to Grafana Cloud (remote_write from Prometheus) or run Grafana Agent on the monitoring LXC
+- Use Grafana Alerting (cloud-managed) or keep Alertmanager and add a Grafana Cloud contact point
+- API key stored in Ansible vault / secrets.yaml — never committed to git
+
+**Implementation plan**:
+1. Configure Grafana Agent on monitoring LXC (205) to scrape local Prometheus and ship to Grafana Cloud
+2. Add Grafana Cloud data source to self-hosted Grafana (for cross-referencing local vs cloud)
+3. Create Grafana Cloud alert rules mirroring current Alertmanager rules
+4. Configure on-call routing: Discord for non-critical, mobile push/SMS for critical
+5. Update `make monitoring` to inject Grafana Cloud credentials
+
+---
+
+### Gutgrinda Enclosure in Grafana
+
+**Status**: PLANNED
+
+**Type**: Monitoring addition — no new infrastructure
+**Goal**: Grafana dashboard panels for Gutgrinda's enclosure (temperature, humidity, plug states) pulled from Home Assistant via the HA Prometheus integration.
+
+**HA Prometheus integration**:
+Enable in `configuration.yaml` (or `packages/beardie.yaml`):
+```yaml
+prometheus:
+  namespace: homeassistant
+  filter:
+    include_entity_globs:
+      - sensor.0xa4c13874d0343902_*
+      - switch.gutgrinda_*
+```
+This exposes `GET /api/prometheus` on HA (port 8123). Add a Prometheus scrape job targeting `192.168.86.41:8123`.
+
+**Dashboard panels**:
+- Temperature gauge (95–115°F range, with color thresholds)
+- Humidity gauge
+- Basking lamp on/off state over time
+- Ambient light on/off state over time
+- Ceramic heater on/off state over time
+- Alert history from `ALERTS{}` where alertname includes "Gutgrinda"
+
+**Implementation plan**:
+1. Add `prometheus:` config to `packages/beardie.yaml`, redeploy via `make beardie`
+2. Add scrape job to `ansible/files/monitoring/prometheus/prometheus.yml`
+3. Create Grafana dashboard JSON in `ansible/files/monitoring/grafana/dashboards/`
+4. Redeploy monitoring: `make monitoring`
+
+---
+
 ## Implementation Priority
 
 1. **NAS** -- DONE (TrueNAS Scale 24.04, ZFS pool `tank` on 2TB Ceph RBD, NFS shares for media/backups/isos)
@@ -766,6 +854,9 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 20. **Zigbee2MQTT** -- DONE (LXC 214 on zotac at 192.168.86.36; SONOFF Zigbee Dongle Lite via USB passthrough; Zigbee2MQTT 2.10.1 + Mosquitto on :1883; HA connects via MQTT integration at 192.168.86.36:1883)
 21. **pwnagotchi** -- DONE (LXC 216 on thinkcentre3 at 192.168.86.38; TP-Link TL-WN722N v2 RTL8188EUS USB WiFi in monitor mode via lxc.net.1.type=phys; bettercap + pwngrid + pwnagotchi Python AI; pwnagotchi.woodhead.tech)
 22. **Legitimate SSL Certs** -- PLANNED (replace self-signed/wildcard certs with proper Let's Encrypt certs per service; evaluate cert-manager in K8s or Traefik ACME for LXC services; ensure all subdomains have valid TLS)
+23. **Piboard Touchscreen** -- PLANNED (verify XPT2046 SPI touch on Waveshare 5" display; add `--touch-events=enabled` to Chromium kiosk flags; calibrate if needed)
+24. **Grafana Cloud Paging** -- PLANNED (route critical alerts through grafana.net on-call; Grafana Agent on monitoring LXC ships metrics to cloud; escalation for Libby alerts, downed services, enclosure, Dexcom)
+25. **Gutgrinda Enclosure in Grafana** -- PLANNED (enable HA Prometheus integration, scrape from monitoring LXC, Grafana dashboard for temp/humidity/plug states)
 
 ---
 
