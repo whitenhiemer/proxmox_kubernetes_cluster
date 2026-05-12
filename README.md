@@ -22,6 +22,10 @@ ISP Modem/ONT
     |       +-- SDR Scanner LXC (192.168.86.32) -- Trunk Recorder + rdio-scanner
     |       +-- Kanboard LXC (192.168.86.33) -- project management
     |       +-- Mailserver LXC (192.168.86.34) -- Mailcow email server
+    |       +-- PXE Boot Server LXC (192.168.86.35) -- proxy-DHCP + TFTP + HTTP
+    |       +-- Zigbee2MQTT LXC (192.168.86.36) -- Zigbee USB bridge for Home Assistant
+    |       +-- Claude OS LXC (192.168.86.37) -- AI memory system (claude-os.woodhead.tech)
+    |       +-- pwnagotchi LXC (192.168.86.38) -- WiFi learning device (pwnagotchi.woodhead.tech)
     |       +-- K8s VIP (192.168.86.100)
     |
     +-- WireGuard LXC (192.168.86.39) -- VPN tunnel (UDP 51820)
@@ -122,6 +126,10 @@ make harden
 | `kanboard`          | 3     | Deploy Kanboard project management              |
 | `mailserver`        | 3     | Deploy Mailcow email server (Mailgun relay)      |
 | `sdr`               | 3     | Deploy SDR scanner stack (Trunk Recorder)        |
+| `pxe`               | 3     | Deploy PXE boot server (proxy-DHCP + TFTP)       |
+| `zigbee2mqtt`       | 3     | Deploy Zigbee2MQTT + Mosquitto on zotac          |
+| `claude-os`         | 3     | Deploy Claude OS AI memory system                |
+| `pwnagotchi`        | 3     | Deploy pwnagotchi WiFi learning device           |
 | `bootstrap`         | 4     | Generate Talos configs and bootstrap K8s       |
 | `kubeconfig`        | 4     | Fetch kubeconfig from running cluster          |
 | `health`            | 4     | Check K8s cluster health via talosctl          |
@@ -168,6 +176,10 @@ make harden
 │   ├── lxc-sdr.tf                       # SDR scanner LXC
 │   ├── lxc-kanboard.tf                  # Kanboard project management LXC
 │   ├── lxc-mailserver.tf                # Mailcow email server LXC
+│   ├── lxc-pxe-server.tf               # PXE boot server LXC
+│   ├── lxc-zigbee2mqtt.tf              # Zigbee2MQTT LXC (zotac)
+│   ├── lxc-claude-os.tf                # Claude OS AI memory system LXC
+│   ├── lxc-pwnagotchi.tf               # pwnagotchi WiFi learning device LXC
 │   ├── lxc-ssh-hook.tf                  # Proxmox hookscript: fix Debian 12.12 SSH socket
 │   ├── vm-truenas.tf                     # TrueNAS Scale NAS VM
 │   ├── vm-truenas-variables.tf           # TrueNAS variables
@@ -201,6 +213,10 @@ make harden
 │   │   ├── setup-kanboard.yml           # Deploy Kanboard
 │   │   ├── setup-sdr.yml               # Deploy SDR scanner
 │   │   ├── setup-mailserver.yml         # Deploy Mailcow email server
+│   │   ├── setup-pxe-server.yml        # Deploy PXE boot server
+│   │   ├── setup-zigbee2mqtt.yml       # Deploy Zigbee2MQTT + Mosquitto
+│   │   ├── setup-claude-os.yml         # Deploy Claude OS AI memory system
+│   │   ├── setup-pwnagotchi.yml        # Deploy pwnagotchi + bettercap + pwngrid
 │   │   ├── patch-proxmox.yml              # Patch Proxmox VE hosts
 │   │   ├── patch-lxc.yml                 # Patch Debian packages on LXCs
 │   │   ├── patch-docker.yml              # Update Docker images on all stacks
@@ -324,6 +340,10 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) for full details, IP plan, and hardware c
 | Email Server     | LXC  | Ready       | `mail.woodhead.tech`       |
 | Docusaurus       | LXC  | Ready       | `docs.woodhead.tech`       |
 | Resume Site      | LXC  | Ready       | `resume.woodhead.tech`     |
+| PXE Boot Server  | LXC  | Ready       | LAN-only (no subdomain)    |
+| Zigbee2MQTT      | LXC  | Ready       | LAN-only (MQTT :1883)      |
+| Claude OS        | LXC  | Ready       | `claude-os.woodhead.tech`  |
+| pwnagotchi       | LXC  | Ready       | `pwnagotchi.woodhead.tech` |
 
 Traefik routes for all planned services are stubbed out in `ansible/files/traefik/dynamic/` -- uncomment as you deploy each service.
 

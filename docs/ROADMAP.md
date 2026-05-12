@@ -330,6 +330,8 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.34     | Mailcow email        | LXC  | 212   |
 | 192.168.86.35     | PXE boot server      | LXC  | 213   |
 | 192.168.86.36     | Zigbee2MQTT          | LXC  | 214   |
+| 192.168.86.37     | Claude OS            | LXC  | 215   |
+| 192.168.86.38     | pwnagotchi           | LXC  | 216   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.27     | Libby Alert          | LXC  | 209   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
@@ -762,6 +764,36 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 18. **UPS Monitoring Dashboard** -- DONE (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters scraping tc3/tower1/zotac; battery charge, load, runtime, voltage, status per UPS)
 19. **Email Server** -- DONE (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
 20. **Zigbee2MQTT** -- DONE (LXC 214 on zotac at 192.168.86.36; SONOFF Zigbee Dongle Lite via USB passthrough; Zigbee2MQTT 2.10.1 + Mosquitto on :1883; HA connects via MQTT integration at 192.168.86.36:1883)
+21. **pwnagotchi** -- DONE (LXC 216 on thinkcentre3 at 192.168.86.38; TP-Link TL-WN722N v2 RTL8188EUS USB WiFi in monitor mode via lxc.net.1.type=phys; bettercap + pwngrid + pwnagotchi Python AI; pwnagotchi.woodhead.tech)
+22. **Legitimate SSL Certs** -- PLANNED (replace self-signed/wildcard certs with proper Let's Encrypt certs per service; evaluate cert-manager in K8s or Traefik ACME for LXC services; ensure all subdomains have valid TLS)
+
+---
+
+### Legitimate SSL Certificates
+
+**Status**: PLANNED
+
+**Type**: Configuration change (Traefik ACME + Let's Encrypt)
+**Goal**: All `*.woodhead.tech` subdomains should present valid Let's Encrypt certificates
+rather than relying on self-signed or wildcard certs that trigger browser warnings.
+
+**Current state**: Traefik handles TLS termination via Let's Encrypt with Cloudflare DNS-01
+challenge. The static config (`traefik.yml`) has ACME configured but several routes may
+still serve self-signed certs or have cert resolver misconfigured.
+
+**What to do**:
+1. Audit all Traefik dynamic configs — ensure every `tls:` block references `certresolver: letsencrypt`
+2. Verify Cloudflare API token has `Zone:DNS:Edit` permission for DNS-01 challenge
+3. Check Traefik ACME storage (`/etc/traefik/acme.json`) is populated with valid certs for all subdomains
+4. Test each subdomain: `curl -v https://<subdomain>.woodhead.tech` and check the cert
+5. For K8s ingress routes, evaluate cert-manager with Let's Encrypt ClusterIssuer
+
+**Requirements**:
+- Cloudflare API token with DNS edit permissions (already needed for DDNS)
+- Traefik ACME storage persisted across restarts (`/etc/traefik/acme.json`, chmod 600)
+- All subdomains must be routable via Traefik before ACME challenge can complete
+
+---
 
 ## Hardware Considerations
 

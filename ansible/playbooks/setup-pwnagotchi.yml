@@ -14,19 +14,40 @@
 ---
 
 # --- Play 1: WiFi interface passthrough on pve3 ---
-- name: Configure WiFi interface passthrough on pve3
+- name: Configure WiFi interface passthrough on thinkcentre3
   hosts: pve3
   tasks:
-    - name: Find WiFi interface (RTL8188EUS)
+    - name: Check if wlan0 is already inside the LXC
+      ansible.builtin.shell: pct exec 216 -- ip link show wlan0
+      register: lxc_wlan_check
+      changed_when: false
+      failed_when: false
+
+    - name: Find WiFi interface on host (RTL8188EUS, only if not yet in LXC)
       ansible.builtin.shell: |
-        ip -o link show | awk -F': ' '{print $2}' | grep -E '^wl' | head -1
+        # USB interfaces use wlx<mac> naming; look for wlx or vendor 2357 via sysfs
+        for iface in /sys/class/net/wlx*; do
+          [ -d "$iface" ] && basename "$iface" && exit 0
+        done
+        # Fallback: vendor 2357 via sysfs walk
+        for iface in /sys/class/net/wl*; do
+          [ -d "$iface/device" ] || continue
+          vendorpath=$(readlink -f "$iface/device")
+          while [ "$vendorpath" != "/" ]; do
+            grep -qi "2357" "$vendorpath/idVendor" 2>/dev/null && basename "$iface" && exit 0
+            vendorpath=$(dirname "$vendorpath")
+          done
+        done
+        exit 1
       register: wifi_iface
       changed_when: false
-      failed_when: wifi_iface.stdout | trim == ""
+      failed_when: wifi_iface.rc != 0
+      when: lxc_wlan_check.rc != 0
 
     - name: Show detected interface
       ansible.builtin.debug:
-        msg: "WiFi interface detected: {{ wifi_iface.stdout | trim }}"
+        msg: "WiFi interface detected on host: {{ wifi_iface.stdout | trim }}"
+      when: lxc_wlan_check.rc != 0
 
     - name: Add WiFi interface passthrough to LXC config
       ansible.builtin.blockinfile:
@@ -37,7 +58,13 @@
           lxc.net.1.link={{ wifi_iface.stdout | trim }}
           lxc.net.1.name=wlan0
           lxc.net.1.flags=up
+      when: lxc_wlan_check.rc != 0
       notify: restart lxc
+
+    - name: WiFi passthrough already configured
+      ansible.builtin.debug:
+        msg: "wlan0 already present in LXC 216 — skipping passthrough config"
+      when: lxc_wlan_check.rc == 0
 
     - name: Create udev rule for stable WiFi device permissions
       ansible.builtin.copy:
@@ -87,9 +114,13 @@
           - python3-pip
           - python3-venv
           - python3-dev
+          - python3-dbus
           - build-essential
           - libssl-dev
           - libffi-dev
+          - libglib2.0-dev
+          - libdbus-1-dev
+          - libcap-dev
           - dnsmasq
           - aircrack-ng
         state: present
@@ -127,19 +158,68 @@
         cmd: bettercap -eval "caplets.update; quit"
         creates: /usr/local/share/bettercap/caplets
 
+    # --- pwngrid (peer exchange daemon, also generates identity keys) ---
+    - name: Get latest pwngrid release info
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/evilsocket/pwngrid/releases/latest
+        return_content: true
+        headers:
+          Accept: application/vnd.github.v3+json
+      register: pwngrid_release
+
+    - name: Download pwngrid linux_amd64
+      ansible.builtin.get_url:
+        url: "{{ pwngrid_release.json.assets | selectattr('name', 'match', '.*linux_amd64.*\\.zip') | map(attribute='browser_download_url') | first }}"
+        dest: /tmp/pwngrid.zip
+        mode: "0644"
+
+    - name: Unzip pwngrid
+      ansible.builtin.unarchive:
+        src: /tmp/pwngrid.zip
+        dest: /tmp/
+        remote_src: true
+
+    - name: Install pwngrid binary
+      ansible.builtin.copy:
+        src: /tmp/pwngrid
+        dest: /usr/local/bin/pwngrid
+        mode: "0755"
+        remote_src: true
+
     # --- pwnagotchi Python package ---
-    - name: Create pwnagotchi venv
+    - name: Create pwnagotchi venv (with system-site-packages for dbus)
       ansible.builtin.command:
-        cmd: python3 -m venv {{ pwnagotchi_dir }}/venv
+        cmd: python3 -m venv --system-site-packages {{ pwnagotchi_dir }}/venv
         creates: "{{ pwnagotchi_dir }}/venv/bin/activate"
 
-    - name: Install pwnagotchi Python package
+    - name: Install pwnagotchi and dependencies from GitHub/PyPI
       ansible.builtin.pip:
         name:
-          - pwnagotchi
-          - pwnagotchi-torch
+          - python-prctl
+          - "git+https://github.com/jayofelony/pwnagotchi.git"
         virtualenv: "{{ pwnagotchi_dir }}/venv"
         extra_args: "--upgrade"
+
+    # --- Monitor mode scripts (bettercap !cmd doesn't handle &&) ---
+    - name: Install monitor mode start script
+      ansible.builtin.copy:
+        dest: /usr/local/bin/pwnagotchi-mon-start.sh
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          /usr/sbin/ip link set wlan0 down
+          /usr/sbin/iw wlan0 set monitor control
+          /usr/sbin/ip link set wlan0 up
+
+    - name: Install monitor mode stop script
+      ansible.builtin.copy:
+        dest: /usr/local/bin/pwnagotchi-mon-stop.sh
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          /usr/sbin/ip link set wlan0 down
+          /usr/sbin/iw wlan0 set type managed
+          /usr/sbin/ip link set wlan0 up
 
     # --- Directories ---
     - name: Create directories
@@ -152,33 +232,54 @@
         - "{{ handshakes_dir }}"
         - "{{ pwnagotchi_dir }}/logs"
 
-    # --- Config ---
-    - name: Write pwnagotchi config
+    # --- User config (overrides only — pwnagotchi regenerates defaults.toml on each start) ---
+    # pwnagotchi overwrites --config with package defaults.toml on every run if they differ.
+    # The correct pattern is --user-config for persistent overrides, which are merged on top.
+    - name: Write pwnagotchi user config (overrides)
       ansible.builtin.copy:
-        dest: /etc/pwnagotchi/config.toml
+        dest: /etc/pwnagotchi/user_config.toml
         mode: "0600"
         content: |
-          # pwnagotchi config - managed by Ansible
-          main.name = "pwnagotchi"
-          main.lang = "en"
-          main.whitelist = []
-          main.iface = "wlan0"
-          main.mon_start_cmd = "/sbin/ip link set wlan0 down && /usr/sbin/iw wlan0 set monitor control && /sbin/ip link set wlan0 up"
-          main.mon_stop_cmd = "/sbin/ip link set wlan0 down && /usr/sbin/iw wlan0 set type managed && /sbin/ip link set wlan0 up"
+          # pwnagotchi user overrides - managed by Ansible
+          # Merged on top of package defaults at startup via --user-config flag.
 
-          fs.memory.enabled = false
+          [main]
+          iface = "wlan0"
+          mon_start_cmd = "/usr/local/bin/pwnagotchi-mon-start.sh"
+          mon_stop_cmd = "/usr/local/bin/pwnagotchi-mon-stop.sh"
 
-          bettercap.handshakes = "{{ handshakes_dir }}"
+          [fs.memory]
+          enabled = false
 
-          ui.display.enabled = false
-          ui.web.enabled = true
-          ui.web.address = "0.0.0.0"
-          ui.web.port = 8080
-          ui.web.username = "{{ web_username }}"
-          ui.web.password = "{{ web_password }}"
+          [fs.memory.mounts.log]
+          enabled = false
+
+          [fs.memory.mounts.data]
+          enabled = false
       notify: restart pwnagotchi
 
-    # --- systemd: bettercap ---
+    # --- systemd: pwngrid (peer exchange daemon, must start first to put wlan0 in monitor mode) ---
+    - name: Install pwngrid systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/pwngrid.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=pwngrid peer exchange daemon
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStartPre=/usr/local/bin/pwnagotchi-mon-start.sh
+          ExecStart=/usr/local/bin/pwngrid -keys /etc/pwnagotchi -address 127.0.0.1:8666 -iface wlan0
+          Restart=on-failure
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+      notify: reload systemd
+
+    # --- systemd: bettercap (starts after pwngrid so wlan0 is already in monitor mode) ---
     - name: Install bettercap systemd service
       ansible.builtin.copy:
         dest: /etc/systemd/system/bettercap.service
@@ -186,7 +287,8 @@
         content: |
           [Unit]
           Description=bettercap WiFi framework
-          After=network.target
+          After=network.target pwngrid.service
+          Wants=pwngrid.service
 
           [Service]
           Type=simple
@@ -208,12 +310,12 @@
         content: |
           [Unit]
           Description=pwnagotchi AI agent
-          After=network.target bettercap.service
-          Requires=bettercap.service
+          After=network.target bettercap.service pwngrid.service
+          Requires=bettercap.service pwngrid.service
 
           [Service]
           Type=simple
-          ExecStart={{ pwnagotchi_dir }}/venv/bin/pwnagotchi --config /etc/pwnagotchi/config.toml
+          ExecStart={{ pwnagotchi_dir }}/venv/bin/pwnagotchi --config /etc/pwnagotchi/config.toml --user-config /etc/pwnagotchi/user_config.toml
           Restart=on-failure
           RestartSec=10
           StandardOutput=append:{{ pwnagotchi_dir }}/logs/pwnagotchi.log
@@ -230,6 +332,7 @@
         state: started
         daemon_reload: true
       loop:
+        - pwngrid
         - bettercap
         - pwnagotchi
 

@@ -8,7 +8,7 @@
 # After `terraform apply`, run: make pwnagotchi
 
 resource "proxmox_virtual_environment_container" "pwnagotchi" {
-  node_name   = "pve3"
+  node_name   = "thinkcentre3"
   vm_id       = var.pwnagotchi_vmid
   description = "Pwnagotchi - passive WiFi handshake capture (RTL8188EUS on pve3)"
   tags        = ["service", "security", "wifi"]
