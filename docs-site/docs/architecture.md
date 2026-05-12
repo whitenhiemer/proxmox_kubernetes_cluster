@@ -423,6 +423,57 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 
 **Provider:** [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox-virtual-environment) ~0.66.0
 
+## Service Group Management
+
+Services are organized into logical groups that can be started and stopped as a unit. Node location is discovered at runtime via the Proxmox cluster API — no node is hardcoded.
+
+| Group | VMIDs | RAM | Always On | Notes |
+|---|---|---|---|---|
+| `core` | 200 (traefik), 208 (wireguard) | ~512MB | Yes | Stop refused |
+| `storage` | 300 (truenas) | ~16GB | Yes | Stop refused; required by `media` |
+| `security` | 207 (authentik) | ~2GB | No | Required by `media`, `apps` |
+| `home` | 301 (homeassistant), 214 (zigbee2mqtt), 209 (libby-alert) | ~2.7GB | No | |
+| `media` | 202 (arr-stack), 203 (plex), 204 (jellyfin) | ~8GB | No | Depends on `core`, `storage` |
+| `observability` | 205 (monitoring), 206 (openclaw) | ~4GB | No | |
+| `apps` | 201 (recipe-site), 211 (kanboard), 215 (claude-os) | ~6.5GB | No | |
+| `infra` | 212 (mailserver), 213 (pxe) | ~3.5GB | No | |
+| `sdr` | 210 (sdr) | ~2GB | No | RTL-SDR USB passthrough |
+| `special` | 216 (pwnagotchi) | ~1GB | No | Hardware-bound; excluded from bulk ops |
+| `k8s` | 400 (talos-cp-0), 410 (worker-0), 411 (worker-1) | ~20GB | No | Drain workers before stop |
+
+**Max potential savings:** ~42GB RAM when all non-`core`, non-`storage` groups are stopped.
+
+### Usage
+
+```bash
+make group-status                 # Show live status of all groups
+make group-start GROUP=<name>     # Start a group
+make group-stop GROUP=<name>      # Stop a group
+```
+
+### Safety Rules
+
+- **`always_on`** (`core`, `storage`) — stop is refused unconditionally
+- **Dependency blocking** — stop is blocked if a dependent group is running; operator must stop dependents first, no cascading
+- **Dependency warnings** — start emits a warning (non-blocking) if `depends_on` groups have stopped members
+- **`hardware_bound`** (`special`) — excluded from bulk ops; manage individual members via `pct`/`qm` on the host node directly
+- **K8s group** — workers are drained via `kubectl drain` before VMs stop; control plane starts first on start
+
+:::note
+Stop is never cascaded. `make group-stop GROUP=storage` will fail while `media` is running — stop `media` first, then `storage`.
+:::
+
+### Implementation
+
+| File | Purpose |
+|---|---|
+| `ansible/vars/service_groups.yml` | Group definitions, dependency graph, `proxmox_node_map` |
+| `ansible/playbooks/group-status.yml` | Read-only status query |
+| `ansible/playbooks/group-start.yml` | Start with dependency warnings |
+| `ansible/playbooks/group-stop.yml` | Stop with dependency blocking |
+
+Node discovery uses `pvesh get /cluster/resources` on `pve1`. The `proxmox_node_map` in `service_groups.yml` translates Proxmox node hostnames (e.g., `thinkcentre2`) to Ansible inventory names (e.g., `pve2`).
+
 ## Backup Strategy
 
 | What | Where | Method | Frequency |

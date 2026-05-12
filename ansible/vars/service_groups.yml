@@ -1,5 +1,16 @@
 # service_groups.yml - Logical service group definitions for resource management
 #
+# proxmox_node_map translates pvesh node names (Proxmox hostnames) to Ansible
+# inventory names. Update if nodes are renamed or added.
+proxmox_node_map:
+  thinkcentre1: pve1
+  thinkcentre2: pve2
+  thinkcentre3: pve3
+  tower1: tower1
+  zotac: zotac
+
+
+#
 # Groups can be started/stopped as a unit via:
 #   make group-status
 #   make group-start GROUP=<name>
@@ -66,11 +77,15 @@ service_groups:
       - { vmid: 212, name: mailserver, type: lxc }
       - { vmid: 213, name: pxe, type: lxc }
 
+  sdr:
+    description: "SDR scanner (Trunk Recorder + rdio-scanner)"
+    members:
+      - { vmid: 210, name: sdr, type: lxc }
+
   special:
     hardware_bound: true
     description: "USB passthrough services (excluded from bulk ops)"
     members:
-      - { vmid: 210, name: sdr, type: lxc }
       - { vmid: 216, name: pwnagotchi, type: lxc }
 
   k8s:

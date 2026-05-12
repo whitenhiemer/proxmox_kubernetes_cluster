@@ -106,7 +106,7 @@
 
     - name: Stop k8s worker VMs
       ansible.builtin.shell: qm shutdown {{ member.vmid }}
-      delegate_to: "{{ vm_node[member.vmid | string] }}"
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
       loop: "{{ service_groups[target_group].members | selectattr('role', 'defined') | selectattr('role', 'equalto', 'worker') | list }}"
       loop_control:
         loop_var: member
@@ -117,7 +117,7 @@
 
     - name: Stop k8s control plane VM
       ansible.builtin.shell: qm shutdown {{ member.vmid }}
-      delegate_to: "{{ vm_node[member.vmid | string] }}"
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
       loop: "{{ service_groups[target_group].members | selectattr('role', 'defined') | selectattr('role', 'equalto', 'control_plane') | list }}"
       loop_control:
         loop_var: member
@@ -128,7 +128,7 @@
 
     - name: Stop LXC containers
       ansible.builtin.shell: pct stop {{ member.vmid }}
-      delegate_to: "{{ vm_node[member.vmid | string] }}"
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
       loop: "{{ service_groups[target_group].members | selectattr('type', 'equalto', 'lxc') | list }}"
       loop_control:
         loop_var: member
@@ -139,7 +139,7 @@
 
     - name: Stop VMs
       ansible.builtin.shell: qm shutdown {{ member.vmid }}
-      delegate_to: "{{ vm_node[member.vmid | string] }}"
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
       loop: "{{ service_groups[target_group].members | selectattr('type', 'equalto', 'vm') | rejectattr('role', 'defined') | list }}"
       loop_control:
         loop_var: member

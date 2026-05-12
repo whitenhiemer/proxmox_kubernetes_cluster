@@ -23,6 +23,7 @@ and resource allocation.
 - [VLAN Segmentation Plan](#vlan-segmentation-plan)
 - [Firewall Rules](#firewall-rules)
 - [Backup Strategy](#backup-strategy)
+- [Service Group Management](#service-group-management)
 
 ---
 
@@ -893,6 +894,55 @@ the future (OPNsense VM or UniFi Dream Machine).
 
 **Offsite (recommended future):** Replicate TrueNAS backups to cloud storage
 or rotate USB drives.
+
+---
+
+## Service Group Management
+
+Services are organized into logical groups that can be started and stopped as a unit. Node location is discovered at runtime via the Proxmox cluster API — no node is hardcoded.
+
+| Group | VMIDs | RAM | Always On | Notes |
+|-------|-------|-----|-----------|-------|
+| `core` | 200 (traefik), 208 (wireguard) | ~512MB | Yes | Stop refused |
+| `storage` | 300 (truenas) | ~16GB | Yes | Stop refused; required by `media` |
+| `security` | 207 (authentik) | ~2GB | No | Required by `media`, `apps` |
+| `home` | 301 (homeassistant), 214 (zigbee2mqtt), 209 (libby-alert) | ~2.7GB | No | |
+| `media` | 202 (arr-stack), 203 (plex), 204 (jellyfin) | ~8GB | No | Depends on `core`, `storage` |
+| `observability` | 205 (monitoring), 206 (openclaw) | ~4GB | No | |
+| `apps` | 201 (recipe-site), 211 (kanboard), 215 (claude-os) | ~6.5GB | No | |
+| `infra` | 212 (mailserver), 213 (pxe) | ~3.5GB | No | |
+| `sdr` | 210 (sdr) | ~2GB | No | RTL-SDR USB passthrough |
+| `special` | 216 (pwnagotchi) | ~1GB | No | Hardware-bound; excluded from bulk ops |
+| `k8s` | 400 (talos-cp-0), 410 (worker-0), 411 (worker-1) | ~20GB | No | Drain workers before stop |
+
+**Max potential savings:** ~42GB RAM when all non-`core`, non-`storage` groups are stopped.
+
+### Usage
+
+```bash
+make group-status                   # Show live status of all groups
+make group-start GROUP=<name>       # Start a group
+make group-stop GROUP=<name>        # Stop a group
+```
+
+### Safety Rules
+
+- **`always_on`** (`core`, `storage`) — stop is refused unconditionally
+- **Dependency blocking** — stop is blocked if a dependent group is running (e.g., `make group-stop GROUP=storage` fails while `media` is running); operator must stop dependents first, no cascading
+- **Dependency warnings** — start emits a warning (non-blocking) if `depends_on` groups have stopped members
+- **`hardware_bound`** (`special`) — excluded from bulk ops; manage individual members via `pct`/`qm` on the host node directly
+- **K8s group** — workers are drained via `kubectl drain --ignore-daemonsets --delete-emptydir-data` before VMs are shut down; control plane starts first on start
+
+### Implementation Files
+
+| File | Purpose |
+|------|---------|
+| `ansible/vars/service_groups.yml` | Group definitions: VMIDs, types, dependency graph, `proxmox_node_map` |
+| `ansible/playbooks/group-status.yml` | Read-only status query against cluster API |
+| `ansible/playbooks/group-start.yml` | Start group with dependency warnings |
+| `ansible/playbooks/group-stop.yml` | Stop group with dependency blocking |
+
+Node discovery queries `pvesh get /cluster/resources --type vm` on `pve1`. The `proxmox_node_map` in `service_groups.yml` translates Proxmox node hostnames (e.g., `thinkcentre2`) to Ansible inventory names (e.g., `pve2`).
 
 ---
 
