@@ -172,7 +172,7 @@ and resource allocation.
 | 192.168.86.28      | authentik        | LXC    | 207   | Identity provider (Authentik SSO, OIDC)    |
 | 192.168.86.39      | wireguard        | LXC    | 208   | WireGuard VPN tunnel (UDP 51820)    |
 | 192.168.86.40      | truenas          | VM     | 300   | NAS, ZFS, NFS/SMB shares            |
-| 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home       |
+| 192.168.86.41      | homeassistant    | VM     | 301   | Home Assistant OS, smart home (Zigbee2MQTT + Matter; beardie enclosure automation) |
 | 192.168.86.32      | sdr              | LXC    | 210   | SDR scanner (Trunk Recorder + rdio-scanner)|
 | 192.168.86.33      | kanboard         | LXC    | 211   | Kanboard task queue (ClawBot)       |
 | 192.168.86.34      | mailserver       | LXC    | 212   | Mailcow email (woodhead.tech)       |

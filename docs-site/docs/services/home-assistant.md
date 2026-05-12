@@ -42,3 +42,35 @@ Settings > System > Backups > Create Backup, then Settings > System > Updates > 
 
 - Alexa Media Player -- for Dexcom glucose voice announcements
 - Webhook automations -- receives alerts from Alertmanager
+- Zigbee2MQTT (MQTT broker at `192.168.86.36:1883`) -- Zigbee device integration
+- Matter -- WiFi smart plug support via HAOS Matter Server addon
+
+## Packages
+
+HA configuration uses `homeassistant: packages: !include_dir_named packages` so
+automation bundles can be deployed independently. Package files live in
+`ansible/files/homeassistant/packages/` and are deployed via `make beardie`.
+
+### Gutgrinda Skullkrumpa da Choppy
+
+Bearded dragon enclosure automation (`packages/beardie.yaml`):
+
+| Entity | ID |
+|---|---|
+| Temp/humidity | `sensor.0xa4c13874d0343902_temperature` / `_humidity` |
+| Basking lamp | `switch.gutgrinda_basking_lamp` (Matter, plug `3016-351-2379`) |
+| Ambient light | `switch.gutgrinda_ambient_light` (Matter, plug `2201-851-2373`) |
+
+**Logic:**
+- Basking lamp: on below 95°F / off above 110°F, daytime only (sun.sun condition), forced off at sunset
+- Ambient light: on at sunrise+30min, off at sunset-30min (seasonal via HA sun integration)
+- Alerts via Discord webhook (`!secret gutgrinda_discord_webhook`) for too hot (>115°F), too cold (<70°F), sensor offline
+
+**Deploy:**
+```bash
+make beardie GUTGRINDA_DISCORD_WEBHOOK=<webhook_url> HA_TOKEN=<token>
+```
+
+Deploys via `qm guest exec` on VM 301 through Proxmox host `192.168.86.29` (HAOS SSH addon
+cannot expose external ports). Writes package to `/mnt/data/supervisor/homeassistant/packages/`
+and webhook URL to `secrets.yaml`.
