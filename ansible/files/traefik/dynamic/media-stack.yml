@@ -13,6 +13,8 @@ http:
       service: plex
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
     # Jellyfin web UI -- no Authelia (Jellyfin has built-in auth)
     jellyfin:
@@ -22,6 +24,8 @@ http:
       service: jellyfin
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
     # TrueNAS admin UI -- protected by Authelia 2FA
     truenas:
@@ -31,6 +35,8 @@ http:
       service: truenas
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       middlewares:
         - authentik@file
 

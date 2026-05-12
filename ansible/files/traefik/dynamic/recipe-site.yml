@@ -16,6 +16,8 @@ http:
       service: recipe-site
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     # Backend: recipe site LXC running nginx on port 80

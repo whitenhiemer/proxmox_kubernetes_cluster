@@ -12,6 +12,8 @@ http:
       service: pwnagotchi
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     pwnagotchi:

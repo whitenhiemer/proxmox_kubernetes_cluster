@@ -15,6 +15,8 @@ http:
       service: claude-os-frontend
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
     claude-os-api:
       rule: "Host(`claude-os-api.woodhead.tech`)"
@@ -23,6 +25,8 @@ http:
       service: claude-os-api
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     claude-os-frontend:

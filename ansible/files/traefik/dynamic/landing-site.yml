@@ -12,8 +12,9 @@ http:
       tls:
         certResolver: cloudflare
         domains:
-          - main: "woodhead.tech"
+          - main: "*.woodhead.tech"
             sans:
+              - "woodhead.tech"
               - "www.woodhead.tech"
 
   services:

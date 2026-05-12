@@ -7,6 +7,8 @@ http:
       service: truenas
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       middlewares:
         - authentik@file
 

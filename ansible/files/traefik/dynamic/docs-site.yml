@@ -11,6 +11,8 @@ http:
       service: docs-site
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     docs-site:
