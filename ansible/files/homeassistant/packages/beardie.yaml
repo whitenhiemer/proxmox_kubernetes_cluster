@@ -4,6 +4,7 @@
 #   Temp/humidity sensor : sensor.0xa4c13874d0343902_temperature / _humidity (Zigbee, gutgrinda_enclosure)
 #   Basking lamp         : switch.gutgrinda_basking_lamp (Matter, plug 3016-351-2379)
 #   Ambient light        : switch.gutgrinda_ambient_light (Matter, plug 2201-851-2373)
+#   Ceramic heater       : switch.gutgrinda_ceramic_heater (Matter, plug 1016-521-2372)
 #
 # Notifications go to Discord via rest_command.gutgrinda_discord.
 # The webhook URL is stored in /config/secrets.yaml as gutgrinda_discord_webhook.
@@ -52,6 +53,24 @@ input_number:
     max: 90
     step: 1
     initial: 70
+    unit_of_measurement: "°F"
+    mode: box
+
+  gutgrinda_che_temp_on:
+    name: "Gutgrinda Ceramic Heater ON Threshold"
+    min: 50
+    max: 85
+    step: 1
+    initial: 70
+    unit_of_measurement: "°F"
+    mode: box
+
+  gutgrinda_che_temp_off:
+    name: "Gutgrinda Ceramic Heater OFF Threshold"
+    min: 55
+    max: 90
+    step: 1
+    initial: 80
     unit_of_measurement: "°F"
     mode: box
 
@@ -118,6 +137,49 @@ automation:
       - service: switch.turn_off
         target:
           entity_id: switch.gutgrinda_ambient_light
+
+  # Ceramic heater ON — temp dropped below threshold at night
+  - id: gutgrinda_che_on
+    alias: "Gutgrinda - Ceramic Heater ON"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.0xa4c13874d0343902_temperature
+        below: input_number.gutgrinda_che_temp_on
+    condition:
+      - condition: state
+        entity_id: sun.sun
+        state: "below_horizon"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.gutgrinda_ceramic_heater
+
+  # Ceramic heater OFF — temp reached target
+  - id: gutgrinda_che_off
+    alias: "Gutgrinda - Ceramic Heater OFF"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.0xa4c13874d0343902_temperature
+        above: input_number.gutgrinda_che_temp_off
+    condition:
+      - condition: state
+        entity_id: sun.sun
+        state: "below_horizon"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.gutgrinda_ceramic_heater
+
+  # Ceramic heater OFF at sunrise — hand off to basking lamp
+  - id: gutgrinda_che_sunrise
+    alias: "Gutgrinda - Ceramic Heater OFF at Sunrise"
+    trigger:
+      - platform: sun
+        event: sunrise
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.gutgrinda_ceramic_heater
 
   # Alert — enclosure too hot for 5 minutes
   - id: gutgrinda_alert_too_hot

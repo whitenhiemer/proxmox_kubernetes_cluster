@@ -14,6 +14,7 @@ Bearded dragon enclosure automation running as a Home Assistant package.
 | Temp/humidity sensor | ZG-227Z (`gutgrinda_enclosure`) | Zigbee → Z2M → MQTT | `sensor.0xa4c13874d0343902_temperature` |
 | Basking lamp plug | Linkind LC09003256 (`3016-351-2379`) | Matter (WiFi) | `switch.gutgrinda_basking_lamp` |
 | Ambient light plug | Linkind LC09003256 (`2201-851-2373`) | Matter (WiFi) | `switch.gutgrinda_ambient_light` |
+| Ceramic heater plug | Linkind LC09003256 (`1016-521-2372`) | Matter (WiFi) | `switch.gutgrinda_ceramic_heater` |
 
 ## Automation Logic
 
@@ -25,7 +26,10 @@ Daytime (sunrise+30m → sunset):
   sunset-30m   → ambient light OFF
 
 Nighttime:
-  sunset → basking lamp OFF (failsafe)
+  sunset       → basking lamp OFF (failsafe)
+  temp < 70°F  → ceramic heater ON
+  temp > 80°F  → ceramic heater OFF
+  sunrise      → ceramic heater OFF (hand off to basking lamp)
 
 Anytime:
   temp > 115°F for 5min  → Discord alert: too hot
