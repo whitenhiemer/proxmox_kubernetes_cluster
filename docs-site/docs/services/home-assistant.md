@@ -64,7 +64,7 @@ Bearded dragon enclosure automation (`packages/beardie.yaml`):
 **Logic:**
 - Basking lamp: on below 95°F / off above 110°F, daytime only (sun.sun condition), forced off at sunset
 - Ambient light: on at sunrise+30min, off at sunset-30min (seasonal via HA sun integration)
-- Alerts via Discord webhook (`!secret gutgrinda_discord_webhook`) for too hot (>115°F), too cold (<70°F), sensor offline
+- Alerts via Discord webhook (`!secret gutgrinda_discord_webhook`) for too hot (&gt;115°F), too cold (&lt;70°F), sensor offline
 
 **Deploy:**
 ```bash
