@@ -1,0 +1,172 @@
+# beardie.yaml - Enclosure automation for Gutgrinda Skullkrumpa da Choppy
+#
+# Entities:
+#   Temp/humidity sensor : sensor.0xa4c13874d0343902_temperature / _humidity (Zigbee, gutgrinda_enclosure)
+#   Basking lamp         : switch.gutgrinda_basking_lamp (Matter, plug 3016-351-2379)
+#   Ambient light        : switch.gutgrinda_ambient_light (Matter, plug 2201-851-2373)
+#
+# Deploy: make beardie (copies this file to /config/packages/beardie.yaml on HAOS)
+# After deploy: Developer Tools > YAML > Check Configuration, then restart HA.
+
+input_number:
+  gutgrinda_basking_temp_on:
+    name: "Gutgrinda Basking Lamp ON Threshold"
+    min: 70
+    max: 120
+    step: 1
+    initial: 95
+    unit_of_measurement: "°F"
+    mode: box
+
+  gutgrinda_basking_temp_off:
+    name: "Gutgrinda Basking Lamp OFF Threshold"
+    min: 70
+    max: 130
+    step: 1
+    initial: 110
+    unit_of_measurement: "°F"
+    mode: box
+
+  gutgrinda_alert_temp_max:
+    name: "Gutgrinda Alert Temp (Too Hot)"
+    min: 80
+    max: 140
+    step: 1
+    initial: 115
+    unit_of_measurement: "°F"
+    mode: box
+
+  gutgrinda_alert_temp_min:
+    name: "Gutgrinda Alert Temp (Too Cold)"
+    min: 50
+    max: 90
+    step: 1
+    initial: 70
+    unit_of_measurement: "°F"
+    mode: box
+
+automation:
+  # Basking lamp ON — temp dropped below threshold during daytime
+  - id: gutgrinda_basking_lamp_on
+    alias: "Gutgrinda - Basking Lamp ON"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.0xa4c13874d0343902_temperature
+        below: input_number.gutgrinda_basking_temp_on
+    condition:
+      - condition: state
+        entity_id: sun.sun
+        state: "above_horizon"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.gutgrinda_basking_lamp
+
+  # Basking lamp OFF — temp exceeded threshold
+  - id: gutgrinda_basking_lamp_off
+    alias: "Gutgrinda - Basking Lamp OFF (too hot)"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.0xa4c13874d0343902_temperature
+        above: input_number.gutgrinda_basking_temp_off
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.gutgrinda_basking_lamp
+
+  # Basking lamp OFF at sunset — failsafe, no heat lamp at night
+  - id: gutgrinda_basking_lamp_sunset
+    alias: "Gutgrinda - Basking Lamp OFF at Sunset"
+    trigger:
+      - platform: sun
+        event: sunset
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.gutgrinda_basking_lamp
+
+  # Ambient light ON at sunrise + 30 min (seasonal via sun integration)
+  - id: gutgrinda_ambient_light_on
+    alias: "Gutgrinda - Ambient Light ON"
+    trigger:
+      - platform: sun
+        event: sunrise
+        offset: "+00:30:00"
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.gutgrinda_ambient_light
+
+  # Ambient light OFF at sunset - 30 min
+  - id: gutgrinda_ambient_light_off
+    alias: "Gutgrinda - Ambient Light OFF"
+    trigger:
+      - platform: sun
+        event: sunset
+        offset: "-00:30:00"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.gutgrinda_ambient_light
+
+  # Alert — enclosure too hot for 5 minutes
+  - id: gutgrinda_alert_too_hot
+    alias: "Gutgrinda - Alert Too Hot"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.0xa4c13874d0343902_temperature
+        above: input_number.gutgrinda_alert_temp_max
+        for: "00:05:00"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "WAAAGH! Gutgrinda iz too HOT!"
+          message: >
+            Da warboss iz roastin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F —
+            above da {{ states('input_number.gutgrinda_alert_temp_max') | int }}°F limit. TURN IT OFF!
+          notification_id: gutgrinda_too_hot
+      # Uncomment and set your mobile app notifier if using HA Companion:
+      # - service: notify.mobile_app_YOUR_PHONE
+      #   data:
+      #     title: "WAAAGH! Gutgrinda iz too HOT!"
+      #     message: "Da warboss iz roastin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F"
+
+  # Alert — enclosure too cold for 10 minutes
+  - id: gutgrinda_alert_too_cold
+    alias: "Gutgrinda - Alert Too Cold"
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.0xa4c13874d0343902_temperature
+        below: input_number.gutgrinda_alert_temp_min
+        for: "00:10:00"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Gutgrinda iz FREEZIN'!"
+          message: >
+            Da warboss iz shiverin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F —
+            below da {{ states('input_number.gutgrinda_alert_temp_min') | int }}°F limit. GET DA BURNA!
+          notification_id: gutgrinda_too_cold
+      # - service: notify.mobile_app_YOUR_PHONE
+      #   data:
+      #     title: "Gutgrinda iz FREEZIN'!"
+      #     message: "Da warboss iz shiverin' at {{ states('sensor.0xa4c13874d0343902_temperature') }}°F"
+
+  # Alert — sensor offline for 15 minutes
+  - id: gutgrinda_alert_sensor_offline
+    alias: "Gutgrinda - Alert Sensor Offline"
+    trigger:
+      - platform: state
+        entity_id: sensor.0xa4c13874d0343902_temperature
+        to: "unavailable"
+        for: "00:15:00"
+    action:
+      - service: persistent_notification.create
+        data:
+          title: "Da Gubbinz iz Broken!"
+          message: "Gutgrinda'z temperature sensor iz offline — check da Zigbee2MQTT at 192.168.86.36:8080, ya grot!"
+          notification_id: gutgrinda_sensor_offline
+      # - service: notify.mobile_app_YOUR_PHONE
+      #   data:
+      #     title: "Da Gubbinz iz Broken!"
+      #     message: "Check Zigbee2MQTT, ya grot!"

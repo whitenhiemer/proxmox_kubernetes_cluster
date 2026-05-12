@@ -7,11 +7,14 @@
 # This playbook:
 #   1. Deploys the Traefik dynamic route for home.woodhead.tech
 #   2. Configures trusted_proxies in HAOS so Traefik can reverse proxy it
+#   3. Deploys HA package files (e.g. beardie.yaml) to /config/packages/ via SSH
 #
 # Prerequisites:
 #   - HAOS VM running at 192.168.86.41 (Terraform + `make apply-homeassistant`)
 #   - Initial setup wizard completed at http://192.168.86.41:8123
 #   - Long-lived access token created in HA: Profile > Security > Long-lived access tokens
+#   - For package deployment (--tags packages): SSH & Web Terminal addon installed in HA
+#     with your SSH public key added (Settings > Add-ons > SSH & Web Terminal > Config)
 #
 # Usage:
 #   ansible-playbook playbooks/setup-homeassistant.yml \
@@ -19,6 +22,9 @@
 #
 # Without the token (Traefik config only):
 #   ansible-playbook playbooks/setup-homeassistant.yml --tags traefik
+#
+# Deploy HA packages only (requires SSH addon):
+#   ansible-playbook playbooks/setup-homeassistant.yml --tags packages
 ---
 # --- Play 1: Deploy Traefik route ---
 - name: Deploy Traefik route for Home Assistant
@@ -105,3 +111,53 @@
           - "After editing, restart HA: Settings > System > Restart"
           - "Then verify: https://home.woodhead.tech should load without 400 error"
       tags: ha_config
+
+# --- Play 3: Deploy HA package files via SSH ---
+- name: Deploy Home Assistant packages
+  hosts: localhost
+  connection: local
+  become: false
+  vars:
+    ha_host: "192.168.86.41"
+    ha_ssh_port: 22222          # HAOS SSH & Web Terminal addon default port
+    ha_ssh_user: root
+    packages_src: "{{ playbook_dir }}/../files/homeassistant/packages"
+    packages_dest: /config/packages
+
+  tasks:
+    - name: Create /config/packages directory on HAOS
+      ansible.builtin.shell: >
+        ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes
+        -i ~/.ssh/id_ed25519 -p {{ ha_ssh_port }}
+        {{ ha_ssh_user }}@{{ ha_host }}
+        "mkdir -p {{ packages_dest }}"
+      changed_when: false
+      tags: packages
+
+    - name: Copy package files to HAOS
+      ansible.builtin.shell: >
+        scp -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes
+        -i ~/.ssh/id_ed25519 -P {{ ha_ssh_port }}
+        {{ packages_src }}/{{ item }}
+        {{ ha_ssh_user }}@{{ ha_host }}:{{ packages_dest }}/{{ item }}
+      loop:
+        - beardie.yaml
+      register: scp_result
+      changed_when: true
+      tags: packages
+
+    - name: Remind user to enable packages and restart
+      ansible.builtin.debug:
+        msg:
+          - "Package files copied to {{ packages_dest }}/ on HAOS."
+          - ""
+          - "If not already done, add to /config/configuration.yaml:"
+          - "  homeassistant:"
+          - "    packages: !include_dir_named packages"
+          - ""
+          - "Then: Developer Tools > YAML > Check Configuration, then restart HA."
+          - ""
+          - "IMPORTANT: Edit beardie.yaml and replace the four REPLACE_ME entity IDs"
+          - "before restarting. Find them in Developer Tools > States or"
+          - "Zigbee2MQTT UI at http://192.168.86.36:8080."
+      tags: packages

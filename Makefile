@@ -24,7 +24,7 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr pxe mailserver zigbee2mqtt claude-os pwnagotchi \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant beardie truenas sdr pxe mailserver zigbee2mqtt claude-os pwnagotchi \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
         docs-build docs-dev resume-build
@@ -168,6 +168,9 @@ wireguard: ## Deploy WireGuard VPN tunnel into its LXC
 homeassistant: ## Deploy Traefik route for Home Assistant (post-onboarding config via HA_TOKEN=)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml \
 		$(if $(HA_TOKEN),--extra-vars "ha_token=$(HA_TOKEN)")
+
+beardie: ## Deploy bearded dragon enclosure automation package to HAOS (requires SSH addon)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml --tags packages
 
 truenas: ## Configure TrueNAS Scale via REST API (post-install: ZFS pool, datasets, NFS shares)
 	@if [ -z "$(TRUENAS_PASSWORD)" ]; then \
