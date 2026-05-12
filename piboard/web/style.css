@@ -18,10 +18,11 @@ html, body {
 
 body {
     display: grid;
-    grid-template-rows: 48px 1fr 44px;
+    grid-template-rows: 48px 1fr 40px 44px;
     grid-template-areas:
         "topbar"
         "grid"
+        "enclosure"
         "bottombar";
 }
 
@@ -142,6 +143,50 @@ body {
     color: #8b949e;
     font-family: monospace;
 }
+
+/* --- Enclosure Bar --- */
+
+#enclosure-bar {
+    grid-area: enclosure;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 16px;
+    background: #0d1f17;
+    border-top: 1px solid #1f3a2a;
+    font-family: monospace;
+    font-size: 13px;
+    color: #8b949e;
+}
+
+#enc-label {
+    font-weight: 700;
+    color: #3fb950;
+    letter-spacing: 1px;
+}
+
+#enc-temp, #enc-hum {
+    color: #e6edf3;
+}
+
+.enc-device {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.enc-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #484f58;
+    flex-shrink: 0;
+}
+
+.enc-dot.on  { background: #3fb950; }
+.enc-dot.off { background: #484f58; }
+.enc-dot.unavailable { background: #f85149; animation: pulse 1.5s infinite; }
 
 /* --- Bottom Bar --- */
 

@@ -27,11 +27,13 @@ build-pi:
 run: build
 	$(BUILD_DIR)/$(BINARY) --config config.yaml
 
-# Deploy binary and config to Pi, then restart services
+# Deploy binary and config to Pi, then restart services.
+# Pass HA_TOKEN=<token> to write /etc/piboard/ha.env (HOME_ASSISTANT_TOKEN).
 deploy: build-pi
 	@if [ -z "$(PI_HOST)" ]; then echo "ERROR: set PI_HOST=pi@<ip>"; exit 1; fi
 	scp $(BUILD_DIR)/$(BINARY)-arm $(PI_HOST):/tmp/piboard
 	scp config.yaml $(PI_HOST):/tmp/config.yaml
+	$(if $(HA_TOKEN),echo "HOME_ASSISTANT_TOKEN=$(HA_TOKEN)" | ssh $(PI_HOST) "sudo tee /etc/piboard/ha.env > /dev/null && sudo chmod 600 /etc/piboard/ha.env",)
 	ssh $(PI_HOST) 'sudo install -m 755 /tmp/piboard /usr/local/bin/piboard && \
 		sudo install -m 640 -o piboard -g piboard /tmp/config.yaml /etc/piboard/config.yaml && \
 		sudo systemctl restart piboard'
