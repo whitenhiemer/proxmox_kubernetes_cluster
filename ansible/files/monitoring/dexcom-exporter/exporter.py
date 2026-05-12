@@ -111,23 +111,34 @@ def main():
         "region": "ous" if ous else "us",
     })
 
-    # Import here so missing credentials fail fast before the import
-    from pydexcom import Dexcom
+    from pydexcom import Dexcom, Region
 
-    log.info("Connecting to Dexcom Share API (region=%s)...", "ous" if ous else "us")
-    dexcom = Dexcom(username=username, password=password, ous=ous)
-    log.info("Authenticated successfully")
+    region = Region.OUS if ous else Region.US
 
-    # Initial reading
-    poll_dexcom(dexcom)
-
-    # Start metrics server
+    # Start metrics server before auth so /metrics is reachable even when auth fails
     start_http_server(port)
     log.info("Serving metrics on :%d/metrics (poll interval: %ds)", port, interval)
 
+    dexcom = None
+    retry_delay = 60
+
     while True:
-        time.sleep(interval)
+        if dexcom is None:
+            try:
+                log.info("Connecting to Dexcom Share API (region=%s)...", region.value)
+                dexcom = Dexcom(username=username, password=password, region=region)
+                log.info("Authenticated successfully")
+                exporter_errors.set(0)
+                retry_delay = 60
+            except Exception as e:
+                log.error("Authentication failed: %s — retrying in %ds", e, retry_delay)
+                exporter_errors.inc()
+                time.sleep(retry_delay)
+                retry_delay = min(retry_delay * 2, 3600)
+                continue
+
         poll_dexcom(dexcom)
+        time.sleep(interval)
 
 
 if __name__ == "__main__":
