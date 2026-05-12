@@ -11,6 +11,14 @@
 #
 # Deploy: make beardie
 
+prometheus:
+  namespace: homeassistant
+  filter:
+    include_entity_globs:
+      - "sensor.0xa4c13874d0343902_*"
+      - "switch.gutgrinda_*"
+      - "input_number.gutgrinda_*"
+
 rest_command:
   gutgrinda_discord:
     url: !secret gutgrinda_discord_webhook

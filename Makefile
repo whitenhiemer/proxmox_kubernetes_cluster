@@ -150,12 +150,14 @@ jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
 monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager, Dexcom) into its LXC
 	@# Usage: make monitoring DISCORD_WEBHOOK=https://... GRAFANA_PASSWORD=... PVE_USER=monitoring@pve PVE_TOKEN_NAME=prometheus PVE_TOKEN_VALUE=...
 	@# Dexcom: make monitoring DEXCOM_USERNAME=user DEXCOM_PASSWORD=pass HA_GLUCOSE_WEBHOOK=http://192.168.86.41:8123/api/webhook/<id>
+	@# Gutgrinda: make monitoring HA_TOKEN=<long-lived-token>  (writes /etc/prometheus/ha_token for HA scrape)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml \
 		$(if $(DISCORD_WEBHOOK),--extra-vars "discord_webhook=$(DISCORD_WEBHOOK)") \
 		$(if $(GRAFANA_PASSWORD),--extra-vars "grafana_password=$(GRAFANA_PASSWORD)") \
 		$(if $(PVE_USER),--extra-vars "pve_user=$(PVE_USER) pve_token_name=$(PVE_TOKEN_NAME) pve_token_value=$(PVE_TOKEN_VALUE)") \
 		$(if $(DEXCOM_USERNAME),--extra-vars "dexcom_username=$(DEXCOM_USERNAME) dexcom_password=$(DEXCOM_PASSWORD)") \
-		$(if $(HA_GLUCOSE_WEBHOOK),--extra-vars "ha_glucose_webhook=$(HA_GLUCOSE_WEBHOOK)")
+		$(if $(HA_GLUCOSE_WEBHOOK),--extra-vars "ha_glucose_webhook=$(HA_GLUCOSE_WEBHOOK)") \
+		$(if $(HA_TOKEN),--extra-vars "ha_token=$(HA_TOKEN)")
 
 openclaw: ## Deploy OpenClaw AI agent framework into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-openclaw.yml
