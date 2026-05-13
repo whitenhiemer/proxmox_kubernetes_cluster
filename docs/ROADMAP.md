@@ -754,6 +754,112 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 20. **AdGuard Home DNS** -- PLANNED (LXC 213 at .35; Terraform + playbook ready; needs onsite deploy + router DNS cutover)
 21. **step-ca SSH CA** -- PLANNED (LXC 214 at .36; Terraform + playbook ready)
 22. **Minecraft Server** -- PLANNED (LXC 215 at .37; Java Edition PaperMC for Annie + friends; needs TrueNAS dataset + port forward) (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
+23. **NAS Migration: Ceph → Dedicated Hardware** -- PLANNED (move TrueNAS off Ceph RBD to bare-metal NAS; hardware shortlisted: HP MicroServer Gen10+; see migration plan and parts list in this file)
+
+### NAS Migration: Ceph-backed VM → Dedicated Hardware
+
+**Status**: PLANNED
+
+**Why**: TrueNAS currently runs as a VM (VMID 300, tower1) with its 2TB `tank` pool on a
+Ceph RBD (`thinkCentreCeph:vm-300-disk-0`). The Ceph cluster has mixed SSD+HDD OSDs. Heavy
+write I/O from SABnzbd overwhelms the HDD OSDs, causing Ceph slow ops → TrueNAS ZFS stall →
+NFS hang → all `/media` services freeze. Moving to bare-metal eliminates the Ceph layer entirely.
+
+**Current mitigations** (applied 2026-05-13, do not revert):
+- TrueNAS NFS thread count raised to 16 — must set permanently in web UI: Services → NFS → Number of servers → 16
+- SABnzbd global bandwidth cap: 50 MB/s (`bandwidth_max = 50M` in `/opt/arr/sabnzbd/config/sabnzbd.ini`)
+- SABnzbd scheduler: 6pm → 40% speed, 1am → 100% (set in SABnzbd web UI → Config → Scheduling)
+
+---
+
+#### Hardware Options
+
+**Option A — HP ProLiant MicroServer Gen10 Plus (Recommended)**
+
+| Part | Model | Est. Price |
+|------|-------|-----------|
+| NAS chassis | HP ProLiant MicroServer Gen10 Plus (used) | $150–250 |
+| RAM | 16GB DDR4 ECC UDIMM (2x 8GB) | $30–50 |
+| Drive 1 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
+| Drive 2 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
+| Boot USB | Samsung 32GB USB flash | $8–10 |
+| **Total** | | **~$430–590** |
+
+- 4 bays (direct SATA), ~35W idle, ECC RAM, purpose-built for NAS
+- ZFS pool: 2x 8TB mirror → ~7.3TB usable, room to expand to 4 drives later
+
+**Option B — N100 Mini PC + Terramaster DAS Enclosure**
+
+| Part | Model | Est. Price |
+|------|-------|-----------|
+| Mini PC | Beelink EQ12 (N100, 16GB RAM) | $160–180 |
+| DAS | Terramaster D4-320 (4-bay USB-C) | $100–130 |
+| Drive 1 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
+| Drive 2 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
+| **Total** | | **~$500–590** |
+
+- ~15W idle, very compact, NVMe used for TrueNAS OS leaving all DAS bays for data
+- USB-C DAS adds one more link in the chain vs Option A's direct SATA
+
+**Option C — Synology DS923+**
+
+| Part | Model | Est. Price |
+|------|-------|-----------|
+| NAS unit | Synology DS923+ | $600–650 |
+| RAM upgrade | 8GB DDR4 ECC SO-DIMM (optional) | $50–80 |
+| Drive 1 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
+| Drive 2 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
+| **Total** | | **~$890–1010** |
+
+- Turnkey, polished UI, good mobile app — but uses Synology DSM (not TrueNAS), Btrfs not ZFS
+- Most expensive; Ansible playbooks would need adaptation for different NFS config
+
+**Drive notes**: All options use 2x 8TB in a ZFS mirror. Use CMR drives only — WD Red Plus
+(WD80EFPX) or Seagate IronWolf (ST8000VN004). Avoid WD Red non-Plus (SMR, bad for ZFS).
+
+---
+
+#### Migration Plan
+
+**Phase 1 — Prep** (before hardware arrives)
+- [ ] Audit datasets from tower1: `qm guest exec 300 -- /bin/sh -c "zfs list && cat /etc/exports"`
+- [ ] Apply remaining mitigations (NFS threads 16 in TrueNAS UI, SABnzbd schedule)
+
+**Phase 2 — New NAS setup** (temp IP 192.168.86.41 during transition)
+- [ ] Install TrueNAS Scale bare metal, assign 192.168.86.41
+- [ ] Create pool `tank` (ZFS mirror), datasets: `tank/media/{books,downloads,movies,music,tv}`, `tank/workspace`, `tank/isos`, `tank/backups`
+- [ ] Enable NFS, thread count 16, export to `192.168.86.0/24`
+- [ ] Verify from thinkcentre2: `showmount -e 192.168.86.41`
+
+**Phase 3 — Live data sync** (no downtime, hours for 3–6TB)
+```bash
+rsync -avz --progress 192.168.86.40:/mnt/tank/media/ root@192.168.86.41:/mnt/tank/media/
+rsync -avz --progress 192.168.86.40:/mnt/tank/workspace/ root@192.168.86.41:/mnt/tank/workspace/
+rsync -avz --progress 192.168.86.40:/mnt/tank/isos/ root@192.168.86.41:/mnt/tank/isos/
+rsync -avz --progress 192.168.86.40:/mnt/tank/backups/ root@192.168.86.41:/mnt/tank/backups/
+```
+
+**Phase 4 — Cutover** (~15 min downtime)
+```bash
+# Stop arr-stack
+ssh -i ~/.ssh/id_ansible root@192.168.86.30 pct stop 202
+# Final delta sync
+rsync -avz --checksum 192.168.86.40:/mnt/tank/media/ root@192.168.86.41:/mnt/tank/media/
+# Take old TrueNAS offline, assign 192.168.86.40 to new NAS
+ssh -i ~/.ssh/id_ansible root@192.168.86.130 qm stop 300
+# Remount NFS on thinkcentre2
+ssh -i ~/.ssh/id_ansible root@192.168.86.30 \
+  'systemctl restart mnt-truenas\\x2dmedia.mount && timeout 5 ls /mnt/truenas-media/'
+# Start arr-stack
+ssh -i ~/.ssh/id_ansible root@192.168.86.30 pct start 202
+```
+
+**Phase 5 — Cleanup** (after 1–2 weeks stable)
+- [ ] `qm destroy 300` on tower1 — removes TrueNAS VM
+- [ ] Remove Ceph RBD via Proxmox UI to reclaim 2TB; monitor `ceph status` until HEALTH_OK
+- [ ] Update any Ansible playbooks referencing TrueNAS IP directly
+
+---
 
 ## Hardware Considerations
 
@@ -764,3 +870,6 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
   which physical disks go to Ceph vs NAS at Proxmox install time.
 - **RAM budget**: With all services running, expect ~24-32GB total usage.
   Plan node RAM accordingly.
+- **NAS on Ceph (known issue)**: TrueNAS VM currently uses a Ceph RBD for its data pool.
+  Heavy write workloads (SABnzbd) overwhelm HDD OSDs and cause NFS hangs. See
+  "NAS Migration" section above for the fix plan.
