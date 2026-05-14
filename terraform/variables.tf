@@ -158,10 +158,23 @@ variable "worker_balloon" {
 }
 
 variable "worker_disk_size" {
-  description = "Disk size in GB per worker node"
+  description = "Disk size in GB for Talos worker nodes"
   type        = number
   default     = 100
 }
+
+variable "talos_iops_read" {
+  description = "IOPS read limit for Talos nodes (lowered to 200 for HDD-backed Ceph stability)"
+  type        = number
+  default     = 200
+}
+
+variable "talos_iops_write" {
+  description = "IOPS write limit for Talos nodes (lowered to 200 for HDD-backed Ceph stability)"
+  type        = number
+  default     = 200
+}
+
 
 variable "worker_ips" {
   description = "Static IPs for worker nodes"

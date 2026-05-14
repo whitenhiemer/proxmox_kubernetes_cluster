@@ -34,7 +34,14 @@ resource "proxmox_virtual_environment_vm" "worker" {
     file_format  = "raw"
     ssd          = true
     discard      = "on"
+    iothread     = true
+
+    speed {
+      iops_read  = var.talos_iops_read
+      iops_write = var.talos_iops_write
+    }
   }
+
 
   network_device {
     bridge = var.network_bridge

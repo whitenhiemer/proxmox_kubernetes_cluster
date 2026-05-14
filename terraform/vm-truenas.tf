@@ -64,6 +64,12 @@ resource "proxmox_virtual_environment_vm" "truenas" {
     file_format  = "raw"
     ssd          = true
     discard      = "on"
+    iothread     = true
+
+    speed {
+      iops_read  = var.truenas_iops_read
+      iops_write = var.truenas_iops_write
+    }
   }
 
   # LAN interface -- same network as all other services
