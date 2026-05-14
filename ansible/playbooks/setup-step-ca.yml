@@ -1,0 +1,150 @@
+# setup-step-ca.yml - Deploy Smallstep step-ca SSH Certificate Authority
+#
+# This playbook configures the Step-CA LXC container:
+#   1. Installs Docker CE and Docker Compose plugin
+#   2. Deploys step-ca via Docker Compose
+#   3. Initializes the CA with SSH support
+#
+# Prerequisites:
+#   - Step-CA LXC created via Terraform (make apply-lxc)
+#   - SSH access to the LXC
+#
+# Usage:
+#   make step-ca
+---
+- name: Deploy Smallstep step-ca
+  hosts: lxc_services:&step_ca
+  vars:
+    step_base_dir: /opt/step-ca
+    compose_src: "{{ playbook_dir }}/../files/step-ca/docker-compose.yml"
+
+  tasks:
+    # --- SSH Socket Activation Fix (Debian 12.12 LXC fix) ---
+    - name: Disable SSH socket activation
+      ansible.builtin.systemd:
+        name: ssh.socket
+        enabled: false
+        state: stopped
+      failed_when: false
+
+    - name: Ensure SSH listens on IPv4
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?ListenAddress "
+        line: "ListenAddress 0.0.0.0"
+        create: false
+
+    - name: Restart SSH service
+      ansible.builtin.systemd:
+        name: ssh
+        state: restarted
+
+    # --- System Setup ---
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - openssl
+        state: present
+
+    # --- Docker Installation ---
+    - name: Create Docker keyring directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg
+
+    - name: Add Docker repository
+      ansible.builtin.copy:
+        content: |
+          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable
+        dest: /etc/apt/sources.list.d/docker.list
+        mode: "0644"
+
+    - name: Install Docker CE and Compose plugin
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Enable and start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # --- Deploy Step-CA ---
+    - name: Create step-ca directory
+      ansible.builtin.file:
+        path: "{{ step_base_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create data directory
+      ansible.builtin.file:
+        path: "{{ step_base_dir }}/data"
+        state: directory
+        mode: "0755"
+        owner: 1000
+        group: 1000
+
+    - name: Copy docker-compose.yml
+      ansible.builtin.copy:
+        src: "{{ compose_src }}"
+        dest: "{{ step_base_dir }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Generate random password for Step-CA if not exists
+      ansible.builtin.shell:
+        cmd: openssl rand -base64 24 > {{ step_base_dir }}/password.txt
+        creates: "{{ step_base_dir }}/password.txt"
+
+    - name: Read password
+      ansible.builtin.slurp:
+        src: "{{ step_base_dir }}/password.txt"
+      register: step_password
+
+    - name: Set password environment variable
+      ansible.builtin.set_fact:
+        step_ca_password: "{{ step_password.content | b64decode | trim }}"
+
+    - name: Deploy Step-CA container
+      ansible.builtin.community.docker.docker_compose_v2:
+        project_src: "{{ step_base_dir }}"
+        state: present
+        env:
+          DOCKER_STEPCA_INIT_PASSWORD: "{{ step_ca_password }}"
+
+    - name: Wait for Step-CA to be ready
+      ansible.builtin.wait_for:
+        port: 9000
+        host: "{{ ansible_host }}"
+        delay: 5
+        timeout: 60
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "Step-CA deployed to {{ ansible_host }}"
+          - "Admin UI/API: https://{{ ansible_host }}:9000"
+          - "Step-CA password stored at: {{ step_base_dir }}/password.txt"
+          - ""
+          - "NEXT STEPS:"
+          - "  1. Add OIDC provisioner to Authentik"
+          - "  2. Configure Step-CA to use Authentik OIDC"
+          - "  3. Distribute SSH CA public key to all nodes"

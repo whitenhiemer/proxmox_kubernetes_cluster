@@ -1,0 +1,63 @@
+# patch-workstations.yml - Patch workstations (mixed distros)
+#
+# Handles apt-based (Ubuntu) and pacman-based (CachyOS/Arch) hosts.
+#
+# Usage:
+#   cd ansible && ansible-playbook playbooks/patch-workstations.yml
+#   cd ansible && ansible-playbook playbooks/patch-workstations.yml --limit lenovo-go
+#   cd ansible && ansible-playbook playbooks/patch-workstations.yml --limit ubuntu-laptop
+
+---
+- name: Patch workstations
+  hosts: workstations
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update apt packages (Debian/Ubuntu)
+      when: ansible_facts["pkg_mgr"] == "apt"
+      block:
+        - name: Update apt cache
+          ansible.builtin.apt:
+            update_cache: true
+            cache_valid_time: 0
+
+        - name: Upgrade all packages
+          ansible.builtin.apt:
+            upgrade: safe
+          register: apt_upgrade
+
+        - name: Show upgraded packages
+          ansible.builtin.debug:
+            msg: "{{ apt_upgrade.stdout_lines | default(['No packages upgraded']) }}"
+          when: apt_upgrade.changed
+
+        - name: Clean up old packages
+          ansible.builtin.apt:
+            autoremove: true
+            autoclean: true
+
+        - name: Check if reboot is required
+          ansible.builtin.stat:
+            path: /var/run/reboot-required
+          register: reboot_required
+
+        - name: Reboot if required
+          ansible.builtin.reboot:
+            reboot_timeout: 300
+            msg: "Rebooting for kernel/package updates"
+          when: reboot_required.stat.exists
+
+    - name: Update pacman packages (Arch/CachyOS)
+      when: ansible_facts["pkg_mgr"] == "pacman"
+      block:
+        - name: Upgrade all packages
+          community.general.pacman:
+            update_cache: true
+            upgrade: true
+          register: pacman_upgrade
+
+        - name: Show upgraded packages
+          ansible.builtin.debug:
+            msg: "{{ pacman_upgrade.stdout_lines | default(['No packages upgraded']) }}"
+          when: pacman_upgrade.changed

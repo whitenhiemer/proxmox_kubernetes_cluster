@@ -18,7 +18,7 @@
 
 clusterName: talos-proxmox
 talosVersion: v1.12.5
-kubernetesVersion: v1.31.0
+kubernetesVersion: v1.35.2
 endpoint: https://192.168.86.100:6443  # Update with your VIP
 
 # Control plane nodes

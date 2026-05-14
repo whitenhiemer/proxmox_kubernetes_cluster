@@ -20,6 +20,7 @@
 #   make bootstrap      - Bootstrap Talos K8s cluster
 #   make k8s-base       - Apply base K8s manifests
 #   make sdr            - Deploy SDR scanner (Trunk Recorder + rdio-scanner)
+#   make minecraft      - Deploy Minecraft server (PaperMC) for Annie
 #   make harden         - Security hardening
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
@@ -194,6 +195,17 @@ libby-alert: ## Deploy Libby life alert QR website into its LXC
 		twilio_from_number=$(TWILIO_FROM) alert_phone_numbers=$(ALERT_PHONES) \
 		$(if $(DISCORD_WEBHOOK),discord_webhook=$(DISCORD_WEBHOOK)) \
 		$(if $(COOLDOWN),alert_cooldown_minutes=$(COOLDOWN))"
+
+minecraft: ## Deploy Minecraft Java Edition server (PaperMC) for Annie
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-minecraft.yml \
+		$(if $(RCON_PASSWORD),--extra-vars "rcon_password=$(RCON_PASSWORD)") \
+		$(if $(OPS),--extra-vars "ops=$(OPS)")
+
+adguard: ## Deploy AdGuard Home DNS server into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-adguard.yml
+
+step-ca: ## Deploy Smallstep step-ca SSH Certificate Authority into its LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-step-ca.yml
 
 kanboard: ## Deploy Kanboard project management into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-kanboard.yml

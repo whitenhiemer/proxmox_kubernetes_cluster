@@ -75,6 +75,12 @@ resource "proxmox_virtual_environment_vm" "homeassistant" {
     file_format  = "raw"
     discard      = "on"
     ssd          = true
+    iothread     = true
+
+    speed {
+      iops_read  = var.homeassistant_iops_read
+      iops_write = var.homeassistant_iops_write
+    }
   }
 
   # LAN interface -- same network as all other services

@@ -895,3 +895,6 @@ still serve self-signed certs or have cert resolver misconfigured.
   which physical disks go to Ceph vs NAS at Proxmox install time.
 - **RAM budget**: With all services running, expect ~24-32GB total usage.
   Plan node RAM accordingly.
+- **NAS on Ceph (known issue)**: TrueNAS VM currently uses a Ceph RBD for its data pool.
+  Heavy write workloads (SABnzbd) overwhelm HDD OSDs and cause NFS hangs. See
+  "NAS Migration" section above for the fix plan.

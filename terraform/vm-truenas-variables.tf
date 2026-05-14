@@ -42,6 +42,18 @@ variable "truenas_disk_size" {
   default     = 16
 }
 
+variable "truenas_iops_read" {
+  description = "IOPS read limit for TrueNAS"
+  type        = number
+  default     = 2000
+}
+
+variable "truenas_iops_write" {
+  description = "IOPS write limit for TrueNAS"
+  type        = number
+  default     = 2000
+}
+
 variable "truenas_ip" {
   description = "Static IP for TrueNAS (configured inside TrueNAS, not via Terraform)"
   type        = string

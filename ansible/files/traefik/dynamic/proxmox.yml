@@ -1,0 +1,28 @@
+# proxmox.yml - Traefik routes for Proxmox VE web UI
+#
+# Routes proxmox.woodhead.tech to pve1 (:8006).
+# Protected by Authentik (admin access only).
+# Uses insecureSkipVerify because Proxmox uses a self-signed cert on :8006.
+
+http:
+  routers:
+    proxmox:
+      rule: "Host(`proxmox.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: proxmox
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - authentik@file
+
+  services:
+    proxmox:
+      loadBalancer:
+        servers:
+          - url: "https://192.168.86.29:8006"
+        serversTransport: proxmox-transport
+
+  serversTransports:
+    proxmox-transport:
+      insecureSkipVerify: true

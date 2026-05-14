@@ -39,6 +39,18 @@ variable "homeassistant_disk_size" {
   default     = 32
 }
 
+variable "homeassistant_iops_read" {
+  description = "IOPS read limit for Home Assistant"
+  type        = number
+  default     = 1000
+}
+
+variable "homeassistant_iops_write" {
+  description = "IOPS write limit for Home Assistant"
+  type        = number
+  default     = 1000
+}
+
 variable "homeassistant_ip" {
   description = "Static IP for Home Assistant (configured inside HAOS, not via Terraform)"
   type        = string

@@ -28,6 +28,7 @@ Implementation priority and planned services for the homelab.
 | 15 | Resume Site | DONE |
 | 16 | Landing Page (woodhead.tech) | DONE |
 | 17 | NUT UPS Monitoring | DONE |
+| 18 | NAS Migration: Ceph → Dedicated Hardware | PLANNED |
 
 ## IP Address Plan
 
@@ -90,6 +91,18 @@ Implementation priority and planned services for the homelab.
 - **Status:** Code built, blocked on credentials
 - **Stack:** Python exporter -> Prometheus -> Grafana dashboard
 - **Alerts:** Twilio SMS + Home Assistant Alexa + Discord
+
+### NAS Migration: Ceph → Dedicated Hardware
+
+- **Status:** PLANNED
+- **Why:** TrueNAS runs as a VM with its data pool on a Ceph RBD. Mixed SSD+HDD OSDs cause
+  Ceph slow ops under heavy write load (SABnzbd), which stalls TrueNAS NFS and freezes all
+  media services. Dedicated bare-metal NAS eliminates the Ceph layer.
+- **Hardware shortlisted:** HP ProLiant MicroServer Gen10+ (2x 8TB IronWolf, ZFS mirror)
+- **Interim mitigations applied:** NFS threads raised to 16, SABnzbd capped at 50 MB/s
+- **Full plan:** See `docs/ROADMAP.md` — hardware parts lists for 3 options + 5-phase migration
+
+---
 
 ### VLAN Segmentation (Deferred)
 
