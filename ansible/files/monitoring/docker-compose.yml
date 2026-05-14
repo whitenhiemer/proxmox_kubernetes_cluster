@@ -214,8 +214,10 @@ services:
 
   # --- alertmind: AI-powered alert triage ---
   # Receives Alertmanager webhooks, triages via Claude API, posts to Slack/Discord.
+  # Built from source on the LXC via multi-stage Dockerfile (Go -> scratch).
   alertmind:
-    image: ghcr.io/whitenhiemer/alertmind:latest
+    build:
+      context: /opt/monitoring/alertmind/build
     container_name: alertmind
     ports:
       - "8086:8080"

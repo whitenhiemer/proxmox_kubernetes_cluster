@@ -29,6 +29,13 @@ route:
   receiver: "null"
 
   routes:
+    # alertmind: triage all warning/critical alerts via Claude AI, then continue
+    # to other receivers so normal notifications still fire.
+    - match_re:
+        severity: "warning|critical"
+      receiver: "alertmind"
+      continue: true
+
     # Glucose alerts: SMS + Alexa + Discord
     # Ansible replaces receiver with "glucose-alerts" when webhooks are set
     - match:
@@ -61,6 +68,12 @@ route:
 receivers:
   # Null receiver (swallows alerts -- used when no webhooks are configured)
   - name: "null"
+
+  # alertmind: AI-powered triage webhook
+  - name: "alertmind"
+    webhook_configs:
+      - url: "http://alertmind:8080/webhook"
+        send_resolved: true
 
 # --- Inhibition Rules ---
 # Suppress warning alerts when a critical alert fires for the same instance
