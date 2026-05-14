@@ -9,7 +9,7 @@ TRUENAS_IOPS=2000
 
 # Proxmox Nodes
 NODES=("192.168.86.29" "192.168.86.30" "192.168.86.31" "192.168.86.130" "192.168.86.147")
-SSH_KEY="~/.ssh/id_ansible"
+SSH_KEY="$HOME/.ssh/id_ansible"
 
 for node in "${NODES[@]}"; do
     echo "--- Checking node $node ---"

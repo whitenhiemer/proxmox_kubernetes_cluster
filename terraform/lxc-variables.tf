@@ -8,18 +8,6 @@ variable "lxc_storage" {
   default     = "local-lvm"
 }
 
-variable "lxc_iops_read" {
-  description = "Default IOPS read limit for LXC containers"
-  type        = number
-  default     = 500
-}
-
-variable "lxc_iops_write" {
-  description = "Default IOPS write limit for LXC containers"
-  type        = number
-  default     = 500
-}
-
 variable "debian_template" {
   description = "Debian LXC template file ID (e.g., local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst)"
   type        = string
@@ -99,18 +87,6 @@ variable "arr_disk_size" {
   default     = 20
 }
 
-variable "arr_iops_read" {
-  description = "IOPS read limit for the ARR stack"
-  type        = number
-  default     = 1000
-}
-
-variable "arr_iops_write" {
-  description = "IOPS write limit for the ARR stack"
-  type        = number
-  default     = 1000
-}
-
 # --- Plex LXC ---
 variable "plex_vmid" {
   description = "VM ID for the Plex Media Server LXC"
@@ -142,18 +118,6 @@ variable "plex_disk_size" {
   default     = 8
 }
 
-variable "plex_iops_read" {
-  description = "IOPS read limit for Plex"
-  type        = number
-  default     = 1000
-}
-
-variable "plex_iops_write" {
-  description = "IOPS write limit for Plex"
-  type        = number
-  default     = 1000
-}
-
 # --- Jellyfin LXC ---
 variable "jellyfin_vmid" {
   description = "VM ID for the Jellyfin Media Server LXC"
@@ -183,18 +147,6 @@ variable "jellyfin_disk_size" {
   description = "Disk size in GB for Jellyfin (metadata + cache, media on NAS)"
   type        = number
   default     = 8
-}
-
-variable "jellyfin_iops_read" {
-  description = "IOPS read limit for Jellyfin"
-  type        = number
-  default     = 1000
-}
-
-variable "jellyfin_iops_write" {
-  description = "IOPS write limit for Jellyfin"
-  type        = number
-  default     = 1000
 }
 
 # --- Monitoring Stack LXC ---
