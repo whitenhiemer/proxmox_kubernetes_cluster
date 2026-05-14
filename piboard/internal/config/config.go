@@ -10,12 +10,26 @@ import (
 )
 
 type Config struct {
-	PrometheusURL            string          `yaml:"prometheus_url"`
-	PollIntervalSeconds      int             `yaml:"poll_interval_seconds"`
-	ListenAddr               string          `yaml:"listen_addr"`
-	Services                 []ServiceConfig `yaml:"services"`
-	ProxmoxNodes             []NodeConfig    `yaml:"proxmox_nodes"`
-	DegradedThresholdSeconds float64         `yaml:"degraded_threshold_seconds"`
+	PrometheusURL            string              `yaml:"prometheus_url"`
+	PollIntervalSeconds      int                 `yaml:"poll_interval_seconds"`
+	ListenAddr               string              `yaml:"listen_addr"`
+	Services                 []ServiceConfig     `yaml:"services"`
+	ProxmoxNodes             []NodeConfig        `yaml:"proxmox_nodes"`
+	DegradedThresholdSeconds float64             `yaml:"degraded_threshold_seconds"`
+	HomeAssistant            HomeAssistantConfig `yaml:"home_assistant"`
+}
+
+type HomeAssistantConfig struct {
+	URL      string             `yaml:"url"`
+	Entities EnclosureEntityIDs `yaml:"entities"`
+}
+
+type EnclosureEntityIDs struct {
+	Temperature   string `yaml:"temperature"`
+	Humidity      string `yaml:"humidity"`
+	BaskingLamp   string `yaml:"basking_lamp"`
+	AmbientLight  string `yaml:"ambient_light"`
+	CeramicHeater string `yaml:"ceramic_heater"`
 }
 
 type ServiceConfig struct {

@@ -23,6 +23,8 @@ http:
       service: klipper-ender3
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     klipper-ender5pro:

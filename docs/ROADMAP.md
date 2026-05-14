@@ -328,9 +328,10 @@ Keeping track of allocated IPs to avoid conflicts:
 | 192.168.86.32     | SDR Scanner          | LXC  | 210   |
 | 192.168.86.33     | Kanboard             | LXC  | 211   |
 | 192.168.86.34     | Mailcow email        | LXC  | 212   |
-| 192.168.86.35     | AdGuard Home         | LXC  | 213   |
-| 192.168.86.36     | step-ca              | LXC  | 214   |
-| 192.168.86.37     | Minecraft            | LXC  | 215   |
+| 192.168.86.35     | PXE boot server      | LXC  | 213   |
+| 192.168.86.36     | Zigbee2MQTT          | LXC  | 214   |
+| 192.168.86.37     | Claude OS            | LXC  | 215   |
+| 192.168.86.38     | pwnagotchi           | LXC  | 216   |
 | 192.168.86.39     | WireGuard VPN        | LXC  | 208   |
 | 192.168.86.27     | Libby Alert          | LXC  | 209   |
 | 192.168.86.40     | TrueNAS              | VM   | 300   |
@@ -504,80 +505,91 @@ curl -u clawbot:API_TOKEN -d '{"jsonrpc":"2.0","method":"moveTaskPosition","id":
 
 ---
 
-### Minecraft Server
+### Zigbee2MQTT (Zigbee Dongle on Zotac)
 
-**Type**: LXC container with Docker Compose
-**Domain**: `minecraft.woodhead.tech` (web map/console); game connects directly via IP/port
-**Goal**: Family Minecraft server for Annie and friends. Always-on, auto-restarts on crash,
-persistent world saved to TrueNAS.
+**Type**: LXC container on zotac (192.168.86.147)
+**Domain**: none (internal service only)
+**Goal**: Bridge the Zigbee USB dongle attached to zotac into Home Assistant via
+Zigbee2MQTT + Mosquitto. USB passthrough can only go to a VM/LXC on the same
+physical host as the USB device — the HA VM lives on thinkcentre1, so a dedicated
+Zigbee2MQTT LXC on zotac is required.
 
-**Edition choice**: Run **Java Edition** (PC) and/or **Bedrock Edition** (Xbox, Switch, iOS, Android, Windows).
-If Annie plays on a console, tablet, or phone → Bedrock. If on PC only → Java. Both can run side-by-side.
-
-**Stack**: [`itzg/minecraft-server`](https://github.com/itzg/docker-minecraft-server) (Java)
-and/or [`itzg/minecraft-bedrock-server`](https://github.com/itzg/docker-minecraft-bedrock-server) (Bedrock).
-These are the canonical community images — handle JVM tuning, auto-restart, EULA acceptance,
-plugin/mod support, and rcon.
-
-**Requirements**:
-- 2 CPU cores, 4GB RAM (comfortable for ~5 players), 10GB disk (world saves go to TrueNAS)
-- NFS mount from TrueNAS for persistent world data (survives LXC rebuilds)
-- Port forward on Google Nest:
-  - Java: TCP 25565 → Minecraft LXC
-  - Bedrock: UDP 19132 → Minecraft LXC
-- No Traefik needed for game traffic (raw TCP/UDP, not HTTP)
-- Optional: Traefik route for web map (`minecraft.woodhead.tech` → map viewer)
-
-**Terraform**: `terraform/lxc-minecraft.tf` (VM ID: 215, IP: 192.168.86.37)
-**Traefik route**: optional, for Dynmap/BlueMap web viewer only
-
-**Docker Compose** (Java + Dynmap example):
-```yaml
-services:
-  minecraft:
-    image: itzg/minecraft-server
-    environment:
-      EULA: "TRUE"
-      TYPE: PAPER          # PaperMC — better performance than vanilla
-      VERSION: "LATEST"
-      MEMORY: "3G"
-      DIFFICULTY: normal
-      MOTD: "Annie's Minecraft Server"
-      MAX_PLAYERS: 10
-      ALLOW_NETHER: "true"
-      OPS: ""              # comma-separated operator usernames
-    ports:
-      - "25565:25565"
-    volumes:
-      - /mnt/minecraft/data:/data   # NFS mount from TrueNAS
-    restart: unless-stopped
+**Architecture**:
+```
+Zigbee device (sensor/switch/bulb)
+    |
+    | Zigbee RF
+    |
+    v
+USB Zigbee dongle (zotac, /dev/ttyUSB0 or /dev/ttyACM0)
+    |
+    | USB passthrough via cgroup rules in /etc/pve/lxc/<vmid>.conf
+    |
+    v
+Zigbee2MQTT LXC (192.168.86.36, zotac)
+    |
+    | MQTT (192.168.86.36:1883)
+    |
+    v
+Home Assistant VM (192.168.86.41, thinkcentre1)
+    |
+    | MQTT integration -> entities, automations
+    |
+    v
+home.woodhead.tech
 ```
 
+**USB passthrough for LXC** — add to `/etc/pve/lxc/<vmid>.conf` on zotac:
+```
+lxc.cgroup2.devices.allow: c <major>:<minor> rwm
+lxc.mount.entry: /dev/ttyACM0 dev/ttyACM0 none bind,optional,create=file
+```
+
+Find the device major/minor: `ls -la /dev/ttyACM0` or `ls -la /dev/ttyUSB0` on zotac.
+
+**Requirements**:
+- 1 CPU core, 256MB RAM, 4GB disk
+- LXC pinned to zotac (`node_name = "zotac"` in Terraform)
+- USB device passthrough via cgroup rules (same pattern as SDR scanner LXC 210)
+- Zigbee2MQTT + Mosquitto (MQTT broker) in Docker Compose
+- Home Assistant MQTT integration pointed at LXC IP
+
+**Zigbee2MQTT config** (`/opt/zigbee2mqtt/data/configuration.yaml`):
+```yaml
+homeassistant: true
+mqtt:
+  server: mqtt://localhost
+serial:
+  port: /dev/ttyACM0  # or /dev/ttyUSB0 — check after passthrough
+```
+
+**Home Assistant setup**:
+1. Settings -> Devices & Services -> Add Integration -> MQTT
+2. Broker: `192.168.86.36`, port `1883`
+3. Devices auto-discovered via HA discovery topic
+
 **Implementation plan**:
-1. `terraform/lxc-minecraft.tf` — LXC container (VM ID 215, .37)
-2. `ansible/playbooks/setup-minecraft.yml` — install Docker, deploy Compose stack, configure NFS mount
-3. TrueNAS: create dataset `tank/minecraft`, NFS export to LAN
-4. Port forward TCP 25565 on Google Nest → 192.168.86.37
-5. Optional: add BlueMap or Dynmap plugin for browser-based world map
-6. Optional: `ansible/files/traefik/dynamic/minecraft.yml` for web map route
-
-**Connecting**:
-- Java: add server `<your-public-ip>:25565` or `woodhead.tech:25565` in Minecraft multiplayer
-- Bedrock: add server with same IP/hostname, port 19132
-
-**Nice-to-have additions**:
-- BlueMap: renders a live 3D web map of the world at `minecraft.woodhead.tech`
-- Whitelist: `WHITELIST_ENABLED=true` + comma-separated `WHITELIST` env var (recommended for family server)
-- Discord bot: notify when players join/leave (msmcords or similar)
-- Automatic daily world backup to TrueNAS snapshot
+1. Identify dongle device path on zotac: `ls /dev/ttyACM* /dev/ttyUSB*`
+2. `terraform/lxc-zigbee2mqtt.tf` -- LXC on zotac (VM ID 214, IP 192.168.86.36)
+3. `ansible/playbooks/setup-zigbee2mqtt.yml` -- Docker Compose with Zigbee2MQTT + Mosquitto
+4. USB passthrough cgroup rules in LXC config on zotac (same pattern as LXC 210 on pve2)
+5. Configure Home Assistant MQTT integration
+6. Pair Zigbee devices via Zigbee2MQTT web UI (port 8080)
 
 **Files**:
 | File | Purpose |
 |------|---------|
-| `terraform/lxc-minecraft.tf` | LXC container (VM ID 215) |
-| `ansible/playbooks/setup-minecraft.yml` | Install + configure Minecraft |
-| `ansible/files/minecraft/docker-compose.yml` | Server Docker stack |
-| `ansible/files/traefik/dynamic/minecraft.yml` | Traefik route (web map only) |
+| `terraform/lxc-zigbee2mqtt.tf` | LXC on zotac (VM ID 214) |
+| `ansible/playbooks/setup-zigbee2mqtt.yml` | Install Zigbee2MQTT + Mosquitto |
+| `ansible/files/zigbee2mqtt/docker-compose.yml` | Zigbee2MQTT + Mosquitto stack |
+
+**Notes**:
+- Zigbee2MQTT supports Sonoff Zigbee 3.0 USB Dongle Plus, HUSBZB-1, CC2652, ConBee II, and others
+- Check dongle vendor ID: `lsusb` on zotac — needed to verify it's detected before starting LXC work
+- No Traefik route needed; Zigbee2MQTT frontend (port 8080) can be accessed directly or left LAN-only
+- Zigbee2MQTT preferred over ZHA (Home Assistant's built-in Zigbee) because it keeps the radio
+  attached to a fixed LXC — if the HA VM is ever migrated to a different host, the bridge stays
+  on zotac and HA just reconnects to the MQTT broker
 
 ---
 
@@ -730,6 +742,94 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 
 ---
 
+### Piboard Touchscreen Integration
+
+**Status**: PLANNED (verify)
+
+**Type**: Hardware + software — Waveshare 5-inch HDMI display (already installed on piboard Pi 3B)
+**Goal**: Enable the resistive touchscreen on the Waveshare display so the piboard dashboard can respond to touch input. The display hardware supports touch via XPT2046 SPI, and SPI is already enabled in `deploy/setup-pi.sh` via `/boot/firmware/config.txt`.
+
+**What to verify**:
+1. Touch device appears: `ls /dev/input/event*` on the Pi — should see an XPT2046 device
+2. Test raw touch: `evtest /dev/input/event0` (or whichever event node)
+3. Chromium kiosk calibration: may need `xinput_calibrator` if touch coordinates are off
+4. Consider interaction: tap to toggle full-screen, swipe for future panels, etc.
+
+**Potential blockers**:
+- XPT2046 overlay not loaded (add `dtoverlay=xpt2046,cs=0,penirq=17,speed=1000000,swapxy=0` to `/boot/firmware/config.txt`)
+- Touch events not reaching Chromium (Chromium needs `--touch-events=enabled` flag)
+- Coordinate calibration (calibration matrix in X11 `99-calibration.conf`)
+
+**Implementation**:
+1. SSH to Pi (`ssh pi@192.168.86.131`)
+2. Check `dmesg | grep -i xpt2046` and `ls /dev/input/`
+3. Add overlay if missing, reboot, re-verify
+4. Add `--touch-events=enabled` to `deploy/piboard-kiosk.service` Chromium flags
+5. Run `xinput_calibrator` via SSH with `DISPLAY=:0` to generate calibration config
+
+---
+
+### Grafana Cloud Paging / Alerting
+
+**Status**: PLANNED
+
+**Type**: Monitoring integration — Grafana Cloud (grafana.net account)
+**Goal**: Route critical homelab alerts (libby alerts, downed services, sensor failures) through Grafana Cloud's alerting and on-call paging infrastructure instead of raw Discord webhooks. Provides escalation policies, silences, acknowledgment, and mobile push/SMS paging.
+
+**Scope**:
+- Grafana Cloud connected to the self-hosted Prometheus at `192.168.86.25:9090` via Grafana Agent or remote_write
+- Existing Alertmanager rules forwarded to Grafana Cloud Alerting (or replaced by Grafana managed alerts)
+- PagerDuty/OpsGenie-style on-call routing for: Libby life alert triggers, service down (blackbox probe), enclosure temperature alerts, Dexcom glucose critical alerts
+
+**Key decisions**:
+- Push metrics to Grafana Cloud (remote_write from Prometheus) or run Grafana Agent on the monitoring LXC
+- Use Grafana Alerting (cloud-managed) or keep Alertmanager and add a Grafana Cloud contact point
+- API key stored in Ansible vault / secrets.yaml — never committed to git
+
+**Implementation plan**:
+1. Configure Grafana Agent on monitoring LXC (205) to scrape local Prometheus and ship to Grafana Cloud
+2. Add Grafana Cloud data source to self-hosted Grafana (for cross-referencing local vs cloud)
+3. Create Grafana Cloud alert rules mirroring current Alertmanager rules
+4. Configure on-call routing: Discord for non-critical, mobile push/SMS for critical
+5. Update `make monitoring` to inject Grafana Cloud credentials
+
+---
+
+### Gutgrinda Enclosure in Grafana
+
+**Status**: PLANNED
+
+**Type**: Monitoring addition — no new infrastructure
+**Goal**: Grafana dashboard panels for Gutgrinda's enclosure (temperature, humidity, plug states) pulled from Home Assistant via the HA Prometheus integration.
+
+**HA Prometheus integration**:
+Enable in `configuration.yaml` (or `packages/beardie.yaml`):
+```yaml
+prometheus:
+  namespace: homeassistant
+  filter:
+    include_entity_globs:
+      - sensor.0xa4c13874d0343902_*
+      - switch.gutgrinda_*
+```
+This exposes `GET /api/prometheus` on HA (port 8123). Add a Prometheus scrape job targeting `192.168.86.41:8123`.
+
+**Dashboard panels**:
+- Temperature gauge (95–115°F range, with color thresholds)
+- Humidity gauge
+- Basking lamp on/off state over time
+- Ambient light on/off state over time
+- Ceramic heater on/off state over time
+- Alert history from `ALERTS{}` where alertname includes "Gutgrinda"
+
+**Implementation plan**:
+1. Add `prometheus:` config to `packages/beardie.yaml`, redeploy via `make beardie`
+2. Add scrape job to `ansible/files/monitoring/prometheus/prometheus.yml`
+3. Create Grafana dashboard JSON in `ansible/files/monitoring/grafana/dashboards/`
+4. Redeploy monitoring: `make monitoring`
+
+---
+
 ## Implementation Priority
 
 1. **NAS** -- DONE (TrueNAS Scale 24.04, ZFS pool `tank` on 2TB Ceph RBD, NFS shares for media/backups/isos)
@@ -749,115 +849,40 @@ and a proper MX record for the domain. Service accounts (e.g., `clawbot@woodhead
 15. **Resume Site** -- DONE (resume.woodhead.tech; Hugo static site deployed on monitoring LXC)
 16. **Libby-Alert Glucose Graph** -- PLANNED (Chart.js glucose chart on libby.woodhead.tech; queries Prometheus for 3h of dexcom_glucose_value; blocked on Dexcom creds)
 17. **Kanboard / ClawBot** -- DONE (tasks.woodhead.tech; Kanboard on LXC 211, ClawBot agent polls via JSON-RPC, Discord notifications with PR links, woodhead-tech GitHub account for PRs)
-18. **UPS Monitoring Dashboard** -- PLANNED (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters already scraping tc3/tower1/zotac)
-19. **Email Server** -- DONE
-20. **AdGuard Home DNS** -- PLANNED (LXC 213 at .35; Terraform + playbook ready; needs onsite deploy + router DNS cutover)
-21. **step-ca SSH CA** -- PLANNED (LXC 214 at .36; Terraform + playbook ready)
-22. **Minecraft Server** -- PLANNED (LXC 215 at .37; Java Edition PaperMC for Annie + friends; needs TrueNAS dataset + port forward) (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
-23. **NAS Migration: Ceph → Dedicated Hardware** -- PLANNED (move TrueNAS off Ceph RBD to bare-metal NAS; hardware shortlisted: HP MicroServer Gen10+; see migration plan and parts list in this file)
+18. **UPS Monitoring Dashboard** -- DONE (Grafana dashboard + alert rules for NUT UPS metrics; 3 exporters scraping tc3/tower1/zotac; battery charge, load, runtime, voltage, status per UPS)
+19. **Email Server** -- DONE (mail.woodhead.tech; Mailcow on LXC 212, Mailgun SMTP relay for outbound, inbound via port forwards, mailboxes: brandon@, clawbot@, clawbot-0@, alerts@)
+20. **Zigbee2MQTT** -- DONE (LXC 214 on zotac at 192.168.86.36; SONOFF Zigbee Dongle Lite via USB passthrough; Zigbee2MQTT 2.10.1 + Mosquitto on :1883; HA connects via MQTT integration at 192.168.86.36:1883)
+21. **pwnagotchi** -- DONE (LXC 216 on thinkcentre3 at 192.168.86.38; TP-Link TL-WN722N v2 RTL8188EUS USB WiFi in monitor mode via lxc.net.1.type=phys; bettercap + pwngrid + pwnagotchi Python AI; pwnagotchi.woodhead.tech)
+22. **Legitimate SSL Certs** -- PLANNED (replace self-signed/wildcard certs with proper Let's Encrypt certs per service; evaluate cert-manager in K8s or Traefik ACME for LXC services; ensure all subdomains have valid TLS)
+23. **Piboard Touchscreen** -- PLANNED (verify XPT2046 SPI touch on Waveshare 5" display; add `--touch-events=enabled` to Chromium kiosk flags; calibrate if needed)
+24. **Grafana Cloud Paging** -- PLANNED (route critical alerts through grafana.net on-call; Grafana Agent on monitoring LXC ships metrics to cloud; escalation for Libby alerts, downed services, enclosure, Dexcom)
+25. **Gutgrinda Enclosure in Grafana** -- PLANNED (enable HA Prometheus integration, scrape from monitoring LXC, Grafana dashboard for temp/humidity/plug states)
 
-### NAS Migration: Ceph-backed VM → Dedicated Hardware
+---
+
+### Legitimate SSL Certificates
 
 **Status**: PLANNED
 
-**Why**: TrueNAS currently runs as a VM (VMID 300, tower1) with its 2TB `tank` pool on a
-Ceph RBD (`thinkCentreCeph:vm-300-disk-0`). The Ceph cluster has mixed SSD+HDD OSDs. Heavy
-write I/O from SABnzbd overwhelms the HDD OSDs, causing Ceph slow ops → TrueNAS ZFS stall →
-NFS hang → all `/media` services freeze. Moving to bare-metal eliminates the Ceph layer entirely.
+**Type**: Configuration change (Traefik ACME + Let's Encrypt)
+**Goal**: All `*.woodhead.tech` subdomains should present valid Let's Encrypt certificates
+rather than relying on self-signed or wildcard certs that trigger browser warnings.
 
-**Current mitigations** (applied 2026-05-13, do not revert):
-- TrueNAS NFS thread count raised to 16 — must set permanently in web UI: Services → NFS → Number of servers → 16
-- SABnzbd global bandwidth cap: 50 MB/s (`bandwidth_max = 50M` in `/opt/arr/sabnzbd/config/sabnzbd.ini`)
-- SABnzbd scheduler: 6pm → 40% speed, 1am → 100% (set in SABnzbd web UI → Config → Scheduling)
+**Current state**: Traefik handles TLS termination via Let's Encrypt with Cloudflare DNS-01
+challenge. The static config (`traefik.yml`) has ACME configured but several routes may
+still serve self-signed certs or have cert resolver misconfigured.
 
----
+**What to do**:
+1. Audit all Traefik dynamic configs — ensure every `tls:` block references `certresolver: letsencrypt`
+2. Verify Cloudflare API token has `Zone:DNS:Edit` permission for DNS-01 challenge
+3. Check Traefik ACME storage (`/etc/traefik/acme.json`) is populated with valid certs for all subdomains
+4. Test each subdomain: `curl -v https://<subdomain>.woodhead.tech` and check the cert
+5. For K8s ingress routes, evaluate cert-manager with Let's Encrypt ClusterIssuer
 
-#### Hardware Options
-
-**Option A — HP ProLiant MicroServer Gen10 Plus (Recommended)**
-
-| Part | Model | Est. Price |
-|------|-------|-----------|
-| NAS chassis | HP ProLiant MicroServer Gen10 Plus (used) | $150–250 |
-| RAM | 16GB DDR4 ECC UDIMM (2x 8GB) | $30–50 |
-| Drive 1 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
-| Drive 2 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
-| Boot USB | Samsung 32GB USB flash | $8–10 |
-| **Total** | | **~$430–590** |
-
-- 4 bays (direct SATA), ~35W idle, ECC RAM, purpose-built for NAS
-- ZFS pool: 2x 8TB mirror → ~7.3TB usable, room to expand to 4 drives later
-
-**Option B — N100 Mini PC + Terramaster DAS Enclosure**
-
-| Part | Model | Est. Price |
-|------|-------|-----------|
-| Mini PC | Beelink EQ12 (N100, 16GB RAM) | $160–180 |
-| DAS | Terramaster D4-320 (4-bay USB-C) | $100–130 |
-| Drive 1 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
-| Drive 2 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
-| **Total** | | **~$500–590** |
-
-- ~15W idle, very compact, NVMe used for TrueNAS OS leaving all DAS bays for data
-- USB-C DAS adds one more link in the chain vs Option A's direct SATA
-
-**Option C — Synology DS923+**
-
-| Part | Model | Est. Price |
-|------|-------|-----------|
-| NAS unit | Synology DS923+ | $600–650 |
-| RAM upgrade | 8GB DDR4 ECC SO-DIMM (optional) | $50–80 |
-| Drive 1 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
-| Drive 2 | Seagate IronWolf 8TB ST8000VN004 | $120–140 |
-| **Total** | | **~$890–1010** |
-
-- Turnkey, polished UI, good mobile app — but uses Synology DSM (not TrueNAS), Btrfs not ZFS
-- Most expensive; Ansible playbooks would need adaptation for different NFS config
-
-**Drive notes**: All options use 2x 8TB in a ZFS mirror. Use CMR drives only — WD Red Plus
-(WD80EFPX) or Seagate IronWolf (ST8000VN004). Avoid WD Red non-Plus (SMR, bad for ZFS).
-
----
-
-#### Migration Plan
-
-**Phase 1 — Prep** (before hardware arrives)
-- [ ] Audit datasets from tower1: `qm guest exec 300 -- /bin/sh -c "zfs list && cat /etc/exports"`
-- [ ] Apply remaining mitigations (NFS threads 16 in TrueNAS UI, SABnzbd schedule)
-
-**Phase 2 — New NAS setup** (temp IP 192.168.86.41 during transition)
-- [ ] Install TrueNAS Scale bare metal, assign 192.168.86.41
-- [ ] Create pool `tank` (ZFS mirror), datasets: `tank/media/{books,downloads,movies,music,tv}`, `tank/workspace`, `tank/isos`, `tank/backups`
-- [ ] Enable NFS, thread count 16, export to `192.168.86.0/24`
-- [ ] Verify from thinkcentre2: `showmount -e 192.168.86.41`
-
-**Phase 3 — Live data sync** (no downtime, hours for 3–6TB)
-```bash
-rsync -avz --progress 192.168.86.40:/mnt/tank/media/ root@192.168.86.41:/mnt/tank/media/
-rsync -avz --progress 192.168.86.40:/mnt/tank/workspace/ root@192.168.86.41:/mnt/tank/workspace/
-rsync -avz --progress 192.168.86.40:/mnt/tank/isos/ root@192.168.86.41:/mnt/tank/isos/
-rsync -avz --progress 192.168.86.40:/mnt/tank/backups/ root@192.168.86.41:/mnt/tank/backups/
-```
-
-**Phase 4 — Cutover** (~15 min downtime)
-```bash
-# Stop arr-stack
-ssh -i ~/.ssh/id_ansible root@192.168.86.30 pct stop 202
-# Final delta sync
-rsync -avz --checksum 192.168.86.40:/mnt/tank/media/ root@192.168.86.41:/mnt/tank/media/
-# Take old TrueNAS offline, assign 192.168.86.40 to new NAS
-ssh -i ~/.ssh/id_ansible root@192.168.86.130 qm stop 300
-# Remount NFS on thinkcentre2
-ssh -i ~/.ssh/id_ansible root@192.168.86.30 \
-  'systemctl restart mnt-truenas\\x2dmedia.mount && timeout 5 ls /mnt/truenas-media/'
-# Start arr-stack
-ssh -i ~/.ssh/id_ansible root@192.168.86.30 pct start 202
-```
-
-**Phase 5 — Cleanup** (after 1–2 weeks stable)
-- [ ] `qm destroy 300` on tower1 — removes TrueNAS VM
-- [ ] Remove Ceph RBD via Proxmox UI to reclaim 2TB; monitor `ceph status` until HEALTH_OK
-- [ ] Update any Ansible playbooks referencing TrueNAS IP directly
+**Requirements**:
+- Cloudflare API token with DNS edit permissions (already needed for DDNS)
+- Traefik ACME storage persisted across restarts (`/etc/traefik/acme.json`, chmod 600)
+- All subdomains must be routable via Traefik before ACME challenge can complete
 
 ---
 

@@ -1,7 +1,6 @@
 baseURL = 'https://resume.woodhead.tech/'
 locale = 'en-us'
 title = 'Brandon Woodward'
-theme = ''
 
 [markup.goldmark.renderer]
   unsafe = true

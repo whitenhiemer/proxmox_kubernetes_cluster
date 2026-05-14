@@ -14,6 +14,7 @@ Wants=network-online.target
 Type=simple
 User=piboard
 Group=piboard
+EnvironmentFile=-/etc/piboard/ha.env
 ExecStart=/usr/local/bin/piboard --config /etc/piboard/config.yaml
 Restart=always
 RestartSec=5

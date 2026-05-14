@@ -12,6 +12,8 @@ http:
       service: libby-alert
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     libby-alert:

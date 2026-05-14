@@ -12,6 +12,8 @@ http:
       service: kanboard
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       middlewares:
         - authentik@file
 

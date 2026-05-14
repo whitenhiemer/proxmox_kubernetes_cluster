@@ -1,0 +1,96 @@
+# service_groups.yml - Logical service group definitions for resource management
+#
+# proxmox_node_map translates pvesh node names (Proxmox hostnames) to Ansible
+# inventory names. Update if nodes are renamed or added.
+proxmox_node_map:
+  thinkcentre1: pve1
+  thinkcentre2: pve2
+  thinkcentre3: pve3
+  tower1: tower1
+  zotac: zotac
+
+
+#
+# Groups can be started/stopped as a unit via:
+#   make group-status
+#   make group-start GROUP=<name>
+#   make group-stop GROUP=<name>
+#
+# Safety rules:
+#   always_on: true  → stop is refused (core, storage)
+#   required_by      → groups that depend on this one; stop blocked if any are running
+#   depends_on       → groups this one requires; warning emitted on start if stopped
+#   hardware_bound   → excluded from bulk ops (special)
+
+service_groups:
+  core:
+    always_on: true
+    description: "Ingress + VPN"
+    members:
+      - { vmid: 200, name: traefik, type: lxc }
+      - { vmid: 208, name: wireguard, type: lxc }
+
+  storage:
+    always_on: true
+    description: "TrueNAS NAS"
+    required_by: [media]
+    members:
+      - { vmid: 300, name: truenas, type: vm }
+
+  security:
+    description: "Authentik SSO"
+    required_by: [media, apps]
+    members:
+      - { vmid: 207, name: authentik, type: lxc }
+
+  home:
+    description: "Smart home automation"
+    members:
+      - { vmid: 301, name: homeassistant, type: vm }
+      - { vmid: 214, name: zigbee2mqtt, type: lxc }
+      - { vmid: 209, name: libby-alert, type: lxc }
+
+  media:
+    description: "ARR stack, Plex, Jellyfin"
+    depends_on: [core, storage]
+    members:
+      - { vmid: 202, name: arr-stack, type: lxc }
+      - { vmid: 203, name: plex, type: lxc }
+      - { vmid: 204, name: jellyfin, type: lxc }
+
+  observability:
+    description: "Prometheus, Grafana, OpenClaw"
+    members:
+      - { vmid: 205, name: monitoring, type: lxc }
+      - { vmid: 206, name: openclaw, type: lxc }
+
+  apps:
+    description: "Lightweight application services"
+    members:
+      - { vmid: 201, name: recipe-site, type: lxc }
+      - { vmid: 211, name: kanboard, type: lxc }
+      - { vmid: 215, name: claude-os, type: lxc }
+
+  infra:
+    description: "Email + PXE boot"
+    members:
+      - { vmid: 212, name: mailserver, type: lxc }
+      - { vmid: 213, name: pxe, type: lxc }
+
+  sdr:
+    description: "SDR scanner (Trunk Recorder + rdio-scanner)"
+    members:
+      - { vmid: 210, name: sdr, type: lxc }
+
+  special:
+    hardware_bound: true
+    description: "USB passthrough services (excluded from bulk ops)"
+    members:
+      - { vmid: 216, name: pwnagotchi, type: lxc }
+
+  k8s:
+    description: "Talos Kubernetes cluster"
+    members:
+      - { vmid: 400, name: talos-cp-0, type: vm, role: control_plane }
+      - { vmid: 410, name: talos-worker-0, type: vm, role: worker }
+      - { vmid: 411, name: talos-worker-1, type: vm, role: worker }

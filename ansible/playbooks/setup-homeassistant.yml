@@ -7,11 +7,14 @@
 # This playbook:
 #   1. Deploys the Traefik dynamic route for home.woodhead.tech
 #   2. Configures trusted_proxies in HAOS so Traefik can reverse proxy it
+#   3. Deploys HA package files (e.g. beardie.yaml) to /config/packages/ via SSH
 #
 # Prerequisites:
 #   - HAOS VM running at 192.168.86.41 (Terraform + `make apply-homeassistant`)
 #   - Initial setup wizard completed at http://192.168.86.41:8123
 #   - Long-lived access token created in HA: Profile > Security > Long-lived access tokens
+#   - For package deployment (--tags packages): SSH & Web Terminal addon installed in HA
+#     with your SSH public key added (Settings > Add-ons > SSH & Web Terminal > Config)
 #
 # Usage:
 #   ansible-playbook playbooks/setup-homeassistant.yml \
@@ -19,6 +22,9 @@
 #
 # Without the token (Traefik config only):
 #   ansible-playbook playbooks/setup-homeassistant.yml --tags traefik
+#
+# Deploy HA packages only (requires SSH addon):
+#   ansible-playbook playbooks/setup-homeassistant.yml --tags packages
 ---
 # --- Play 1: Deploy Traefik route ---
 - name: Deploy Traefik route for Home Assistant
@@ -105,3 +111,100 @@
           - "After editing, restart HA: Settings > System > Restart"
           - "Then verify: https://home.woodhead.tech should load without 400 error"
       tags: ha_config
+
+# --- Play 3: Deploy HA package files via Proxmox QEMU guest exec ---
+#
+# HAOS SSH addon cannot expose an external port (protected addon), so we deploy
+# files by SSHing to the Proxmox host and using `qm guest exec` to write files
+# into the running HAOS VM (VM ID 301) at /mnt/data/supervisor/homeassistant/.
+#
+# Prerequisites:
+#   - QEMU guest agent running in HAOS VM (it is by default)
+#   - SSH access to the Proxmox host that runs VM 301 (pve1, 192.168.86.29)
+#   - GUTGRINDA_DISCORD_WEBHOOK env var set (written to HAOS secrets.yaml)
+#
+# Usage:
+#   make beardie GUTGRINDA_DISCORD_WEBHOOK=https://discord.com/api/webhooks/...
+- name: Deploy Home Assistant packages via Proxmox guest exec
+  hosts: localhost
+  connection: local
+  become: false
+  vars:
+    proxmox_host: "192.168.86.29"
+    proxmox_ssh_key: "~/.ssh/id_ansible"
+    ha_vmid: 301
+    ha_config_dir: /mnt/data/supervisor/homeassistant
+    packages_src: "{{ playbook_dir }}/../files/homeassistant/packages"
+    gutgrinda_discord_webhook: "{{ lookup('env', 'GUTGRINDA_DISCORD_WEBHOOK') }}"
+
+  tasks:
+    - name: Ensure /config/packages directory exists in HAOS
+      ansible.builtin.shell: |
+        ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
+          -i {{ proxmox_ssh_key }} root@{{ proxmox_host }} \
+          "qm guest exec {{ ha_vmid }} -- /bin/sh -c 'mkdir -p {{ ha_config_dir }}/packages'"
+      changed_when: false
+      tags: packages
+
+    - name: Write package files to HAOS via base64
+      ansible.builtin.shell: |
+        B64=$(base64 -w0 {{ packages_src }}/{{ item }})
+        ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
+          -i {{ proxmox_ssh_key }} root@{{ proxmox_host }} \
+          "qm guest exec {{ ha_vmid }} -- /bin/sh -c \
+          'echo ${B64} | base64 -d > {{ ha_config_dir }}/packages/{{ item }}'"
+      loop:
+        - beardie.yaml
+      changed_when: true
+      tags: packages
+
+    - name: Write Discord webhook secret to HAOS secrets.yaml
+      ansible.builtin.shell: |
+        # Remove existing gutgrinda_discord_webhook line if present, then append
+        ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
+          -i {{ proxmox_ssh_key }} root@{{ proxmox_host }} \
+          "qm guest exec {{ ha_vmid }} -- /bin/sh -c \
+          'sed -i \"/gutgrinda_discord_webhook/d\" {{ ha_config_dir }}/secrets.yaml && \
+           echo \"gutgrinda_discord_webhook: {{ gutgrinda_discord_webhook }}\" \
+           >> {{ ha_config_dir }}/secrets.yaml'"
+      when: gutgrinda_discord_webhook != ""
+      changed_when: true
+      no_log: true
+      tags: packages
+
+    - name: Ensure packages directive in configuration.yaml
+      ansible.builtin.shell: |
+        ssh -o StrictHostKeyChecking=accept-new -o IdentitiesOnly=yes \
+          -i {{ proxmox_ssh_key }} root@{{ proxmox_host }} \
+          "qm guest exec {{ ha_vmid }} -- /bin/sh -c \
+          'grep -q \"include_dir_named packages\" {{ ha_config_dir }}/configuration.yaml || \
+           printf \"\nhomeassistant:\n  packages: !include_dir_named packages\n\" \
+           >> {{ ha_config_dir }}/configuration.yaml'"
+      changed_when: false
+      tags: packages
+
+    - name: Check HA config and reload
+      ansible.builtin.uri:
+        url: "http://{{ hostvars['localhost']['ha_url'] | default('192.168.86.41:8123') }}/api/config/core/check_config"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ lookup('env', 'HA_TOKEN') }}"
+        validate_certs: false
+        status_code: [200]
+      register: config_check
+      failed_when: config_check.json.result != 'valid'
+      when: lookup('env', 'HA_TOKEN') != ""
+      tags: packages
+
+    - name: Restart Home Assistant
+      ansible.builtin.uri:
+        url: "http://192.168.86.41:8123/api/services/homeassistant/restart"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ lookup('env', 'HA_TOKEN') }}"
+        validate_certs: false
+        status_code: [200]
+      when:
+        - lookup('env', 'HA_TOKEN') != ""
+        - config_check.json.result == 'valid'
+      tags: packages

@@ -25,10 +25,11 @@
 
 .PHONY: setup prepare prepare-truenas ddns init plan apply \
         apply-truenas apply-homeassistant apply-lxc plan-lxc \
-        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant truenas sdr mailserver adguard minecraft \
+        traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant beardie truenas sdr pxe mailserver zigbee2mqtt claude-os pwnagotchi \
         bootstrap kubeconfig health k8s-base harden \
-        patch-proxmox patch-lxc patch-docker patch-pi patch-workstations destroy clean help \
-        docs-build docs-dev resume-build
+        patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
+        docs-build docs-dev resume-build \
+        group-status group-start group-stop
 
 TERRAFORM_DIR := terraform
 TALOS_DIR := talos
@@ -93,9 +94,10 @@ plan-lxc: ## Preview LXC container changes only
 		-target=proxmox_virtual_environment_container.libby_alert \
 		-target=proxmox_virtual_environment_container.kanboard \
 		-target=proxmox_virtual_environment_container.mailserver \
-		-target=proxmox_virtual_environment_container.adguard \
-		-target=proxmox_virtual_environment_container.step_ca \
-		-target=proxmox_virtual_environment_container.minecraft
+		-target=proxmox_virtual_environment_container.pxe \
+		-target=proxmox_virtual_environment_container.zigbee2mqtt \
+		-target=proxmox_virtual_environment_container.claude_os \
+		-target=proxmox_virtual_environment_container.pwnagotchi
 
 apply-lxc: ## Create/update LXC containers only
 	cd $(TERRAFORM_DIR) && terraform apply \
@@ -111,9 +113,10 @@ apply-lxc: ## Create/update LXC containers only
 		-target=proxmox_virtual_environment_container.libby_alert \
 		-target=proxmox_virtual_environment_container.kanboard \
 		-target=proxmox_virtual_environment_container.mailserver \
-		-target=proxmox_virtual_environment_container.adguard \
-		-target=proxmox_virtual_environment_container.step_ca \
-		-target=proxmox_virtual_environment_container.minecraft
+		-target=proxmox_virtual_environment_container.pxe \
+		-target=proxmox_virtual_environment_container.zigbee2mqtt \
+		-target=proxmox_virtual_environment_container.claude_os \
+		-target=proxmox_virtual_environment_container.pwnagotchi
 
 # ===== Phase 2-3: LXC Services =====
 
@@ -148,12 +151,14 @@ jellyfin: ## Deploy Jellyfin Media Server into its LXC (with iGPU passthrough)
 monitoring: ## Deploy monitoring stack (Prometheus, Grafana, Alertmanager, Dexcom) into its LXC
 	@# Usage: make monitoring DISCORD_WEBHOOK=https://... GRAFANA_PASSWORD=... PVE_USER=monitoring@pve PVE_TOKEN_NAME=prometheus PVE_TOKEN_VALUE=...
 	@# Dexcom: make monitoring DEXCOM_USERNAME=user DEXCOM_PASSWORD=pass HA_GLUCOSE_WEBHOOK=http://192.168.86.41:8123/api/webhook/<id>
+	@# Gutgrinda: make monitoring HA_TOKEN=<long-lived-token>  (writes /etc/prometheus/ha_token for HA scrape)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-monitoring.yml \
 		$(if $(DISCORD_WEBHOOK),--extra-vars "discord_webhook=$(DISCORD_WEBHOOK)") \
 		$(if $(GRAFANA_PASSWORD),--extra-vars "grafana_password=$(GRAFANA_PASSWORD)") \
 		$(if $(PVE_USER),--extra-vars "pve_user=$(PVE_USER) pve_token_name=$(PVE_TOKEN_NAME) pve_token_value=$(PVE_TOKEN_VALUE)") \
 		$(if $(DEXCOM_USERNAME),--extra-vars "dexcom_username=$(DEXCOM_USERNAME) dexcom_password=$(DEXCOM_PASSWORD)") \
-		$(if $(HA_GLUCOSE_WEBHOOK),--extra-vars "ha_glucose_webhook=$(HA_GLUCOSE_WEBHOOK)")
+		$(if $(HA_GLUCOSE_WEBHOOK),--extra-vars "ha_glucose_webhook=$(HA_GLUCOSE_WEBHOOK)") \
+		$(if $(HA_TOKEN),--extra-vars "ha_token=$(HA_TOKEN)")
 
 openclaw: ## Deploy OpenClaw AI agent framework into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-openclaw.yml
@@ -167,6 +172,9 @@ wireguard: ## Deploy WireGuard VPN tunnel into its LXC
 homeassistant: ## Deploy Traefik route for Home Assistant (post-onboarding config via HA_TOKEN=)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml \
 		$(if $(HA_TOKEN),--extra-vars "ha_token=$(HA_TOKEN)")
+
+beardie: ## Deploy Gutgrinda enclosure automation to HAOS (GUTGRINDA_DISCORD_WEBHOOK= HA_TOKEN= optional)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml --tags packages
 
 truenas: ## Configure TrueNAS Scale via REST API (post-install: ZFS pool, datasets, NFS shares)
 	@if [ -z "$(TRUENAS_PASSWORD)" ]; then \
@@ -204,6 +212,21 @@ kanboard: ## Deploy Kanboard project management into its LXC
 
 sdr: ## Deploy SDR scanner stack (Trunk Recorder + rdio-scanner) for SNO911 fire/EMS
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-sdr.yml
+
+pxe: ## Deploy PXE boot server (proxy-DHCP + TFTP + HTTP for LAN network installs)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-pxe.yml
+
+zigbee2mqtt: ## Deploy Zigbee2MQTT + Mosquitto on zotac (Zigbee USB dongle bridge for Home Assistant)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-zigbee2mqtt.yml
+
+pwnagotchi: ## Deploy pwnagotchi WiFi learning device (LXC 216 on pve3, RTL8188EUS dongle)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-pwnagotchi.yml \
+		$(if $(WEB_PASSWORD),--extra-vars "web_password=$(WEB_PASSWORD)")
+
+claude-os: ## Deploy Claude OS AI memory system (OpenAI: OPENAI_API_KEY=sk-..., local: INSTALL_OLLAMA=true)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-claude-os.yml \
+		$(if $(OPENAI_API_KEY),--extra-vars "openai_api_key=$(OPENAI_API_KEY)") \
+		$(if $(INSTALL_OLLAMA),--extra-vars "install_ollama=$(INSTALL_OLLAMA)")
 
 mailserver: ## Deploy Mailcow email server (Mailgun relay for outbound)
 	@if [ -z "$(MAILGUN_USER)" ] || [ -z "$(MAILGUN_PASSWORD)" ]; then \
@@ -281,3 +304,18 @@ destroy: ## Tear down VMs and clean generated configs
 clean: ## Remove generated Talos configs (does not destroy VMs)
 	rm -rf $(TALOS_OUT)
 	@echo "Cleaned generated configs."
+
+# ===== Service Group Management =====
+
+group-status: ## Show running status of all service groups
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/group-status.yml
+
+group-start: ## Start a service group: make group-start GROUP=media
+	@if [ -z "$(GROUP)" ]; then echo "Usage: make group-start GROUP=<name>"; exit 1; fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/group-start.yml \
+		--extra-vars "target_group=$(GROUP)"
+
+group-stop: ## Stop a service group: make group-stop GROUP=media
+	@if [ -z "$(GROUP)" ]; then echo "Usage: make group-stop GROUP=<name>"; exit 1; fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/group-stop.yml \
+		--extra-vars "target_group=$(GROUP)"

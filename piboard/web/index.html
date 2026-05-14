@@ -22,6 +22,21 @@
     <!-- Service health grid -->
     <main id="service-grid"></main>
 
+    <!-- Enclosure bar: Gutgrinda temp/humidity/plug states -->
+    <section id="enclosure-bar">
+        <span id="enc-label">GUTGRINDA</span>
+        <span class="divider">|</span>
+        <span id="enc-temp">TEMP: --°F</span>
+        <span class="divider">|</span>
+        <span id="enc-hum">HUM: --%</span>
+        <span class="divider">|</span>
+        <span class="enc-device"><span class="enc-dot" id="enc-basking"></span>BASKING</span>
+        <span class="divider">|</span>
+        <span class="enc-device"><span class="enc-dot" id="enc-ambient"></span>AMBIENT</span>
+        <span class="divider">|</span>
+        <span class="enc-device"><span class="enc-dot" id="enc-heater"></span>HEATER</span>
+    </section>
+
     <!-- Bottom bar: alerts + infrastructure summary -->
     <footer id="bottom-bar">
         <div id="alerts-section">

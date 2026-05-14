@@ -11,6 +11,8 @@ http:
       service: resume-site
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     resume-site:

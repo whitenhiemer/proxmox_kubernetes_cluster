@@ -16,6 +16,11 @@
     var memSummary = document.getElementById("mem-summary");
     var diskSummary = document.getElementById("disk-summary");
     var connectionLost = document.getElementById("connection-lost");
+    var encTemp = document.getElementById("enc-temp");
+    var encHum = document.getElementById("enc-hum");
+    var encBasking = document.getElementById("enc-basking");
+    var encAmbient = document.getElementById("enc-ambient");
+    var encHeater = document.getElementById("enc-heater");
 
     function connect() {
         if (eventSource) {
@@ -57,6 +62,9 @@
 
         // Service grid
         renderServices(data.services);
+
+        // Enclosure bar
+        renderEnclosure(data.enclosure);
 
         // Bottom bar
         renderAlerts(data.firing_alerts);
@@ -126,6 +134,22 @@
             el.querySelector(".service-response-time").textContent =
                 svc.response_time >= 0 ? svc.response_time.toFixed(2) + "s" : "--";
         }
+    }
+
+    function renderEnclosure(enc) {
+        if (!enc || !enc.available) {
+            encTemp.textContent = "TEMP: --°F";
+            encHum.textContent = "HUM: --%";
+            encBasking.className = "enc-dot unavailable";
+            encAmbient.className = "enc-dot unavailable";
+            encHeater.className = "enc-dot unavailable";
+            return;
+        }
+        encTemp.textContent = "TEMP: " + enc.temperature.toFixed(1) + "°F";
+        encHum.textContent = "HUM: " + enc.humidity.toFixed(0) + "%";
+        encBasking.className = "enc-dot " + (enc.basking_lamp ? "on" : "off");
+        encAmbient.className = "enc-dot " + (enc.ambient_light ? "on" : "off");
+        encHeater.className = "enc-dot " + (enc.ceramic_heater ? "on" : "off");
     }
 
     function renderAlerts(count) {

@@ -1,0 +1,141 @@
+# setup-zigbee2mqtt.yml - Deploy Zigbee2MQTT + Mosquitto on zotac
+#
+# Passes through the Zigbee USB dongle (attached to zotac) into LXC 214,
+# then deploys Zigbee2MQTT + Mosquitto so Home Assistant can consume Zigbee
+# devices via the MQTT integration.
+#
+# Prerequisites:
+#   - LXC 214 created via `terraform apply -target=...zigbee2mqtt`
+#   - Zigbee USB dongle attached to zotac
+#   - SSH access to 192.168.86.36 (add id_ansible key if needed)
+#
+# Usage:
+#   make zigbee2mqtt
+---
+
+# --- Play 1: USB passthrough on zotac Proxmox host ---
+- name: Configure USB passthrough for Zigbee dongle on zotac
+  hosts: zotac
+  tasks:
+    - name: Find Zigbee USB dongle device path
+      ansible.builtin.shell: |
+        for tty in /dev/ttyACM* /dev/ttyUSB*; do
+          [ -e "$tty" ] || continue
+          vid=$(udevadm info "$tty" 2>/dev/null | awk -F= '/ID_VENDOR_ID/{print $2}' | tr '[:upper:]' '[:lower:]')
+          # Common Zigbee dongle vendors: Silicon Labs (10c4), TI (0451), Nordic (1915), ConBee (1cf1), Nabu Casa (1a86)
+          echo "$vid" | grep -qE "^(10c4|0451|1915|1cf1|1a86)$" && echo "$tty" && exit 0
+        done
+        exit 1
+      register: zigbee_device
+      changed_when: false
+      failed_when: zigbee_device.rc != 0
+
+    - name: Show detected device
+      ansible.builtin.debug:
+        msg: "Zigbee dongle detected at {{ zigbee_device.stdout | trim }}"
+
+    - name: Get device major:minor
+      ansible.builtin.shell: |
+        python3 -c "import os; s = os.stat('{{ zigbee_device.stdout | trim }}'); print(f'{os.major(s.st_rdev)}:{os.minor(s.st_rdev)}')"
+      register: zigbee_devnum
+      changed_when: false
+
+    - name: Enable nesting on LXC (required for Docker overlayfs)
+      ansible.builtin.shell: pct set 214 --features nesting=1
+      changed_when: true
+
+    - name: Add USB passthrough to LXC config
+      ansible.builtin.blockinfile:
+        path: /etc/pve/lxc/214.conf
+        marker: "# {mark} Zigbee USB passthrough"
+        block: |
+          lxc.cgroup2.devices.allow: c {{ zigbee_devnum.stdout | trim }} rwm
+          lxc.mount.entry: {{ zigbee_device.stdout | trim }} dev/ttyACM0 none bind,optional,create=file
+      notify: restart lxc
+
+    - name: Create udev rule for stable Zigbee device permissions
+      ansible.builtin.copy:
+        dest: /etc/udev/rules.d/99-zigbee.rules
+        content: |
+          SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", SYMLINK+="zigbee", MODE="0666"
+          SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", SYMLINK+="zigbee", MODE="0666"
+          SUBSYSTEM=="tty", ATTRS{idVendor}=="1cf1", SYMLINK+="zigbee", MODE="0666"
+          SUBSYSTEM=="tty", ATTRS{idVendor}=="0451", SYMLINK+="zigbee", MODE="0666"
+        mode: "0644"
+      notify: reload udev
+
+  handlers:
+    - name: restart lxc
+      ansible.builtin.shell: pct stop 214 && sleep 3 && pct start 214
+      changed_when: true
+
+    - name: reload udev
+      ansible.builtin.shell: udevadm control --reload-rules && udevadm trigger
+      changed_when: true
+
+# --- Play 2: Deploy Zigbee2MQTT + Mosquitto in LXC ---
+- name: Deploy Zigbee2MQTT stack in LXC
+  hosts: lxc_services:&zigbee2mqtt
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Install Docker
+      ansible.builtin.shell: |
+        curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Create directory structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /opt/zigbee2mqtt/mosquitto/config
+        - /opt/zigbee2mqtt/mosquitto/data
+        - /opt/zigbee2mqtt/z2m-data
+
+    - name: Deploy Mosquitto config
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/zigbee2mqtt/mosquitto.conf"
+        dest: /opt/zigbee2mqtt/mosquitto/config/mosquitto.conf
+        mode: "0644"
+
+    - name: Deploy Zigbee2MQTT configuration
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/zigbee2mqtt/configuration.yaml"
+        dest: /opt/zigbee2mqtt/z2m-data/configuration.yaml
+        mode: "0644"
+        force: false
+
+    - name: Deploy Docker Compose file
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/zigbee2mqtt/docker-compose.yml"
+        dest: /opt/zigbee2mqtt/docker-compose.yml
+        mode: "0644"
+
+    - name: Start Zigbee2MQTT stack
+      ansible.builtin.shell: |
+        cd /opt/zigbee2mqtt && docker compose up -d
+      changed_when: true
+
+    - name: Verify containers running
+      ansible.builtin.shell: |
+        cd /opt/zigbee2mqtt && docker compose ps --format json | python3 -c "
+        import json, sys
+        containers = [json.loads(l) for l in sys.stdin if l.strip()]
+        failed = [c['Name'] for c in containers if c.get('State') != 'running']
+        if failed: sys.exit(1)
+        print('All containers running')
+        "
+      register: verify
+      changed_when: false
+      retries: 5
+      delay: 5
+      until: verify.rc == 0

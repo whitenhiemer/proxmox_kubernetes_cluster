@@ -12,5 +12,7 @@ http:
       service: api@internal
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       middlewares:
         - authentik@file

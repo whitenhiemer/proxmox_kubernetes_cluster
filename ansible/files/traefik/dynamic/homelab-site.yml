@@ -7,6 +7,8 @@ http:
       service: homelab-site
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     homelab-site:

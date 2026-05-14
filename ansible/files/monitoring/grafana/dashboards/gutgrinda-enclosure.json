@@ -1,0 +1,286 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "description": "Gutgrinda Skullkrumpa da Choppy — bearded dragon enclosure temperature, humidity, and device states. HA Prometheus integration exposes metrics in Celsius; dashboard converts to °F.",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "id": 100, "title": "Current Conditions", "type": "row" },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue",   "value": null },
+            { "color": "blue",   "value": 60   },
+            { "color": "yellow", "value": 70   },
+            { "color": "green",  "value": 85   },
+            { "color": "yellow", "value": 110  },
+            { "color": "red",    "value": 115  }
+          ]},
+          "unit": "fahrenheit", "min": 60, "max": 130, "mappings": [],
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "homeassistant_sensor_temperature_celsius{entity=\"sensor.0xa4c13874d0343902_temperature\"} * 9/5 + 32", "legendFormat": "Temperature", "refId": "A" }],
+      "title": "Temperature",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",    "value": null },
+            { "color": "red",    "value": 0    },
+            { "color": "yellow", "value": 20   },
+            { "color": "green",  "value": 25   },
+            { "color": "yellow", "value": 50   },
+            { "color": "red",    "value": 65   }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": [],
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "options": { "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "homeassistant_sensor_humidity_percent{entity=\"sensor.0xa4c13874d0343902_humidity\"}", "legendFormat": "Humidity", "refId": "A" }],
+      "title": "Humidity",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue", "value": null },
+            { "color": "blue", "value": 0    },
+            { "color": "red",  "value": 1    }
+          ]},
+          "mappings": [
+            { "type": "value", "options": {
+              "0": { "text": "OFF", "color": "blue"  },
+              "1": { "text": "ON",  "color": "red"   }
+            }}
+          ],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 },
+      "id": 3,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "homeassistant_switch_state{entity=\"switch.gutgrinda_basking_lamp\"}", "legendFormat": "Basking Lamp", "refId": "A" }],
+      "title": "Basking Lamp",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue",  "value": null },
+            { "color": "blue",  "value": 0    },
+            { "color": "green", "value": 1    }
+          ]},
+          "mappings": [
+            { "type": "value", "options": {
+              "0": { "text": "OFF", "color": "blue"  },
+              "1": { "text": "ON",  "color": "green" }
+            }}
+          ],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 },
+      "id": 4,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "homeassistant_switch_state{entity=\"switch.gutgrinda_ambient_light\"}", "legendFormat": "Ambient Light", "refId": "A" }],
+      "title": "Ambient Light",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "blue",   "value": null },
+            { "color": "blue",   "value": 0    },
+            { "color": "orange", "value": 1    }
+          ]},
+          "mappings": [
+            { "type": "value", "options": {
+              "0": { "text": "OFF", "color": "blue"   },
+              "1": { "text": "ON",  "color": "orange" }
+            }}
+          ],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 },
+      "id": 5,
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false } },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "homeassistant_switch_state{entity=\"switch.gutgrinda_ceramic_heater\"}", "legendFormat": "Ceramic Heater", "refId": "A" }],
+      "title": "Ceramic Heater",
+      "type": "stat"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }, "id": 101, "title": "Temperature & Humidity History", "type": "row" },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "gradientMode": "none", "spanNulls": false },
+          "unit": "fahrenheit",
+          "decimals": 1
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Too Hot" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } },
+              { "id": "custom.lineStyle", "value": { "dash": [8, 4], "fill": "dash" } },
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "custom.lineWidth", "value": 1 }
+            ]
+          },
+          { "matcher": { "id": "byName", "options": "Too Cold" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } },
+              { "id": "custom.lineStyle", "value": { "dash": [8, 4], "fill": "dash" } },
+              { "id": "custom.fillOpacity", "value": 0 },
+              { "id": "custom.lineWidth", "value": 1 }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 7 },
+      "id": 10,
+      "options": { "tooltip": { "mode": "multi", "sort": "none" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        { "expr": "homeassistant_sensor_temperature_celsius{entity=\"sensor.0xa4c13874d0343902_temperature\"} * 9/5 + 32", "legendFormat": "Temperature", "refId": "A" },
+        { "expr": "homeassistant_input_number_state_celsius{entity=\"input_number.gutgrinda_alert_temp_max\"} * 9/5 + 32", "legendFormat": "Too Hot", "refId": "B" },
+        { "expr": "homeassistant_input_number_state_celsius{entity=\"input_number.gutgrinda_alert_temp_min\"} * 9/5 + 32", "legendFormat": "Too Cold", "refId": "C" }
+      ],
+      "title": "Temperature (°F)",
+      "type": "timeseries"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "gradientMode": "none", "spanNulls": false },
+          "unit": "percent", "min": 0, "max": 100,
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 7 },
+      "id": 11,
+      "options": { "tooltip": { "mode": "single", "sort": "none" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        { "expr": "homeassistant_sensor_humidity_percent{entity=\"sensor.0xa4c13874d0343902_humidity\"}", "legendFormat": "Humidity", "refId": "A" }
+      ],
+      "title": "Humidity (%)",
+      "type": "timeseries"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 }, "id": 102, "title": "Device Activity", "type": "row" },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2, "fillOpacity": 20, "gradientMode": "none", "spanNulls": false,
+            "drawStyle": "line", "lineInterpolation": "stepAfter"
+          },
+          "unit": "short", "min": 0, "max": 1,
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "OFF" }, "1": { "text": "ON" } } }
+          ]
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Basking Lamp" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Ambient Light" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Ceramic Heater" },
+            "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "id": 20,
+      "options": { "tooltip": { "mode": "multi", "sort": "none" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        { "expr": "homeassistant_switch_state{entity=\"switch.gutgrinda_basking_lamp\"}", "legendFormat": "Basking Lamp", "refId": "A" },
+        { "expr": "homeassistant_switch_state{entity=\"switch.gutgrinda_ambient_light\"}", "legendFormat": "Ambient Light", "refId": "B" },
+        { "expr": "homeassistant_switch_state{entity=\"switch.gutgrinda_ceramic_heater\"}", "legendFormat": "Ceramic Heater", "refId": "C" }
+      ],
+      "title": "Device States (1 = ON, 0 = OFF)",
+      "type": "timeseries"
+    }
+
+  ],
+  "refresh": "1m",
+  "schemaVersion": 39,
+  "tags": ["homeassistant", "gutgrinda", "enclosure"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Gutgrinda's Enclosure",
+  "uid": "gutgrinda-enclosure",
+  "version": 1,
+  "weekStart": ""
+}

@@ -21,6 +21,8 @@ http:
       service: authentik
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
     # Outpost callback handler -- routes /outpost.goauthentik.io/ on any
     # subdomain back to Authentik so login redirects and callbacks resolve
@@ -31,6 +33,8 @@ http:
       service: authentik
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       priority: 15
 
   services:

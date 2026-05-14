@@ -1,0 +1,22 @@
+# pwnagotchi.yml - Traefik route for pwnagotchi web UI
+#
+# LXC 216, IP 192.168.86.38, port 8080
+# Access via WireGuard VPN for security — avoid exposing publicly if possible.
+
+http:
+  routers:
+    pwnagotchi:
+      rule: "Host(`pwnagotchi.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: pwnagotchi
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
+
+  services:
+    pwnagotchi:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.38:8080"

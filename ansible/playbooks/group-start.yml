@@ -1,0 +1,146 @@
+# group-start.yml - Start a named service group
+#
+# Discovers node location at runtime, starts each member LXC/VM.
+# Warns (does not block) if depends_on groups have stopped members.
+# K8s group: starts control plane first, waits 60s, then starts workers
+# and polls until all worker nodes are Ready.
+#
+# Usage:
+#   cd ansible && ansible-playbook playbooks/group-start.yml --extra-vars "target_group=media"
+#   make group-start GROUP=media
+
+---
+- name: Start service group
+  hosts: pve1
+  gather_facts: false
+  vars_files:
+    - ../vars/service_groups.yml
+
+  tasks:
+    - name: Validate target_group is set
+      ansible.builtin.fail:
+        msg: "target_group is required. Usage: make group-start GROUP=<name>"
+      when: target_group is not defined
+
+    - name: Validate target_group exists
+      ansible.builtin.fail:
+        msg: "Unknown group '{{ target_group }}'. Valid groups: {{ service_groups.keys() | list | join(', ') }}"
+      when: target_group not in service_groups
+
+    - name: No-op for always_on group
+      ansible.builtin.debug:
+        msg: "Group '{{ target_group }}' is always-on — no action needed."
+      when: service_groups[target_group].always_on | default(false)
+
+    - name: End play for always_on groups
+      ansible.builtin.meta: end_play
+      when: service_groups[target_group].always_on | default(false)
+
+    - name: Refuse to start hardware_bound group via bulk ops
+      ansible.builtin.fail:
+        msg: >
+          Group '{{ target_group }}' is hardware-bound and excluded from bulk operations.
+          Start individual members manually via pct/qm on their host node.
+      when: service_groups[target_group].hardware_bound | default(false)
+
+    - name: Discover VM/LXC locations and status
+      ansible.builtin.shell: pvesh get /cluster/resources --type vm --output-format json
+      register: cluster_raw
+      changed_when: false
+
+    - name: Build vmid→node and vmid→status lookups
+      ansible.builtin.set_fact:
+        vm_node: "{{ dict(resources | map(attribute='vmid') | map('string') | zip(resources | map(attribute='node'))) }}"
+        vm_status: "{{ dict(resources | map(attribute='vmid') | map('string') | zip(resources | map(attribute='status'))) }}"
+      vars:
+        resources: "{{ cluster_raw.stdout | from_json }}"
+
+    # Warn if any depends_on group has stopped members (don't block — operator may know what they're doing)
+    - name: Warn if depends_on groups have stopped members
+      ansible.builtin.debug:
+        msg: >
+          WARNING: Group '{{ target_group }}' depends on '{{ dep_group }}' but
+          {{ stopped_names | join(', ') }} {{ 'is' if stopped_names | length == 1 else 'are' }} not running.
+          '{{ target_group }}' may not function correctly until '{{ dep_group }}' is started.
+      loop: "{{ service_groups[target_group].depends_on | default([]) }}"
+      loop_control:
+        loop_var: dep_group
+      vars:
+        running_vmids: >-
+          {{
+            vm_status | dict2items
+            | selectattr('value', 'equalto', 'running')
+            | map(attribute='key') | map('int') | list
+          }}
+        stopped_names: >-
+          {{
+            service_groups[dep_group].members
+            | rejectattr('vmid', 'in', running_vmids)
+            | map(attribute='name') | list
+          }}
+      when:
+        - dep_group in service_groups
+        - stopped_names | length > 0
+
+    # K8s: start control plane → wait → start workers → wait for Ready
+    - name: Start k8s control plane VM
+      ansible.builtin.shell: qm start {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('role', 'defined') | selectattr('role', 'equalto', 'control_plane') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group == 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') != 'running'
+
+    - name: Wait for k8s control plane to initialise
+      ansible.builtin.pause:
+        seconds: 60
+      when: target_group == 'k8s'
+
+    - name: Start k8s worker VMs
+      ansible.builtin.shell: qm start {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('role', 'defined') | selectattr('role', 'equalto', 'worker') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group == 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') != 'running'
+
+    - name: Wait for k8s worker nodes to be Ready
+      ansible.builtin.shell: >
+        KUBECONFIG={{ playbook_dir }}/../../talos/_out/kubeconfig
+        kubectl get nodes --no-headers | grep -v ' Ready'
+      register: not_ready_nodes
+      until: not_ready_nodes.stdout == ''
+      retries: 20
+      delay: 15
+      changed_when: false
+      delegate_to: localhost
+      when: target_group == 'k8s'
+
+    # All other groups: start LXCs and VMs in parallel (Ansible default)
+    - name: Start LXC containers
+      ansible.builtin.shell: pct start {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('type', 'equalto', 'lxc') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group != 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') != 'running'
+
+    - name: Start VMs
+      ansible.builtin.shell: qm start {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('type', 'equalto', 'vm') | rejectattr('role', 'defined') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group != 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') != 'running'

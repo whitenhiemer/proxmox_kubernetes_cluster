@@ -12,6 +12,8 @@ http:
       service: grafana
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       middlewares:
         - authentik@file
 
@@ -23,6 +25,8 @@ http:
       service: prometheus
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       middlewares:
         - authentik@file
 
@@ -34,6 +38,8 @@ http:
       service: alertmanager
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
       middlewares:
         - authentik@file
 

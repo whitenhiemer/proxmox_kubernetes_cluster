@@ -89,6 +89,25 @@ and resource allocation.
             |   | RTL-SDR  |
             |   +----------+
             |
+            |   +----------+   +----------+   +----------+
+            |   | Kanboard |   | PXE      |   | Claude   |
+            |   | LXC 211  |   | Server   |   | OS       |
+            |   | .33      |   | LXC 213  |   | LXC 215  |
+            |   | :8000    |   | .35      |   | .37      |
+            |   +----------+   | TFTP/HTTP|   | :8051    |
+            |                  +----------+   | :5173    |
+            |                                 +----------+
+            |
+            |   +----------+
+            |   | Zigbee   |
+            |   | 2MQTT    |
+            |   | LXC 214  |
+            |   | .36      |
+            |   | :8080    |
+            |   | :1883    |
+            |   | (zotac)  |
+            |   +----------+
+            |
           +------- Standalone Devices (not Proxmox-managed) -------+
           |                                                         |
      +----+----------+     +----------------+
@@ -119,11 +138,18 @@ and resource allocation.
 | 192.168.86.27 | libby-alert | LXC | 209 | Libby life alert QR site + alerts |
 | 192.168.86.28 | authentik | LXC | 207 | Identity provider (Authentik SSO, OIDC) |
 | 192.168.86.32 | sdr | LXC | 210 | SDR scanner (Trunk Recorder + rdio-scanner) |
+| 192.168.86.33 | kanboard | LXC | 211 | Kanboard project management + ClawBot agent |
+| 192.168.86.34 | mailserver | LXC | 212 | Mailcow email server (Mailgun relay) |
+| 192.168.86.35 | pxe-server | LXC | 213 | PXE boot server (proxy-DHCP + TFTP + HTTP) |
+| 192.168.86.36 | zigbee2mqtt | LXC | 214 | Zigbee2MQTT + Mosquitto (on zotac) |
+| 192.168.86.37 | claude-os | LXC | 215 | Claude OS AI memory/MCP server |
+| 192.168.86.38 | pwnagotchi | LXC | 216 | Pwnagotchi passive WiFi capture (pve3, RTL8188EUS) |
 | 192.168.86.39 | wireguard | LXC | 208 | WireGuard VPN tunnel (UDP 51820) |
 | 192.168.86.40 | truenas | VM | 300 | NAS, ZFS, NFS/SMB shares |
 | 192.168.86.41 | homeassistant | VM | 301 | Home Assistant OS, smart home |
 | 192.168.86.131 | piboard | Pi | -- | Raspberry Pi 3B monitoring dashboard |
 | 192.168.86.136 | klipper-ender5pro | Pi | -- | Klipper 3D printer (Ender 5 Pro) |
+| 192.168.86.138 | klipper-ender3 | Pi | -- | Klipper 3D printer (Ender 3) |
 | 192.168.86.100 | k8s-vip | VIP | -- | Kubernetes API endpoint |
 | 192.168.86.101 | talos-cp-0 | VM | 400 | K8s control plane (Talos Linux) |
 | 192.168.86.111-113 | talos-worker-* | VM | 410-412 | K8s workers (Talos Linux, 3 nodes) |
@@ -319,6 +345,11 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | Authentik LXC | 2 | 2048 | Postgres + Redis + server + worker |
 | SDR Scanner LXC | 2 | 2048 | Trunk Recorder + rdio-scanner |
 | WireGuard LXC | 1 | 256 | Kernel WireGuard |
+| Kanboard LXC | 1 | 512 | Kanboard + SQLite |
+| PXE Server LXC | 1 | 256 | dnsmasq + nginx |
+| Zigbee2MQTT LXC | 1 | 512 | Zigbee2MQTT + Mosquitto |
+| Claude OS LXC | 4 | 4096 | FastAPI + Redis + RQ + Vite |
+| Pwnagotchi LXC | 1 | 1024 | bettercap + pwnagotchi Python |
 
 ### Total Budget
 
@@ -346,13 +377,23 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | home.woodhead.tech | 192.168.86.41 | 8123 | Active |
 | grafana.woodhead.tech | 192.168.86.25 | 3000 | Active |
 | prometheus.woodhead.tech | 192.168.86.25 | 9090 | Active (Authentik SSO) |
-| scanner.woodhead.tech | 192.168.86.32 | 3000 | Active (Authentik SSO) |
-| auth.woodhead.tech | 192.168.86.28 | 9000 | Active |
+| alertmanager.woodhead.tech | 192.168.86.25 | 9093 | Active |
 | docs.woodhead.tech | 192.168.86.25 | 8081 | Active |
 | resume.woodhead.tech | 192.168.86.25 | 8082 | Active |
-| woodhead.tech | 192.168.86.25 | 8083 | Active |
+| woodhead.tech / www.woodhead.tech | 192.168.86.25 | 8083 | Active |
+| homelab.woodhead.tech | 192.168.86.25 | 8084 | Active |
+| scanner.woodhead.tech | 192.168.86.32 | 3000 | Active (Authentik SSO) |
+| auth.woodhead.tech | 192.168.86.28 | 9000 | Active |
+| claw.woodhead.tech | 192.168.86.26 | 18789 | Active |
+| alert.woodhead.tech | 192.168.86.27 | 8080 | Active |
+| mail.woodhead.tech | 192.168.86.34 | 8080 | Active |
+| tasks.woodhead.tech | 192.168.86.33 | 8000 | Active |
 | ender5.woodhead.tech | 192.168.86.136 | 80 | Active |
+| ender3.woodhead.tech | 192.168.86.138 | 80 | Active |
 | traefik.woodhead.tech | localhost | -- | Active (Authentik SSO) |
+| claude-os.woodhead.tech | 192.168.86.37 | 5173 | Active |
+| claude-os-api.woodhead.tech | 192.168.86.37 | 8051 | Active |
+| pwnagotchi.woodhead.tech | 192.168.86.38 | 8080 | Active |
 
 ## Terraform Resource Map
 
@@ -369,12 +410,69 @@ Traefik handles all TLS termination using Let's Encrypt certificates obtained vi
 | `proxmox_virtual_environment_container.wireguard` | lxc-wireguard.tf | LXC | 208 |
 | `proxmox_virtual_environment_container.libby_alert` | lxc-libby-alert.tf | LXC | 209 |
 | `proxmox_virtual_environment_container.sdr` | lxc-sdr.tf | LXC | 210 |
+| `proxmox_virtual_environment_container.kanboard` | lxc-kanboard.tf | LXC | 211 |
+| `proxmox_virtual_environment_container.mailserver` | lxc-mailserver.tf | LXC | 212 |
+| `proxmox_virtual_environment_container.pxe` | lxc-pxe.tf | LXC | 213 |
+| `proxmox_virtual_environment_container.zigbee2mqtt` | lxc-zigbee2mqtt.tf | LXC | 214 |
+| `proxmox_virtual_environment_container.claude_os` | lxc-claude-os.tf | LXC | 215 |
+| `proxmox_virtual_environment_container.pwnagotchi` | lxc-pwnagotchi.tf | LXC | 216 |
 | `proxmox_virtual_environment_vm.truenas` | vm-truenas.tf | VM | 300 |
 | `proxmox_virtual_environment_vm.homeassistant` | vm-homeassistant.tf | VM | 301 |
 | `proxmox_virtual_environment_vm.controlplane[*]` | control-plane.tf | VM | 400+ |
 | `proxmox_virtual_environment_vm.worker[*]` | workers.tf | VM | 410+ |
 
 **Provider:** [bpg/proxmox](https://registry.terraform.io/providers/bpg/proxmox-virtual-environment) ~0.66.0
+
+## Service Group Management
+
+Services are organized into logical groups that can be started and stopped as a unit. Node location is discovered at runtime via the Proxmox cluster API — no node is hardcoded.
+
+| Group | VMIDs | RAM | Always On | Notes |
+|---|---|---|---|---|
+| `core` | 200 (traefik), 208 (wireguard) | ~512MB | Yes | Stop refused |
+| `storage` | 300 (truenas) | ~16GB | Yes | Stop refused; required by `media` |
+| `security` | 207 (authentik) | ~2GB | No | Required by `media`, `apps` |
+| `home` | 301 (homeassistant), 214 (zigbee2mqtt), 209 (libby-alert) | ~2.7GB | No | |
+| `media` | 202 (arr-stack), 203 (plex), 204 (jellyfin) | ~8GB | No | Depends on `core`, `storage` |
+| `observability` | 205 (monitoring), 206 (openclaw) | ~4GB | No | |
+| `apps` | 201 (recipe-site), 211 (kanboard), 215 (claude-os) | ~6.5GB | No | |
+| `infra` | 212 (mailserver), 213 (pxe) | ~3.5GB | No | |
+| `sdr` | 210 (sdr) | ~2GB | No | RTL-SDR USB passthrough |
+| `special` | 216 (pwnagotchi) | ~1GB | No | Hardware-bound; excluded from bulk ops |
+| `k8s` | 400 (talos-cp-0), 410 (worker-0), 411 (worker-1) | ~20GB | No | Drain workers before stop |
+
+**Max potential savings:** ~42GB RAM when all non-`core`, non-`storage` groups are stopped.
+
+### Usage
+
+```bash
+make group-status                 # Show live status of all groups
+make group-start GROUP=<name>     # Start a group
+make group-stop GROUP=<name>      # Stop a group
+```
+
+### Safety Rules
+
+- **`always_on`** (`core`, `storage`) — stop is refused unconditionally
+- **Dependency blocking** — stop is blocked if a dependent group is running; operator must stop dependents first, no cascading
+- **Dependency warnings** — start emits a warning (non-blocking) if `depends_on` groups have stopped members
+- **`hardware_bound`** (`special`) — excluded from bulk ops; manage individual members via `pct`/`qm` on the host node directly
+- **K8s group** — workers are drained via `kubectl drain` before VMs stop; control plane starts first on start
+
+:::note
+Stop is never cascaded. `make group-stop GROUP=storage` will fail while `media` is running — stop `media` first, then `storage`.
+:::
+
+### Implementation
+
+| File | Purpose |
+|---|---|
+| `ansible/vars/service_groups.yml` | Group definitions, dependency graph, `proxmox_node_map` |
+| `ansible/playbooks/group-status.yml` | Read-only status query |
+| `ansible/playbooks/group-start.yml` | Start with dependency warnings |
+| `ansible/playbooks/group-stop.yml` | Stop with dependency blocking |
+
+Node discovery uses `pvesh get /cluster/resources` on `pve1`. The `proxmox_node_map` in `service_groups.yml` translates Proxmox node hostnames (e.g., `thinkcentre2`) to Ansible inventory names (e.g., `pve2`).
 
 ## Backup Strategy
 

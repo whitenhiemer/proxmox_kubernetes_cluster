@@ -216,6 +216,69 @@ groups:
   #       annotations:
   #         summary: "Pod stuck pending: {{ $labels.namespace }}/{{ $labels.pod }}"
 
+  # --- UPS (NUT) ---
+  - name: ups
+    rules:
+      # UPS switched to battery power
+      - alert: UpsOnBattery
+        expr: network_ups_tools_ups_status{status=~".*OB.*"} == 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "UPS on battery: {{ $labels.instance }}"
+          description: "{{ $labels.instance }} has switched to battery power (status: {{ $labels.status }})."
+
+      # Battery charge below 50% (warning)
+      - alert: UpsLowBatteryWarning
+        expr: network_ups_tools_battery_charge < 50
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "UPS battery low: {{ $labels.instance }} ({{ $value | printf \"%.0f\" }}%)"
+          description: "Battery charge on {{ $labels.instance }} has been below 50% for 1 minute."
+
+      # Battery charge below 20% (critical)
+      - alert: UpsLowBatteryCritical
+        expr: network_ups_tools_battery_charge < 20
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "UPS battery critical: {{ $labels.instance }} ({{ $value | printf \"%.0f\" }}%)"
+          description: "Battery charge on {{ $labels.instance }} is below 20%. Imminent shutdown risk."
+
+      # UPS load above 80% for 5 minutes (warning)
+      - alert: UpsHighLoadWarning
+        expr: network_ups_tools_ups_load > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "UPS high load: {{ $labels.instance }} ({{ $value | printf \"%.0f\" }}%)"
+          description: "UPS load on {{ $labels.instance }} has been above 80% for 5 minutes."
+
+      # UPS load above 90% for 5 minutes (critical)
+      - alert: UpsHighLoadCritical
+        expr: network_ups_tools_ups_load > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "UPS overloaded: {{ $labels.instance }} ({{ $value | printf \"%.0f\" }}%)"
+          description: "UPS load on {{ $labels.instance }} has been above 90% for 5 minutes."
+
+      # Runtime remaining below 10 minutes
+      - alert: UpsLowRuntime
+        expr: network_ups_tools_battery_runtime < 600
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "UPS low runtime: {{ $labels.instance }} ({{ $value | printf \"%.0f\" }}s)"
+          description: "{{ $labels.instance }} has less than 10 minutes of battery runtime remaining."
+
   # --- Prometheus Self-Monitoring ---
   - name: prometheus
     rules:

@@ -13,6 +13,8 @@ http:
       service: mailcow
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     mailcow:

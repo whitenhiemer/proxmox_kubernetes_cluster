@@ -1,0 +1,487 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }, "id": 100, "title": "Summary", "type": "row" },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 50 },
+            { "color": "green", "value": 80 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_charge{instance=\"ups-thinkcentre3\"}", "legendFormat": "tc3", "refId": "A" }],
+      "title": "tc3 Battery Charge",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 50 },
+            { "color": "green", "value": 80 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_charge{instance=\"ups-tower1\"}", "legendFormat": "tower1", "refId": "A" }],
+      "title": "tower1 Battery Charge",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 50 },
+            { "color": "green", "value": 80 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 1 },
+      "id": 3,
+      "options": {
+        "colorMode": "background", "graphMode": "area", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_charge{instance=\"ups-zotac\"}", "legendFormat": "zotac", "refId": "A" }],
+      "title": "zotac Battery Charge",
+      "type": "stat"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 }, "id": 10, "title": "thinkcentre3", "type": "row" },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 50 },
+            { "color": "green", "value": 80 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 7 },
+      "id": 11,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_charge{instance=\"ups-thinkcentre3\"}", "legendFormat": "Battery %", "refId": "A" }],
+      "title": "Battery Charge",
+      "type": "gauge"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "green", "value": 0 },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 4, "y": 7 },
+      "id": 12,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_ups_load{instance=\"ups-thinkcentre3\"}", "legendFormat": "Load %", "refId": "A" }],
+      "title": "UPS Load",
+      "type": "gauge"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 600 },
+            { "color": "green", "value": 900 }
+          ]},
+          "unit": "s", "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 7 },
+      "id": 13,
+      "options": {
+        "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_runtime{instance=\"ups-thinkcentre3\"}", "legendFormat": "Runtime", "refId": "A" }],
+      "title": "Runtime Remaining",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "mappings": [] }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 11 },
+      "id": 14,
+      "options": {
+        "colorMode": "none", "graphMode": "none", "justifyMode": "auto", "textMode": "name",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_ups_status{instance=\"ups-thinkcentre3\"}", "legendFormat": "{{status}}", "refId": "A" }],
+      "title": "Status",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "volt", "custom": { "lineWidth": 1, "fillOpacity": 5 }, "mappings": [] },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "id": 15,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        { "expr": "network_ups_tools_input_voltage{instance=\"ups-thinkcentre3\"}", "legendFormat": "Input V", "refId": "A" },
+        { "expr": "network_ups_tools_battery_voltage{instance=\"ups-thinkcentre3\"}", "legendFormat": "Battery V", "refId": "B" },
+        { "expr": "network_ups_tools_output_voltage{instance=\"ups-thinkcentre3\"}", "legendFormat": "Output V", "refId": "C" }
+      ],
+      "title": "Voltage",
+      "type": "timeseries"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 }, "id": 20, "title": "tower1", "type": "row" },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 50 },
+            { "color": "green", "value": 80 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 16 },
+      "id": 21,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_charge{instance=\"ups-tower1\"}", "legendFormat": "Battery %", "refId": "A" }],
+      "title": "Battery Charge",
+      "type": "gauge"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "green", "value": 0 },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 4, "y": 16 },
+      "id": 22,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_ups_load{instance=\"ups-tower1\"}", "legendFormat": "Load %", "refId": "A" }],
+      "title": "UPS Load",
+      "type": "gauge"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 600 },
+            { "color": "green", "value": 900 }
+          ]},
+          "unit": "s", "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 16 },
+      "id": 23,
+      "options": {
+        "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_runtime{instance=\"ups-tower1\"}", "legendFormat": "Runtime", "refId": "A" }],
+      "title": "Runtime Remaining",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "mappings": [] }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 20 },
+      "id": 24,
+      "options": {
+        "colorMode": "none", "graphMode": "none", "justifyMode": "auto", "textMode": "name",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_ups_status{instance=\"ups-tower1\"}", "legendFormat": "{{status}}", "refId": "A" }],
+      "title": "Status",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "volt", "custom": { "lineWidth": 1, "fillOpacity": 5 }, "mappings": [] },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 25,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        { "expr": "network_ups_tools_input_voltage{instance=\"ups-tower1\"}", "legendFormat": "Input V", "refId": "A" },
+        { "expr": "network_ups_tools_battery_voltage{instance=\"ups-tower1\"}", "legendFormat": "Battery V", "refId": "B" },
+        { "expr": "network_ups_tools_output_voltage{instance=\"ups-tower1\"}", "legendFormat": "Output V", "refId": "C" }
+      ],
+      "title": "Voltage",
+      "type": "timeseries"
+    },
+
+    { "collapsed": false, "gridPos": { "h": 1, "w": 24, "x": 0, "y": 24 }, "id": 30, "title": "zotac", "type": "row" },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 50 },
+            { "color": "green", "value": 80 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 25 },
+      "id": 31,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_charge{instance=\"ups-zotac\"}", "legendFormat": "Battery %", "refId": "A" }],
+      "title": "Battery Charge",
+      "type": "gauge"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "green", "value": 0 },
+            { "color": "yellow", "value": 70 },
+            { "color": "red", "value": 90 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100, "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 4, "y": 25 },
+      "id": 32,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "orientation": "auto"
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_ups_load{instance=\"ups-zotac\"}", "legendFormat": "Load %", "refId": "A" }],
+      "title": "UPS Load",
+      "type": "gauge"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "red", "value": 0 },
+            { "color": "yellow", "value": 600 },
+            { "color": "green", "value": 900 }
+          ]},
+          "unit": "s", "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 25 },
+      "id": 33,
+      "options": {
+        "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_battery_runtime{instance=\"ups-zotac\"}", "legendFormat": "Runtime", "refId": "A" }],
+      "title": "Runtime Remaining",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": { "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "mappings": [] }, "overrides": [] },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 29 },
+      "id": 34,
+      "options": {
+        "colorMode": "none", "graphMode": "none", "justifyMode": "auto", "textMode": "name",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [{ "expr": "network_ups_tools_ups_status{instance=\"ups-zotac\"}", "legendFormat": "{{status}}", "refId": "A" }],
+      "title": "Status",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "volt", "custom": { "lineWidth": 1, "fillOpacity": 5 }, "mappings": [] },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 25 },
+      "id": 35,
+      "options": {
+        "legend": { "calcs": ["lastNotNull", "min", "max"], "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "pluginVersion": "11.0.0",
+      "targets": [
+        { "expr": "network_ups_tools_input_voltage{instance=\"ups-zotac\"}", "legendFormat": "Input V", "refId": "A" },
+        { "expr": "network_ups_tools_battery_voltage{instance=\"ups-zotac\"}", "legendFormat": "Battery V", "refId": "B" },
+        { "expr": "network_ups_tools_output_voltage{instance=\"ups-zotac\"}", "legendFormat": "Output V", "refId": "C" }
+      ],
+      "title": "Voltage",
+      "type": "timeseries"
+    }
+
+  ],
+  "schemaVersion": 38,
+  "tags": ["ups", "power", "nut"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "UPS Monitoring",
+  "uid": "ups-monitoring",
+  "version": 1
+}

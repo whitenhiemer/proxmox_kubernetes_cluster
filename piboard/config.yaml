@@ -64,3 +64,14 @@ proxmox_nodes:
 
 # Response time threshold (seconds) for "degraded" (amber) status
 degraded_threshold_seconds: 3.0
+
+# Home Assistant integration for Gutgrinda enclosure display.
+# Token is read from HOME_ASSISTANT_TOKEN env var (see /etc/piboard/ha.env).
+home_assistant:
+  url: "http://192.168.86.41:8123"
+  entities:
+    temperature: "sensor.0xa4c13874d0343902_temperature"
+    humidity: "sensor.0xa4c13874d0343902_humidity"
+    basking_lamp: "switch.gutgrinda_basking_lamp"
+    ambient_light: "switch.gutgrinda_ambient_light"
+    ceramic_heater: "switch.gutgrinda_ceramic_heater"

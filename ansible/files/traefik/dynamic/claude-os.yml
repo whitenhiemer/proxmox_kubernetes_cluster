@@ -1,0 +1,40 @@
+# claude-os.yml - Traefik route for Claude OS
+#
+# Frontend (React/Vite) at claude-os.woodhead.tech
+# API docs accessible at claude-os.woodhead.tech/api-docs
+#
+# LXC 215, IP 192.168.86.37
+# Frontend: port 5173 | API: port 8051
+
+http:
+  routers:
+    claude-os-frontend:
+      rule: "Host(`claude-os.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: claude-os-frontend
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
+
+    claude-os-api:
+      rule: "Host(`claude-os-api.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: claude-os-api
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
+
+  services:
+    claude-os-frontend:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.37:5173"
+
+    claude-os-api:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.37:8051"

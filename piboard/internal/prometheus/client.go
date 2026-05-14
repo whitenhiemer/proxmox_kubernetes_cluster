@@ -9,21 +9,24 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"sync"
 	"time"
 
 	"piboard/internal/config"
+	"piboard/internal/homeassistant"
 )
 
 // DashboardStatus is the complete state snapshot sent to the frontend.
 type DashboardStatus struct {
-	Timestamp      time.Time      `json:"timestamp"`
-	OverallStatus  string         `json:"overall_status"`
-	Services       []ServiceStatus `json:"services"`
-	FiringAlerts   int            `json:"firing_alerts"`
-	ProxmoxSummary ProxmoxSummary `json:"proxmox_summary"`
-	PrometheusUp   bool           `json:"prometheus_up"`
+	Timestamp      time.Time                    `json:"timestamp"`
+	OverallStatus  string                       `json:"overall_status"`
+	Services       []ServiceStatus              `json:"services"`
+	FiringAlerts   int                          `json:"firing_alerts"`
+	ProxmoxSummary ProxmoxSummary               `json:"proxmox_summary"`
+	PrometheusUp   bool                         `json:"prometheus_up"`
+	Enclosure      homeassistant.EnclosureStatus `json:"enclosure"`
 }
 
 type ServiceStatus struct {
@@ -50,6 +53,8 @@ type NodeStatus struct {
 type Poller struct {
 	client      *http.Client
 	cfg         *config.Config
+	haClient    *homeassistant.Client
+	haEntities  homeassistant.EnclosureEntities
 	mu          sync.RWMutex
 	status      DashboardStatus
 	subscribers map[uint64]chan DashboardStatus
@@ -58,7 +63,7 @@ type Poller struct {
 }
 
 func NewPoller(cfg *config.Config) *Poller {
-	return &Poller{
+	p := &Poller{
 		client: &http.Client{
 			Timeout: 10 * time.Second,
 			Transport: &http.Transport{
@@ -69,6 +74,24 @@ func NewPoller(cfg *config.Config) *Poller {
 		cfg:         cfg,
 		subscribers: make(map[uint64]chan DashboardStatus),
 	}
+
+	if cfg.HomeAssistant.URL != "" {
+		token := os.Getenv("HOME_ASSISTANT_TOKEN")
+		if token != "" {
+			p.haClient = homeassistant.New(cfg.HomeAssistant.URL, token)
+			p.haEntities = homeassistant.EnclosureEntities{
+				Temperature:   cfg.HomeAssistant.Entities.Temperature,
+				Humidity:      cfg.HomeAssistant.Entities.Humidity,
+				BaskingLamp:   cfg.HomeAssistant.Entities.BaskingLamp,
+				AmbientLight:  cfg.HomeAssistant.Entities.AmbientLight,
+				CeramicHeater: cfg.HomeAssistant.Entities.CeramicHeater,
+			}
+		} else {
+			slog.Warn("home_assistant.url configured but HOME_ASSISTANT_TOKEN env var not set")
+		}
+	}
+
+	return p
 }
 
 // Subscribe returns a channel that receives status updates.
@@ -253,6 +276,11 @@ func (p *Poller) poll(ctx context.Context) {
 
 	// Derive overall status
 	status.OverallStatus = deriveOverallStatus(status)
+
+	// Fetch enclosure data from Home Assistant (non-critical, errors logged internally)
+	if p.haClient != nil {
+		status.Enclosure = p.haClient.FetchEnclosure(ctx, p.haEntities)
+	}
 
 	p.updateAndBroadcast(status)
 }

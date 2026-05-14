@@ -1,0 +1,179 @@
+# setup-pxe.yml - PXE boot server (dnsmasq proxy-DHCP + TFTP, nginx HTTP)
+#
+# Sets up a permanent network boot server on the LAN. Devices boot via PXE,
+# receive the GRUB EFI binary over TFTP, then load the kernel + initramfs
+# from TFTP and fetch the root filesystem over HTTP.
+#
+# Currently serves: CachyOS Handheld 2026-04-26
+#
+# Prerequisites:
+#   - PXE LXC created via Terraform (make apply)
+#   - SSH access to 192.168.86.35
+#
+# Usage:
+#   ansible-playbook playbooks/setup-pxe.yml
+#
+# To add a new ISO later, re-run with:
+#   ansible-playbook playbooks/setup-pxe.yml -e "iso_url=https://... iso_name=distro"
+---
+- name: Deploy PXE boot server
+  hosts: lxc_services:&pxe
+  vars:
+    tftp_root: /srv/tftp
+    http_root: /srv/pxe
+    iso_url: "https://cdn77.cachyos.org/ISO/handheld/260426/cachyos-handheld-linux-260426.iso"
+    iso_dest: /tmp/cachyos-handheld.iso
+    iso_label: COS_202604
+
+  tasks:
+    - name: Install packages
+      apt:
+        name:
+          - dnsmasq
+          - nginx
+          - libarchive-tools
+          - grub-efi-amd64-bin
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Create TFTP directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ tftp_root }}/EFI/BOOT"
+        - "{{ tftp_root }}/cachyos"
+        - "{{ http_root }}/arch/x86_64"
+
+    - name: Download CachyOS handheld ISO
+      get_url:
+        url: "{{ iso_url }}"
+        dest: "{{ iso_dest }}"
+        timeout: 3600
+        mode: "0644"
+        force: false
+
+    - name: Extract kernel from ISO
+      shell: >
+        bsdtar -O -xf {{ iso_dest }} arch/boot/x86_64/vmlinuz-linux-cachyos-deckify
+        > {{ tftp_root }}/cachyos/vmlinuz-linux-cachyos-deckify
+      args:
+        creates: "{{ tftp_root }}/cachyos/vmlinuz-linux-cachyos-deckify"
+
+    - name: Extract initramfs from ISO
+      shell: >
+        bsdtar -O -xf {{ iso_dest }} arch/boot/x86_64/initramfs-linux-cachyos-deckify.img
+        > {{ tftp_root }}/cachyos/initramfs-linux-cachyos-deckify.img
+      args:
+        creates: "{{ tftp_root }}/cachyos/initramfs-linux-cachyos-deckify.img"
+
+    - name: Extract airootfs (erofs) from ISO
+      shell: >
+        bsdtar -O -xf {{ iso_dest }} arch/x86_64/airootfs.erofs
+        > {{ http_root }}/arch/x86_64/airootfs.erofs
+      args:
+        creates: "{{ http_root }}/arch/x86_64/airootfs.erofs"
+      register: erofs_result
+      failed_when: false
+
+    - name: Extract airootfs (sfs fallback) from ISO
+      shell: >
+        bsdtar -O -xf {{ iso_dest }} arch/x86_64/airootfs.sfs
+        > {{ http_root }}/arch/x86_64/airootfs.sfs
+      args:
+        creates: "{{ http_root }}/arch/x86_64/airootfs.sfs"
+      when: erofs_result is failed or erofs_result.rc | default(0) != 0
+      failed_when: false
+
+    - name: Remove ISO after extraction
+      file:
+        path: "{{ iso_dest }}"
+        state: absent
+
+    - name: Deploy grub.cfg template
+      template:
+        src: "{{ playbook_dir }}/../files/pxe/grub.cfg.j2"
+        dest: /etc/pxe-grub.cfg
+        mode: "0644"
+
+    - name: Build standalone GRUB EFI with embedded config
+      command: >
+        grub-mkstandalone
+        --format=x86_64-efi
+        --output={{ tftp_root }}/EFI/BOOT/grubx64.efi
+        boot/grub/grub.cfg=/etc/pxe-grub.cfg
+      args:
+        creates: "{{ tftp_root }}/EFI/BOOT/grubx64.efi"
+
+    - name: Deploy dnsmasq config
+      template:
+        src: "{{ playbook_dir }}/../files/pxe/dnsmasq.conf.j2"
+        dest: /etc/dnsmasq.d/pxe.conf
+        mode: "0644"
+      notify: Restart dnsmasq
+
+    - name: Remove default dnsmasq config to prevent conflicts
+      file:
+        path: /etc/dnsmasq.conf
+        state: absent
+      notify: Restart dnsmasq
+
+    - name: Deploy nginx config
+      copy:
+        src: "{{ playbook_dir }}/../files/pxe/nginx.conf"
+        dest: /etc/nginx/sites-available/pxe
+        mode: "0644"
+      notify: Restart nginx
+
+    - name: Enable nginx site
+      file:
+        src: /etc/nginx/sites-available/pxe
+        dest: /etc/nginx/sites-enabled/pxe
+        state: link
+      notify: Restart nginx
+
+    - name: Remove default nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Restart nginx
+
+    - name: Enable and start dnsmasq
+      systemd:
+        name: dnsmasq
+        enabled: true
+        state: started
+
+    - name: Enable and start nginx
+      systemd:
+        name: nginx
+        enabled: true
+        state: started
+
+    - name: Verify TFTP files present
+      stat:
+        path: "{{ item }}"
+      register: tftp_files
+      loop:
+        - "{{ tftp_root }}/EFI/BOOT/grubx64.efi"
+        - "{{ tftp_root }}/cachyos/vmlinuz-linux-cachyos-deckify"
+        - "{{ tftp_root }}/cachyos/initramfs-linux-cachyos-deckify.img"
+
+    - name: Assert TFTP files exist
+      assert:
+        that: item.stat.exists
+        fail_msg: "Missing TFTP file: {{ item.item }}"
+      loop: "{{ tftp_files.results }}"
+
+  handlers:
+    - name: Restart dnsmasq
+      systemd:
+        name: dnsmasq
+        state: restarted
+
+    - name: Restart nginx
+      systemd:
+        name: nginx
+        state: restarted

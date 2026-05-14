@@ -56,6 +56,8 @@
     dexcom_password: ""
     # Home Assistant glucose webhook URL (set via --extra-vars)
     ha_glucose_webhook: ""
+    # Home Assistant long-lived token for Prometheus scrape (set via --extra-vars)
+    ha_token: ""
 
   tasks:
     # --- System Setup ---
@@ -288,6 +290,19 @@
         group: "{{ mon_user }}"
         mode: "0600"
       when: pve_user == "" or pve_token_name == "" or pve_token_value == ""
+
+    # HA long-lived token -- used by Prometheus to scrape /api/prometheus.
+    # Written to the prometheus config dir so it's available inside the container.
+    - name: Write Home Assistant token for Prometheus scrape
+      ansible.builtin.copy:
+        content: "{{ ha_token }}"
+        dest: "{{ mon_base_dir }}/prometheus/config/ha_token"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0640"
+        no_log: true
+      when: ha_token != ""
+      notify: Restart monitoring stack
 
     # --- Branding ---
     - name: Copy woodhead.tech logo assets for Grafana

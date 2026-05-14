@@ -328,43 +328,92 @@ variable "mailserver_root_password" {
   sensitive   = true
 }
 
-# --- AdGuard Home LXC ---
-variable "adguard_vmid" {
-  description = "VM ID for the AdGuard Home DNS server LXC"
+# --- PXE Boot Server LXC ---
+variable "pxe_vmid" {
+  description = "VM ID for the PXE boot server LXC (dnsmasq + nginx)"
   type        = number
   default     = 213
 }
 
-variable "adguard_ip" {
-  description = "Static IP for the AdGuard Home LXC (set as upstream DNS on Google Nest)"
+variable "pxe_ip" {
+  description = "Static IP for the PXE boot server LXC"
   type        = string
   default     = "192.168.86.35"
 }
 
-# --- Step-CA LXC ---
-variable "step_ca_vmid" {
-  description = "VM ID for the Smallstep step-ca LXC"
+variable "pxe_cores" {
+  description = "CPU cores for the PXE server (file serving is lightweight)"
+  type        = number
+  default     = 1
+}
+
+variable "pxe_memory" {
+  description = "Memory in MB for the PXE server (dnsmasq + nginx are tiny)"
+  type        = number
+  default     = 512
+}
+
+variable "pxe_disk_size" {
+  description = "Disk size in GB for the PXE server (kernel + initramfs + airootfs per ISO)"
+  type        = number
+  default     = 8
+}
+
+# --- Zigbee2MQTT LXC ---
+variable "zigbee2mqtt_vmid" {
+  description = "VM ID for the Zigbee2MQTT LXC (must live on zotac with the USB dongle)"
   type        = number
   default     = 214
 }
 
-variable "step_ca_ip" {
-  description = "Static IP for the Step-CA LXC"
+variable "zigbee2mqtt_ip" {
+  description = "Static IP for the Zigbee2MQTT LXC"
   type        = string
   default     = "192.168.86.36"
 }
 
-# --- Minecraft LXC ---
-variable "minecraft_vmid" {
-  description = "VM ID for the Minecraft Java Edition server LXC"
+# --- Claude OS LXC ---
+variable "claude_os_vmid" {
+  description = "VM ID for the Claude OS LXC"
   type        = number
   default     = 215
 }
 
-variable "minecraft_ip" {
-  description = "Static IP for the Minecraft LXC"
+variable "claude_os_ip" {
+  description = "Static IP for the Claude OS LXC"
   type        = string
   default     = "192.168.86.37"
+}
+
+variable "claude_os_cores" {
+  description = "CPU cores for Claude OS (Python API + Node.js frontend + optional Ollama)"
+  type        = number
+  default     = 4
+}
+
+variable "claude_os_memory" {
+  description = "Memory in MB for Claude OS (2GB min for OpenAI, 4GB+ for local Ollama lite)"
+  type        = number
+  default     = 4096
+}
+
+variable "claude_os_disk_size" {
+  description = "Disk size in GB for Claude OS (repo + venv + SQLite DB + optional Ollama models)"
+  type        = number
+  default     = 20
+}
+
+# --- Pwnagotchi LXC ---
+variable "pwnagotchi_vmid" {
+  description = "VM ID for the Pwnagotchi LXC (must be on pve3 where WiFi dongle is attached)"
+  type        = number
+  default     = 216
+}
+
+variable "pwnagotchi_ip" {
+  description = "Static IP for the Pwnagotchi LXC"
+  type        = string
+  default     = "192.168.86.38"
 }
 
 # --- Domain ---

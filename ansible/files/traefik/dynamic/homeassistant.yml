@@ -13,6 +13,8 @@ http:
       service: homeassistant
       tls:
         certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
 
   services:
     homeassistant:

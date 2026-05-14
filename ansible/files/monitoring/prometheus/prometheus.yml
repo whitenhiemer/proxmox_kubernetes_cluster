@@ -137,6 +137,20 @@ scrape_configs:
         labels:
           instance: "dexcom"
 
+  # ===== Home Assistant =====
+
+  # HA built-in Prometheus integration -- exposes enclosure entities
+  # (temp, humidity, plug states). Token file written by setup-monitoring.yml.
+  - job_name: "homeassistant"
+    scrape_interval: 30s
+    metrics_path: /api/prometheus
+    authorization:
+      credentials_file: /etc/prometheus/ha_token
+    static_configs:
+      - targets: ["192.168.86.41:8123"]
+        labels:
+          instance: "home-assistant"
+
   # ===== Service Health Probes =====
 
   # HTTP probes: checks that internal services respond with 2xx

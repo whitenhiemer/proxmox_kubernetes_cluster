@@ -1,0 +1,149 @@
+# group-stop.yml - Stop a named service group
+#
+# Discovers node location at runtime, stops each member LXC/VM gracefully.
+# Hard refuses to stop always_on groups (core, storage).
+# Blocks if any running group lists this group in its required_by.
+# K8s group: drains workers before stopping VMs.
+#
+# Usage:
+#   cd ansible && ansible-playbook playbooks/group-stop.yml --extra-vars "target_group=media"
+#   make group-stop GROUP=media
+
+---
+- name: Stop service group
+  hosts: pve1
+  gather_facts: false
+  vars_files:
+    - ../vars/service_groups.yml
+
+  tasks:
+    - name: Validate target_group is set
+      ansible.builtin.fail:
+        msg: "target_group is required. Usage: make group-stop GROUP=<name>"
+      when: target_group is not defined
+
+    - name: Validate target_group exists
+      ansible.builtin.fail:
+        msg: "Unknown group '{{ target_group }}'. Valid groups: {{ service_groups.keys() | list | join(', ') }}"
+      when: target_group not in service_groups
+
+    - name: Refuse to stop always_on group
+      ansible.builtin.fail:
+        msg: "Group '{{ target_group }}' is always-on and cannot be stopped."
+      when: service_groups[target_group].always_on | default(false)
+
+    - name: Refuse to stop hardware_bound group via bulk ops
+      ansible.builtin.fail:
+        msg: >
+          Group '{{ target_group }}' is hardware-bound and excluded from bulk operations.
+          Stop individual members manually via pct/qm on their host node.
+      when: service_groups[target_group].hardware_bound | default(false)
+
+    - name: Discover VM/LXC locations and status
+      ansible.builtin.shell: pvesh get /cluster/resources --type vm --output-format json
+      register: cluster_raw
+      changed_when: false
+
+    - name: Build vmid→node and vmid→status lookups
+      ansible.builtin.set_fact:
+        vm_node: "{{ dict(resources | map(attribute='vmid') | map('string') | zip(resources | map(attribute='node'))) }}"
+        vm_status: "{{ dict(resources | map(attribute='vmid') | map('string') | zip(resources | map(attribute='status'))) }}"
+      vars:
+        resources: "{{ cluster_raw.stdout | from_json }}"
+
+    # target_group.required_by lists the groups that depend on target_group.
+    # If any of those groups have running members, we must block the stop.
+    - name: Find running groups that depend on this group
+      ansible.builtin.set_fact:
+        running_dependents: "{{ running_dependents | default([]) + [dep_group] }}"
+      loop: "{{ service_groups[target_group].required_by | default([]) }}"
+      loop_control:
+        loop_var: dep_group
+      vars:
+        dep_running: >-
+          {{
+            service_groups[dep_group].members
+            | map(attribute='vmid') | map('string')
+            | select('in',
+                vm_status | dict2items
+                | selectattr('value', 'equalto', 'running')
+                | map(attribute='key') | list
+              ) | list
+          }}
+      when:
+        - dep_group in service_groups
+        - dep_running | length > 0
+
+    - name: Block stop if dependents are running
+      ansible.builtin.fail:
+        msg: >
+          BLOCKED: Cannot stop '{{ target_group }}' — the following groups depend on it and are running:
+          {{ running_dependents | join(', ') }}
+          Stop those groups first, then retry.
+      when: running_dependents | default([]) | length > 0
+
+    # K8s: get worker names → drain → stop workers → stop control plane
+    - name: Get k8s worker node names
+      ansible.builtin.shell: >
+        KUBECONFIG={{ playbook_dir }}/../../talos/_out/kubeconfig
+        kubectl get nodes --no-headers
+        | grep -v 'control-plane'
+        | awk '{print $1}'
+      register: worker_k8s_names
+      changed_when: false
+      delegate_to: localhost
+      when: target_group == 'k8s'
+
+    - name: Drain k8s worker nodes
+      ansible.builtin.shell: >
+        KUBECONFIG={{ playbook_dir }}/../../talos/_out/kubeconfig
+        kubectl drain {{ worker_node }} --ignore-daemonsets --delete-emptydir-data --force
+      loop: "{{ worker_k8s_names.stdout_lines | default([]) }}"
+      loop_control:
+        loop_var: worker_node
+      delegate_to: localhost
+      when: target_group == 'k8s'
+
+    - name: Stop k8s worker VMs
+      ansible.builtin.shell: qm shutdown {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('role', 'defined') | selectattr('role', 'equalto', 'worker') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group == 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') == 'running'
+
+    - name: Stop k8s control plane VM
+      ansible.builtin.shell: qm shutdown {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('role', 'defined') | selectattr('role', 'equalto', 'control_plane') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group == 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') == 'running'
+
+    - name: Stop LXC containers
+      ansible.builtin.shell: pct stop {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('type', 'equalto', 'lxc') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group != 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') == 'running'
+
+    - name: Stop VMs
+      ansible.builtin.shell: qm shutdown {{ member.vmid }}
+      delegate_to: "{{ proxmox_node_map[vm_node[member.vmid | string]] }}"
+      loop: "{{ service_groups[target_group].members | selectattr('type', 'equalto', 'vm') | rejectattr('role', 'defined') | list }}"
+      loop_control:
+        loop_var: member
+        label: "{{ member.name }}({{ member.vmid }})"
+      when:
+        - target_group != 'k8s'
+        - vm_status[member.vmid | string] | default('stopped') == 'running'
