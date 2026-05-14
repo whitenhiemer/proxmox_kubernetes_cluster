@@ -19,7 +19,7 @@ http:
         # Since step-ca uses its own internal self-signed or CA-signed cert,
         # we need to tell Traefik to trust it or skip validation.
         # For simplicity in this homelab, we skip validation for the backend.
-        transport: step-ca-transport
+        serversTransport: step-ca-transport
 
   serversTransports:
     step-ca-transport:
