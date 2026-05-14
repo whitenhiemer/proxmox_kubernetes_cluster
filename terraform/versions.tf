@@ -14,7 +14,8 @@ terraform {
 # Auth via API token is recommended over password
 provider "proxmox" {
   endpoint  = var.proxmox_endpoint
-  api_token = var.proxmox_api_token
+  username  = var.proxmox_username
+  password  = var.proxmox_password
 
   # Skip TLS verification if using self-signed certs
   insecure = var.proxmox_insecure
