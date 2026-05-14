@@ -1,0 +1,327 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="About" description="Brandon Woodward — 20+ years of infrastructure engineering at Rackspace, Amazon, and Salesforce GovCloud.">
+
+  <section class="page-hero">
+    <div class="container">
+      <div class="eyebrow">About</div>
+      <h1>20 years building<br /><span class="accent">infrastructure at scale.</span></h1>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-main">
+          <div class="bio-section">
+            <p class="lead">
+              I started at Rackspace in 2005 as a Linux support technician. By 2009, I was a
+              founding member of the Cloud Servers team — one of the first public cloud offerings
+              before that term meant what it means today.
+            </p>
+            <p>
+              From there: Amazon AWS, where I spent six years across Premium Support, IAM
+              Authentication infrastructure, and RDS Operations. I was the escalation point
+              for complex database issues across MySQL, PostgreSQL, MSSQL, Oracle, and Aurora.
+              I built high-availability infrastructure for AWS's own internal systems.
+            </p>
+            <p>
+              Since 2019, I've been at Salesforce GovCloud as a Systems Security Engineer —
+              building and operating FedRAMP-compliant cloud infrastructure, leading certificate
+              lifecycle and PKI operations, and writing production Go tooling. I built
+              <em>sprint3r</em>, a Go CLI for automated sprint tracking that integrates with
+              GUS (Salesforce's internal work tracker) and posts to Slack.
+            </p>
+            <p>
+              Outside of work, I run a four-node Proxmox homelab with Ceph storage, a Talos
+              Kubernetes cluster, and 15+ self-hosted services — all managed with Terraform and
+              Ansible. That's where I prototype the systems I later recommend to clients.
+            </p>
+          </div>
+
+          <div class="timeline">
+            <div class="timeline-label">Career</div>
+            <div class="timeline-items">
+              <div class="tl-item">
+                <div class="tl-year">2019–now</div>
+                <div class="tl-content">
+                  <div class="tl-title">Systems Security Engineer</div>
+                  <div class="tl-org">Salesforce GovCloud</div>
+                  <div class="tl-desc">FedRAMP compliance, PKI/certificate lifecycle management, security tooling in Go, Terraform, Kubernetes.</div>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-year">2016–2019</div>
+                <div class="tl-content">
+                  <div class="tl-title">RDS Operations &amp; SecOps</div>
+                  <div class="tl-org">Amazon AWS</div>
+                  <div class="tl-desc">Platform stability, database escalation (MySQL, PostgreSQL, MSSQL, Oracle, Aurora). Premium support escalation point.</div>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-year">2014–2016</div>
+                <div class="tl-content">
+                  <div class="tl-title">IAM Authentication</div>
+                  <div class="tl-org">Amazon AWS</div>
+                  <div class="tl-desc">IAM stack health and multi-location HA solutions for Data Warehouse and Tagris internal systems.</div>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-year">2012–2014</div>
+                <div class="tl-content">
+                  <div class="tl-title">Premium Support Engineer</div>
+                  <div class="tl-org">Amazon AWS</div>
+                  <div class="tl-desc">Full-stack AWS support (EC2, S3, Beanstalk) with on-call SLA management.</div>
+                </div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-year">2005–2012</div>
+                <div class="tl-content">
+                  <div class="tl-title">Various engineering roles</div>
+                  <div class="tl-org">Rackspace</div>
+                  <div class="tl-desc">Linux support → Cloud Servers founding team → Professional Services (VPS/cloud migrations, Domino's Pizza) → Email and Apps infrastructure.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="about-sidebar">
+          <div class="card sidebar-card">
+            <div class="sidebar-label">Core skills</div>
+            <div class="skill-group">
+              <div class="skill-group-label">Languages</div>
+              <div class="tags">
+                <span class="tag">Go</span>
+                <span class="tag">Python</span>
+                <span class="tag">Bash</span>
+              </div>
+            </div>
+            <div class="skill-group">
+              <div class="skill-group-label">Infrastructure as Code</div>
+              <div class="tags">
+                <span class="tag">Terraform</span>
+                <span class="tag">Ansible</span>
+              </div>
+            </div>
+            <div class="skill-group">
+              <div class="skill-group-label">Containers &amp; Orchestration</div>
+              <div class="tags">
+                <span class="tag">Kubernetes</span>
+                <span class="tag">Docker</span>
+                <span class="tag">Talos</span>
+              </div>
+            </div>
+            <div class="skill-group">
+              <div class="skill-group-label">Cloud</div>
+              <div class="tags">
+                <span class="tag">AWS</span>
+                <span class="tag">GovCloud</span>
+              </div>
+            </div>
+            <div class="skill-group">
+              <div class="skill-group-label">Databases</div>
+              <div class="tags">
+                <span class="tag">MySQL</span>
+                <span class="tag">PostgreSQL</span>
+                <span class="tag">SQLite</span>
+              </div>
+            </div>
+            <div class="skill-group">
+              <div class="skill-group-label">Observability</div>
+              <div class="tags">
+                <span class="tag">Prometheus</span>
+                <span class="tag">Grafana</span>
+                <span class="tag">Alertmanager</span>
+              </div>
+            </div>
+            <div class="skill-group">
+              <div class="skill-group-label">Security &amp; Compliance</div>
+              <div class="tags">
+                <span class="tag">FedRAMP</span>
+                <span class="tag">PKI</span>
+                <span class="tag">Certificate Mgmt</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card sidebar-card">
+            <div class="sidebar-label">Selected projects</div>
+            <div class="project-list">
+              <div class="project-item">
+                <div class="project-name">sprint3r</div>
+                <div class="project-desc">Go CLI for sprint automation — integrates Salesforce GUS API with Slack webhooks</div>
+              </div>
+              <div class="project-item">
+                <div class="project-name">woodhead.tech homelab</div>
+                <div class="project-desc">4-node Proxmox cluster, Ceph, Talos K8s, 15+ services, full IaC</div>
+              </div>
+              <div class="project-item">
+                <div class="project-name">Piboard</div>
+                <div class="project-desc">Go dashboard on Raspberry Pi with Prometheus metrics via SSE</div>
+              </div>
+              <div class="project-item">
+                <div class="project-name">Gourmand</div>
+                <div class="project-desc">Go + SQLite recipe manager with GitHub webhook auto-deploy</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card sidebar-card cta-card">
+            <p>Ready to talk about your systems?</p>
+            <a href="/contact" class="btn btn-primary" style="width: 100%; justify-content: center;">Schedule a Call →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  .page-hero {
+    padding: 5rem 0 3.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .page-hero h1 { font-size: clamp(2rem, 4vw, 3rem); }
+
+  /* Grid */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 4rem;
+    align-items: start;
+  }
+
+  /* Bio */
+  .lead {
+    font-size: 1.1rem;
+    color: var(--dim);
+    line-height: 1.75;
+    margin-bottom: 1.25rem;
+    font-weight: 500;
+  }
+
+  .bio-section p {
+    color: var(--muted);
+    line-height: 1.75;
+    margin-bottom: 1.1rem;
+    font-size: 0.95rem;
+  }
+
+  /* Timeline */
+  .timeline { margin-top: 3rem; }
+
+  .timeline-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .timeline-items { display: flex; flex-direction: column; gap: 0; }
+
+  .tl-item {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 1.5rem;
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--border);
+    position: relative;
+  }
+
+  .tl-year {
+    font-size: 0.78rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-family: monospace;
+    padding-top: 0.15rem;
+  }
+
+  .tl-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+
+  .tl-org {
+    font-size: 0.82rem;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .tl-desc { font-size: 0.85rem; color: var(--muted); line-height: 1.55; }
+
+  /* Sidebar */
+  .sidebar-card { margin-bottom: 1.25rem; }
+
+  .sidebar-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+  }
+
+  .skill-group { margin-bottom: 1rem; }
+
+  .skill-group-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  .tag {
+    background: rgba(63, 185, 80, 0.08);
+    border: 1px solid rgba(63, 185, 80, 0.25);
+    color: var(--accent);
+    padding: 0.18rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.76rem;
+    font-weight: 500;
+  }
+
+  .project-list { display: flex; flex-direction: column; gap: 1rem; }
+
+  .project-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+    font-family: monospace;
+  }
+
+  .project-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+  .cta-card {
+    text-align: center;
+    background: rgba(63, 185, 80, 0.04);
+    border-color: rgba(63, 185, 80, 0.3);
+  }
+
+  .cta-card p { font-size: 0.9rem; color: var(--dim); margin-bottom: 1rem; }
+
+  @media (max-width: 900px) {
+    .about-grid { grid-template-columns: 1fr; }
+    .about-sidebar { order: -1; }
+  }
+</style>

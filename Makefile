@@ -28,7 +28,7 @@
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant beardie truenas sdr pxe mailserver zigbee2mqtt claude-os pwnagotchi \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
-        docs-build docs-dev resume-build \
+        docs-build docs-dev resume-build consulting-build consulting \
         group-status group-start group-stop
 
 TERRAFORM_DIR := terraform
@@ -246,6 +246,12 @@ docs-dev: ## Start Docusaurus dev server (hot reload)
 
 resume-build: ## Build the Hugo resume site (static output in resume-site/public/)
 	cd resume-site && hugo --minify
+
+consulting-build: ## Build the Astro consulting site (static output in consulting-site/dist/)
+	cd consulting-site && npm ci && npm run build
+
+consulting: ## Deploy consulting site to monitoring LXC
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-consulting-site.yml
 
 # ===== Phase 4: Talos K8s Cluster =====
 

@@ -1,0 +1,284 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Contact" description="Schedule a call or send a message — let's talk about your systems.">
+
+  <section class="page-hero">
+    <div class="container">
+      <div class="eyebrow">Contact</div>
+      <h1>Let's talk about<br /><span class="accent">your systems.</span></h1>
+      <p class="hero-sub">No pitch deck. A 30-minute conversation about what your team is working on and whether I can help.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="contact-grid">
+
+        <div class="contact-main">
+          <div class="card calendly-card">
+            <div class="card-label">Schedule a call</div>
+            <p class="card-desc">
+              Pick a time that works for you. First call is always free — 30 minutes, no obligation.
+            </p>
+            <!-- Replace the href below with your Calendly link -->
+            <a
+              href="https://calendly.com/bwoodwar"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="btn btn-primary calendly-btn"
+            >
+              Open Scheduling Calendar →
+            </a>
+            <p class="calendly-note">Opens Calendly in a new tab</p>
+          </div>
+
+          <div class="or-divider">
+            <span>or reach out directly</span>
+          </div>
+
+          <div class="card email-card">
+            <div class="card-label">Email</div>
+            <a href="mailto:bwoodwar@gmail.com" class="email-link">bwoodwar@gmail.com</a>
+            <p class="email-note">Response within 24 hours on business days.</p>
+
+            <div class="what-to-include">
+              <div class="wti-label">Helpful to include</div>
+              <ul>
+                <li>What your team is building or trying to automate</li>
+                <li>Approximate team size and engineering stack</li>
+                <li>What you've already tried</li>
+                <li>Your timeline and urgency</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="contact-sidebar">
+          <div class="card sidebar-info">
+            <div class="info-label">What happens next</div>
+            <div class="steps">
+              <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-text">
+                  <strong>30-min intro call</strong>
+                  <p>We talk about your systems, your team's pain, and whether the engagement makes sense.</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-text">
+                  <strong>Scope or proposal</strong>
+                  <p>If there's a fit, I send a written scope document with a fixed price and timeline.</p>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-text">
+                  <strong>We start</strong>
+                  <p>50% upfront, work begins. No retainer, no ongoing fees unless that's what we agreed.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card sidebar-info" style="margin-top: 1.25rem;">
+            <div class="info-label">Good fit if...</div>
+            <ul class="fit-list">
+              <li>Your team has 10–200 engineers</li>
+              <li>You have a specific automation problem or AI integration in mind</li>
+              <li>You want architecture expertise, not a vendor</li>
+              <li>You can execute once the architecture is designed</li>
+            </ul>
+            <div class="info-label" style="margin-top: 1.5rem;">Not a fit if...</div>
+            <ul class="fit-list not-fit">
+              <li>You need a full-time embedded contractor</li>
+              <li>The problem is still undefined ("we should do something with AI")</li>
+              <li>You need a large team or agency deliverable</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  .page-hero {
+    padding: 5rem 0 3.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .page-hero h1 { font-size: clamp(2rem, 4vw, 3rem); margin-bottom: 1rem; }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 480px;
+    line-height: 1.7;
+  }
+
+  /* Grid */
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 3rem;
+    align-items: start;
+  }
+
+  /* Calendly card */
+  .card-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  .card-desc { color: var(--dim); font-size: 0.92rem; margin-bottom: 1.5rem; line-height: 1.6; }
+
+  .calendly-btn { font-size: 1rem; padding: 0.85rem 1.75rem; }
+
+  .calendly-note {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 0.75rem;
+  }
+
+  /* Divider */
+  .or-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 2rem 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .or-divider::before,
+  .or-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Email card */
+  .email-link {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  .email-link:hover { text-decoration: underline; }
+
+  .email-note { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+  .what-to-include { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+
+  .wti-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .what-to-include ul { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .what-to-include li {
+    font-size: 0.88rem;
+    color: var(--dim);
+    padding-left: 1.25rem;
+    position: relative;
+  }
+
+  .what-to-include li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 0.8rem;
+  }
+
+  /* Sidebar */
+  .info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 1.25rem;
+  }
+
+  /* Steps */
+  .steps { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .step { display: flex; gap: 1rem; align-items: flex-start; }
+
+  .step-num {
+    width: 28px;
+    height: 28px;
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid rgba(63, 185, 80, 0.3);
+    color: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .step-text strong { display: block; font-size: 0.9rem; color: var(--text); margin-bottom: 0.25rem; }
+
+  .step-text p { font-size: 0.83rem; color: var(--muted); line-height: 1.5; }
+
+  /* Fit list */
+  .fit-list { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .fit-list li {
+    font-size: 0.85rem;
+    color: var(--dim);
+    padding-left: 1.2rem;
+    position: relative;
+  }
+
+  .fit-list li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-size: 0.8rem;
+  }
+
+  .fit-list.not-fit li::before {
+    content: '✗';
+    color: var(--muted);
+  }
+
+  .fit-list.not-fit li { color: var(--muted); }
+
+  @media (max-width: 768px) {
+    .contact-grid { grid-template-columns: 1fr; }
+  }
+</style>

@@ -212,6 +212,16 @@ services:
       - "8084:80"
     restart: unless-stopped
 
+  # --- Consulting Site: Astro Static Site ---
+  # Pre-built Astro output served by nginx. Accessible at consulting.woodhead.tech.
+  consulting-site:
+    build:
+      context: /opt/monitoring/consulting-site/build
+    container_name: consulting-site
+    ports:
+      - "8085:80"
+    restart: unless-stopped
+
   # --- NUT Exporter: UPS Metrics ---
   # Queries NUT server on thinkcentre3 (192.168.86.31:3493) and exposes
   # UPS metrics (battery charge, load, runtime, voltage) for Prometheus.
