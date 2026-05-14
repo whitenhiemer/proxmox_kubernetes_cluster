@@ -145,6 +145,7 @@ and resource allocation.
     |  tasks.*      +---> 192.168.86.33:8000
     |  mail.*       +---> 192.168.86.34:8080
     |  docs.*       +---> 192.168.86.25:3080
+    |  consulting.* +---> 192.168.86.25:8085
     |  ender3.*     +---> 192.168.86.138:80
     |  traefik.*    +---> dashboard (local)
     +---------------+
@@ -692,6 +693,7 @@ Certificates are wildcard (`*.woodhead.tech`) via Let's Encrypt DNS-01.
 | mail.woodhead.tech     | 192.168.86.34        | 8080  | mailserver.yml        | Active    |
 | docs.woodhead.tech     | 192.168.86.25        | 3080  | docs-site.yml         | Active (Authentik SSO) |
 | resume.woodhead.tech   | 192.168.86.25        | 3081  | resume-site.yml       | Active (Authentik SSO) |
+| consulting.woodhead.tech | 192.168.86.25      | 8085  | consulting-site.yml   | Active    |
 | ender3.woodhead.tech   | 192.168.86.138       | 80    | klipper.yml           | Active    |
 | adguard.woodhead.tech  | 192.168.86.35        | 80    | adguard.yml           | Active (Authentik SSO) |
 | proxmox.woodhead.tech  | 192.168.86.29        | 8006  | proxmox.yml           | Active (Authentik SSO) |
