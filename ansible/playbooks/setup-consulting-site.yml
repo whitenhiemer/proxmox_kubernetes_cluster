@@ -19,6 +19,14 @@
     consulting_src: "{{ playbook_dir }}/../files/monitoring/consulting-site"
 
   tasks:
+    - name: Sync docker-compose.yml (adds consulting-site service)
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/monitoring/docker-compose.yml"
+        dest: "{{ mon_base_dir }}/docker-compose.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+
     - name: Create consulting site build context directory
       ansible.builtin.file:
         path: "{{ mon_base_dir }}/consulting-site/build/html"
