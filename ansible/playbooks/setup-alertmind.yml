@@ -1,0 +1,102 @@
+# setup-alertmind.yml - Deploy alertmind AI alert triage service
+#
+# Pulls the alertmind container image, writes the env file with credentials,
+# adds an Alertmanager receiver, and starts the service.
+#
+# Usage:
+#   make alertmind ANTHROPIC_API_KEY=sk-ant-... DISCORD_WEBHOOK=https://...
+#   make alertmind ANTHROPIC_API_KEY=sk-ant-... SLACK_WEBHOOK=https://hooks.slack.com/...
+---
+- name: Deploy alertmind alert triage service
+  hosts: lxc_services:&monitoring
+  vars:
+    mon_user: monitoring
+    mon_base_dir: /opt/monitoring
+    anthropic_api_key: ""
+    slack_webhook_url: ""
+    discord_webhook_url: ""
+    alertmind_model: "claude-haiku-4-5-20251001"
+
+  tasks:
+    - name: Sync docker-compose.yml (adds alertmind service)
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../files/monitoring/docker-compose.yml"
+        dest: "{{ mon_base_dir }}/docker-compose.yml"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0644"
+
+    - name: Write alertmind env file
+      ansible.builtin.copy:
+        content: |
+          ANTHROPIC_API_KEY={{ anthropic_api_key }}
+          SLACK_WEBHOOK_URL={{ slack_webhook_url }}
+          DISCORD_WEBHOOK_URL={{ discord_webhook_url }}
+          ALERTMIND_MODEL={{ alertmind_model }}
+          FETCH_RUNBOOKS=true
+        dest: "{{ mon_base_dir }}/alertmind.env"
+        owner: "{{ mon_user }}"
+        group: "{{ mon_user }}"
+        mode: "0600"
+      no_log: true
+
+    - name: Add alertmind receiver to Alertmanager config
+      ansible.builtin.blockinfile:
+        path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        marker: "# {mark} ALERTMIND RECEIVER"
+        insertafter: '- name: "null"'
+        block: |2
+            - name: "alertmind"
+              webhook_configs:
+                - url: "http://alertmind:8080/webhook"
+                  send_resolved: true
+
+    - name: Route all non-info alerts to alertmind
+      ansible.builtin.blockinfile:
+        path: "{{ mon_base_dir }}/alertmanager/config/alertmanager.yml"
+        marker: "# {mark} ALERTMIND ROUTE"
+        insertafter: "routes:"
+        block: |2
+              - match_re:
+                  severity: "warning|critical"
+                receiver: "alertmind"
+                continue: true
+
+    - name: Pull alertmind image
+      ansible.builtin.command:
+        cmd: docker compose pull alertmind
+        chdir: "{{ mon_base_dir }}"
+      changed_when: true
+      ignore_errors: true
+
+    - name: Start alertmind container
+      ansible.builtin.command:
+        cmd: docker compose up -d alertmind
+        chdir: "{{ mon_base_dir }}"
+      changed_when: true
+
+    - name: Reload Alertmanager config
+      ansible.builtin.uri:
+        url: "http://localhost:9093/-/reload"
+        method: POST
+        status_code: 200
+      ignore_errors: true
+
+    - name: Verify alertmind is healthy
+      ansible.builtin.uri:
+        url: "http://localhost:8086/health"
+        return_content: true
+      register: health
+      retries: 5
+      delay: 3
+      until: health.status == 200
+      ignore_errors: true
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg:
+          - "alertmind deployed"
+          - "Internal: http://192.168.86.25:8086"
+          - "External: https://alertmind.woodhead.tech (Authentik SSO)"
+          - "Webhook endpoint: http://alertmind:8080/webhook (from Alertmanager)"
+          - "Test: curl -X POST http://192.168.86.25:8086/test"

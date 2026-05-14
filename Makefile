@@ -28,7 +28,7 @@
         traefik recipe-site arr-stack plex jellyfin monitoring openclaw authentik wireguard homeassistant beardie truenas sdr pxe mailserver zigbee2mqtt claude-os pwnagotchi \
         bootstrap kubeconfig health k8s-base harden \
         patch-proxmox patch-lxc patch-docker patch-pi destroy clean help \
-        docs-build docs-dev resume-build consulting-build consulting \
+        docs-build docs-dev resume-build consulting-build consulting alertmind \
         group-status group-start group-stop
 
 TERRAFORM_DIR := terraform
@@ -252,6 +252,17 @@ consulting-build: ## Build the Astro consulting site (static output in consultin
 
 consulting: ## Deploy consulting site to monitoring LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-consulting-site.yml
+
+alertmind: ## Deploy alertmind AI alert triage (ANTHROPIC_API_KEY= DISCORD_WEBHOOK= SLACK_WEBHOOK=)
+	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
+		echo "Error: ANTHROPIC_API_KEY is required"; \
+		echo "Usage: make alertmind ANTHROPIC_API_KEY=sk-ant-... DISCORD_WEBHOOK=https://..."; \
+		exit 1; \
+	fi
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-alertmind.yml \
+		--extra-vars "anthropic_api_key=$(ANTHROPIC_API_KEY)" \
+		$(if $(DISCORD_WEBHOOK),--extra-vars "discord_webhook_url=$(DISCORD_WEBHOOK)") \
+		$(if $(SLACK_WEBHOOK),--extra-vars "slack_webhook_url=$(SLACK_WEBHOOK)")
 
 # ===== Phase 4: Talos K8s Cluster =====
 

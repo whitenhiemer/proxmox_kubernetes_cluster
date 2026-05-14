@@ -1,0 +1,23 @@
+# alertmind.yml - Traefik dynamic route for the alertmind triage service
+#
+# Routes alertmind.woodhead.tech to the alertmind container running on the
+# monitoring LXC. The service itself listens on port 8086 (mapped from :8080).
+http:
+  routers:
+    alertmind:
+      rule: "Host(`alertmind.woodhead.tech`)"
+      entryPoints:
+        - websecure
+      service: alertmind
+      middlewares:
+        - authentik@file
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.woodhead.tech"
+
+  services:
+    alertmind:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.86.25:8086"

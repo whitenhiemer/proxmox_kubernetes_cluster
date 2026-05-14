@@ -212,6 +212,17 @@ services:
       - "8084:80"
     restart: unless-stopped
 
+  # --- alertmind: AI-powered alert triage ---
+  # Receives Alertmanager webhooks, triages via Claude API, posts to Slack/Discord.
+  alertmind:
+    image: ghcr.io/whitenhiemer/alertmind:latest
+    container_name: alertmind
+    ports:
+      - "8086:8080"
+    env_file:
+      - alertmind.env
+    restart: unless-stopped
+
   # --- Consulting Site: Astro Static Site ---
   # Pre-built Astro output served by nginx. Accessible at consulting.woodhead.tech.
   consulting-site:
