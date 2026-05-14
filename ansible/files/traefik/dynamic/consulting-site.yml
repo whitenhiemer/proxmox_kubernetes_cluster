@@ -1,11 +1,11 @@
 # consulting-site.yml - Traefik dynamic route for the Astro consulting site
 #
-# Routes consulting.woodhead.tech to the consulting site container running on the
-# monitoring LXC. Nginx serves pre-built Astro static output on port 8085.
+# Routes woodhead.tech and www.woodhead.tech to the consulting site container
+# running on the monitoring LXC. Nginx serves pre-built Astro static output on port 8085.
 http:
   routers:
     consulting-site:
-      rule: "Host(`consulting.woodhead.tech`)"
+      rule: "Host(`woodhead.tech`) || Host(`www.woodhead.tech`)"
       entryPoints:
         - websecure
       service: consulting-site
@@ -13,6 +13,9 @@ http:
         certResolver: cloudflare
         domains:
           - main: "*.woodhead.tech"
+            sans:
+              - "woodhead.tech"
+              - "www.woodhead.tech"
 
   services:
     consulting-site:
