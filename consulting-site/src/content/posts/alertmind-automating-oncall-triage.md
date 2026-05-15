@@ -19,7 +19,7 @@ The first 10 minutes of an incident are the most expensive. You're context-switc
 
 ## What I built
 
-[alertmind](https://github.com/whitenhiemer/alertmind) sits between Alertmanager and your Slack. When an alert fires, it:
+[alertmind](https://github.com/woodhead-tech/alertmind) sits between Alertmanager and your Slack. When an alert fires, it:
 
 1. Receives the webhook payload from Alertmanager
 2. Enriches the alert with additional context (runbook URLs, label summaries)
@@ -60,7 +60,7 @@ It's been running in my homelab for months, wired into a production-equivalent P
 
 ## The repo
 
-It's open source: [github.com/whitenhiemer/alertmind](https://github.com/whitenhiemer/alertmind)
+It's open source: [github.com/woodhead-tech/alertmind](https://github.com/woodhead-tech/alertmind)
 
 Copy-paste Alertmanager config is in the README. Should take under an hour to get running if you already have Alertmanager.
 

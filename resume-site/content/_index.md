@@ -11,7 +11,7 @@ title: "Brandon Woodward"
             <span class="sep">·</span>
             <a href="https://woodhead.tech">woodhead.tech</a>
             <span class="sep">·</span>
-            <a href="https://github.com/whitenhiemer">github.com/whitenhiemer</a>
+            <a href="https://github.com/woodhead-tech">github.com/woodhead-tech</a>
             <span class="sep">·</span>
             <span>San Antonio, TX</span>
         </div>
@@ -167,12 +167,12 @@ in a high-velocity environment.
 <div class="projects">
 
 <div class="project-card">
-<h4><a href="https://github.com/whitenhiemer/alertmind">AlertMind</a></h4>
+<h4><a href="https://github.com/woodhead-tech/alertmind">AlertMind</a></h4>
 <p>Go · Claude API · Alertmanager webhook receiver. AI-powered alert triage — enriches ops alerts with structured diagnosis and posts to Discord. Deployed in production.</p>
 </div>
 
 <div class="project-card">
-<h4><a href="https://github.com/whitenhiemer/shopstack">ShopStack</a></h4>
+<h4><a href="https://github.com/woodhead-tech/shopstack">ShopStack</a></h4>
 <p>Ansible + Terraform IaC suite. Deploys a full business stack (email, file storage, invoicing, SSO, monitoring) on a $200 mini PC or AWS/GCP. Open source, MIT license.</p>
 </div>
 
