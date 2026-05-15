@@ -1,0 +1,1052 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Homelab Architecture" description="A deep-dive into a self-hosted homelab running 20+ production services on commodity hardware — Proxmox, Ceph, Talos Kubernetes, Traefik, and full IaC from Terraform and Ansible.">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">Architecture · White Paper</div>
+      <h1>woodhead.tech homelab infrastructure</h1>
+      <p class="hero-sub">
+        20+ production services on commodity x86 hardware. Fully automated with Terraform,
+        Ansible, and a Makefile. Five-node Proxmox cluster with Ceph storage, Talos Kubernetes,
+        and a single Traefik ingress for all traffic. Single operator.
+      </p>
+      <div class="hero-meta">
+        <span class="meta-tag">Proxmox VE 8</span>
+        <span class="meta-tag">Ceph</span>
+        <span class="meta-tag">Talos Linux</span>
+        <span class="meta-tag">Traefik v3</span>
+        <span class="meta-tag">Authentik SSO</span>
+        <span class="meta-tag">Ansible</span>
+        <span class="meta-tag">Terraform</span>
+        <span class="meta-tag">WireGuard</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Body -->
+  <section class="body-section">
+    <div class="container">
+      <div class="body-layout">
+
+        <!-- Sidebar TOC -->
+        <nav class="toc" aria-label="Table of contents">
+          <div class="toc-label">Contents</div>
+          <ol class="toc-list">
+            <li><a href="#design-goals">Design Goals</a></li>
+            <li><a href="#compute">Compute &amp; Virtualization</a>
+              <ol>
+                <li><a href="#cluster">Cluster Topology</a></li>
+                <li><a href="#workload-types">Workload Types</a></li>
+                <li><a href="#resources">Resource Allocation</a></li>
+              </ol>
+            </li>
+            <li><a href="#storage">Storage Architecture</a></li>
+            <li><a href="#networking">Networking &amp; Traffic Flow</a>
+              <ol>
+                <li><a href="#traffic-path">External Traffic Path</a></li>
+                <li><a href="#tls">TLS Certificates</a></li>
+                <li><a href="#internal-routing">Internal Routing</a></li>
+              </ol>
+            </li>
+            <li><a href="#security">Security Model</a></li>
+            <li><a href="#services">Service Catalog</a></li>
+            <li><a href="#kubernetes">Kubernetes Cluster</a></li>
+            <li><a href="#automation">Automation Toolchain</a></li>
+            <li><a href="#operations">Operational Considerations</a></li>
+            <li><a href="#roadmap">Roadmap</a></li>
+            <li><a href="#hardware">Hardware Inventory</a></li>
+          </ol>
+        </nav>
+
+        <!-- Main Content -->
+        <article class="paper">
+
+          <!-- Executive Summary -->
+          <div class="summary-box">
+            <div class="summary-label">Executive Summary</div>
+            <p>
+              A self-hosted homelab running 20+ production-grade services on commodity hardware,
+              demonstrating Infrastructure-as-Code at every layer. Terraform provisions compute,
+              Ansible configures services, a Makefile orchestrates the lifecycle. A five-node
+              Proxmox VE cluster provides hypervisor compute; Ceph delivers distributed block
+              storage; TrueNAS manages NAS/NFS; a Talos Linux Kubernetes cluster runs containerized
+              workloads. All external traffic terminates at a single Traefik reverse proxy with
+              automatic TLS via Let's Encrypt DNS-01 through Cloudflare. Authentik provides SSO
+              for all admin interfaces. Single operator.
+            </p>
+          </div>
+
+          <!-- 1. Design Goals -->
+          <h2 id="design-goals"><span class="sec-num">01</span>Design Goals</h2>
+
+          <div class="goal-grid">
+            <div class="goal-card">
+              <div class="goal-title">Single-operator model</div>
+              <p>Every service must be deployable and maintainable without manual intervention beyond a single <code>make</code> command. No snowflake configuration.</p>
+            </div>
+            <div class="goal-card">
+              <div class="goal-title">Infrastructure-as-Code first</div>
+              <p>The entire cluster is reproducible from code. If all nodes were wiped, <code>terraform apply</code> + Ansible playbooks would restore every service.</p>
+            </div>
+            <div class="goal-card">
+              <div class="goal-title">Separation of concerns</div>
+              <p>Each service runs in its own LXC container or VM with dedicated disk, CPU, and memory. No shared container boundaries except where architecturally required.</p>
+            </div>
+            <div class="goal-card">
+              <div class="goal-title">Defense in depth</div>
+              <p>External traffic is gated through Cloudflare, then Traefik, then Authentik SSO for admin surfaces. Services without application auth sit behind Authentik.</p>
+            </div>
+            <div class="goal-card">
+              <div class="goal-title">Hardware realism</div>
+              <p>All nodes are commodity x86 mini PCs (~$100 used). The design accounts for the overcommit ratios this forces using memory ballooning and CPU weight scheduling.</p>
+            </div>
+          </div>
+
+          <!-- 2. Compute -->
+          <h2 id="compute"><span class="sec-num">02</span>Compute &amp; Virtualization</h2>
+
+          <h3 id="cluster">Cluster Topology</h3>
+          <p>Five Proxmox VE 8.x nodes on a flat Layer 2 network (192.168.86.0/24), managed as a single cluster with shared corosync quorum and a distributed Ceph storage pool.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Node</th>
+                  <th>IP</th>
+                  <th>Primary Workloads</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>pve1</code> (thinkcentre1)</td><td><code>192.168.86.29</code></td><td>Primary management, Authentik, Traefik</td></tr>
+                <tr><td><code>pve2</code> (thinkcentre2)</td><td><code>192.168.86.30</code></td><td>ARR stack, SDR scanner, K8s worker-0</td></tr>
+                <tr><td><code>pve3</code> (thinkcentre3)</td><td><code>192.168.86.31</code></td><td>Pwnagotchi, K8s worker-1</td></tr>
+                <tr><td><code>tower1</code></td><td><code>192.168.86.130</code></td><td>TrueNAS VM, Home Assistant, K8s control plane</td></tr>
+                <tr><td><code>zotac</code></td><td><code>192.168.86.147</code></td><td>Zigbee2MQTT, K8s worker-2</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <h3 id="workload-types">Workload Types</h3>
+          <p><strong>LXC containers</strong> are the primary unit of service isolation. Proxmox LXC uses Linux namespaces and cgroups with no hardware virtualization overhead, making them lighter than full VMs while still providing strong isolation. Most services — Traefik, Authentik, monitoring, the ARR stack — run as LXC containers.</p>
+          <p><strong>Full VMs</strong> are used only where bare-metal isolation is required: TrueNAS (kernel-level ZFS and raw disk passthrough), Home Assistant OS (USB device passthrough for Zigbee), and Talos Kubernetes nodes (immutable OS that manages its own kernel).</p>
+          <p><strong>Docker Compose inside LXC</strong> is used for multi-container services (ARR stack, Authentik, monitoring, Mailcow). This avoids nested VM overhead while preserving Docker's inter-container networking model.</p>
+
+          <h3 id="resources">Resource Allocation Philosophy</h3>
+          <p>CFS CPU weight scheduling (<code>cpuunits</code>) expresses priority under contention. Traefik (weight 2048) gets twice the CPU time of the ARR stack (weight 1024) at saturation. When cores are idle, weights are irrelevant.</p>
+          <p>VMs support memory ballooning — the hypervisor reclaims idle RAM down to a guaranteed floor. LXC containers are hard-limited by cgroups. The ThinkCentre nodes run at roughly 2–3× CPU overcommit and 2× RAM overcommit, which works in practice because most services idle the majority of the time.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Service</th><th>Type</th><th>CPU Weight</th><th>Tier</th></tr></thead>
+              <tbody>
+                <tr><td>Traefik</td><td>LXC</td><td>2048</td><td>Critical</td></tr>
+                <tr><td>TrueNAS</td><td>VM</td><td>1500</td><td>High</td></tr>
+                <tr><td>K8s Control Plane</td><td>VM</td><td>1200</td><td>High</td></tr>
+                <tr><td>Authentik</td><td>LXC</td><td>1200</td><td>High</td></tr>
+                <tr><td>K8s Workers, ARR, Plex, Jellyfin</td><td>mixed</td><td>1024</td><td>Normal</td></tr>
+                <tr><td>Monitoring, OpenClaw</td><td>LXC</td><td>800</td><td>Low</td></tr>
+                <tr><td>Recipe Site, WireGuard, Libby Alert</td><td>LXC</td><td>512</td><td>Minimal</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 3. Storage -->
+          <h2 id="storage"><span class="sec-num">03</span>Storage Architecture</h2>
+
+          <p>Storage is segmented into three tiers with distinct purpose and failure modes.</p>
+
+          <div class="tier-grid">
+            <div class="tier-card">
+              <div class="tier-num">01</div>
+              <div class="tier-name">Local LVM</div>
+              <div class="tier-scope">Per-node, high-speed</div>
+              <p>Each Proxmox node has a primary SSD formatted as LVM. All LXC container disks and VM OS disks live here. Fast. Not replicated — if a node dies, containers on it are offline until recovery.</p>
+            </div>
+            <div class="tier-card">
+              <div class="tier-num">02</div>
+              <div class="tier-name">Ceph Pool</div>
+              <div class="tier-scope">Distributed, 3× replicated</div>
+              <p>Six OSDs (three SSDs + three HDDs) across multiple nodes. Backs Kubernetes VM disks, enabling VM live migration. Mixed SSD/HDD causes OSD latency divergence under heavy write workloads — monitored via Grafana.</p>
+            </div>
+            <div class="tier-card">
+              <div class="tier-num">03</div>
+              <div class="tier-name">TrueNAS Scale</div>
+              <div class="tier-scope">NFS, ZFS, NAS</div>
+              <p>Full VM on tower1 with raw disk passthrough. ZFS provides checksumming, transparent compression, and native snapshots. Exports NFS shares to the ARR stack, Plex, and Jellyfin.</p>
+            </div>
+          </div>
+
+          <div class="callout callout-warn">
+            <div class="callout-label">Known failure mode: NFS cascade</div>
+            <p>Ceph slow ops under heavy write I/O → TrueNAS ZFS write stall → NFS hangs → Proxmox host NFS mount stalls → LXC processes block on file I/O. NFS is mounted at the <em>Proxmox host level</em> and bind-mounted into LXCs — recovery requires action on the host node, not inside the container. Grafana alerts on <code>ceph health != HEALTH_OK</code>.</p>
+          </div>
+
+          <!-- 4. Networking -->
+          <h2 id="networking"><span class="sec-num">04</span>Networking &amp; Traffic Flow</h2>
+
+          <p>All nodes connect to a flat 192.168.86.0/24 LAN via a managed switch behind a Google Nest WiFi Pro router. The Nest handles NAT, DHCP, DNS forwarding, and hairpin NAT. VLAN segmentation is deferred until VLAN-aware APs replace the Nest — the design is structured so VLANs can be added without touching service configs.</p>
+
+          <h3 id="traffic-path">External Traffic Path</h3>
+
+          <div class="traffic-flow">
+            <div class="flow-step">
+              <div class="flow-label">External client</div>
+              <div class="flow-detail">Resolves <code>*.woodhead.tech</code> via Cloudflare DNS</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step">
+              <div class="flow-label">Cloudflare DNS</div>
+              <div class="flow-detail">Returns public WAN IP (updated every 5 min by DDNS cron)</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step">
+              <div class="flow-label">Google Nest (router)</div>
+              <div class="flow-detail">Port forward: <code>80/443 → 192.168.86.20</code>, <code>51820 UDP → 192.168.86.39</code></div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step highlight">
+              <div class="flow-label">Traefik LXC <code>192.168.86.20</code></div>
+              <div class="flow-detail">TLS termination (wildcard <code>*.woodhead.tech</code>), SNI routing to backend</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step">
+              <div class="flow-label">Backend service</div>
+              <div class="flow-detail">Plaintext HTTP on the LAN. Authentik forwardAuth if required.</div>
+            </div>
+          </div>
+
+          <p>Two DNS records are intentionally <strong>not</strong> proxied through Cloudflare's CDN:</p>
+          <ul>
+            <li><code>*.woodhead.tech</code> — DNS-only so Traefik terminates TLS and receives the client's real IP for logging.</li>
+            <li><code>wg.woodhead.tech</code> — DNS-only; Cloudflare's proxy infrastructure does not forward UDP, which WireGuard requires.</li>
+          </ul>
+          <p>The apex domain <code>woodhead.tech</code> and <code>www.woodhead.tech</code> are proxied — they point to Cloudflare Pages (this site), not the homelab.</p>
+
+          <h3 id="tls">TLS Certificates</h3>
+          <p>Traefik obtains a wildcard certificate (<code>*.woodhead.tech</code>) from Let's Encrypt via DNS-01 challenge. The flow: Traefik creates a <code>_acme-challenge</code> TXT record via the Cloudflare API → Let's Encrypt validates against public resolvers → certificate issued and stored in <code>/etc/traefik/acme.json</code> (mode 0600) → auto-renewed 30 days before expiry.</p>
+          <p>DNS-01 is preferred over HTTP-01 because it supports wildcard certificates and works regardless of whether ports 80/443 are currently reachable. One wildcard cert covers all subdomains at zero per-service overhead.</p>
+
+          <h3 id="internal-routing">Internal Routing</h3>
+          <p>Traefik watches <code>/etc/traefik/dynamic/*.yml</code> and hot-reloads on file changes — no restart required. Each file defines a router (host-matching rule + middleware chain) and a service (backend IP:port). Routes requiring authentication include the <code>authentik@file</code> middleware, which implements Authentik's forward-auth protocol: every request is pre-authorized against the Authentik outpost before reaching the backend.</p>
+
+          <!-- 5. Security -->
+          <h2 id="security"><span class="sec-num">05</span>Security Model</h2>
+
+          <div class="security-layers">
+            <div class="sec-layer">
+              <div class="sec-layer-num">1</div>
+              <div class="sec-layer-body">
+                <div class="sec-layer-name">Cloudflare</div>
+                <p>DDoS protection, IP reputation filtering, rate limiting at the edge. Proxied records benefit from Cloudflare's anycast network.</p>
+              </div>
+            </div>
+            <div class="sec-layer">
+              <div class="sec-layer-num">2</div>
+              <div class="sec-layer-body">
+                <div class="sec-layer-name">Google Nest NAT</div>
+                <p>Stateful NAT drops unsolicited inbound connections. Only explicitly port-forwarded ports are reachable from WAN.</p>
+              </div>
+            </div>
+            <div class="sec-layer">
+              <div class="sec-layer-num">3</div>
+              <div class="sec-layer-body">
+                <div class="sec-layer-name">Traefik</div>
+                <p>TLS termination; all HTTP is redirected to HTTPS. Routes without a configured backend return 404. Dashboard is protected by Authentik.</p>
+              </div>
+            </div>
+            <div class="sec-layer">
+              <div class="sec-layer-num">4</div>
+              <div class="sec-layer-body">
+                <div class="sec-layer-name">Authentik SSO</div>
+                <p>ForwardAuth middleware delegates authentication for all protected services. OIDC-compatible; backed by PostgreSQL + Redis.</p>
+              </div>
+            </div>
+          </div>
+
+          <p><strong>WireGuard</strong> (LXC 208, <code>192.168.86.39</code>) provides a VPN tunnel for remote management with split-tunnel routing — only <code>10.10.0.0/24</code> routes through the tunnel, avoiding conflicts on machines already on 192.168.86.0/24.</p>
+          <p><strong>The ARR stack</strong> routes all download traffic through Gluetun (a WireGuard client to a commercial VPN provider). SABnzbd runs inside Gluetun's network namespace — if the VPN tunnel drops, SABnzbd loses connectivity entirely rather than leaking traffic over the plain WAN connection.</p>
+
+          <!-- 6. Service Catalog -->
+          <h2 id="services"><span class="sec-num">06</span>Service Catalog</h2>
+
+          <div class="service-table-wrap">
+            <table class="service-table">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>LXC/VM</th>
+                  <th>IP</th>
+                  <th>Auth</th>
+                  <th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="group-row"><td colspan="5">Infrastructure</td></tr>
+                <tr><td>Traefik</td><td>LXC 200</td><td><code>.20</code></td><td>Authentik</td><td>Reverse proxy, TLS termination, ingress for all HTTPS</td></tr>
+                <tr><td>Authentik</td><td>LXC 207</td><td><code>.28</code></td><td>—</td><td>SSO identity provider, OIDC, forwardAuth middleware</td></tr>
+                <tr><td>WireGuard</td><td>LXC 208</td><td><code>.39</code></td><td>—</td><td>Remote management VPN tunnel (UDP 51820)</td></tr>
+                <tr><td>Mailcow</td><td>LXC 212</td><td><code>.34</code></td><td>Own auth</td><td>Email stack — Postfix, Dovecot, Rspamd, ClamAV, webmail</td></tr>
+                <tr><td>PXE Server</td><td>LXC 213</td><td><code>.35</code></td><td>—</td><td>Network boot for bare-metal provisioning</td></tr>
+                <tr class="group-row"><td colspan="5">Media Pipeline</td></tr>
+                <tr><td>Sonarr / Radarr / Prowlarr / Bazarr / Overseerr / SABnzbd</td><td>LXC 202</td><td><code>.22</code></td><td>Authentik</td><td>Full ARR stack — indexing, downloading (via VPN), library management</td></tr>
+                <tr><td>Plex</td><td>LXC 203</td><td><code>.23</code></td><td>Plex auth</td><td>Media server with iGPU hardware transcoding (Intel Quick Sync)</td></tr>
+                <tr><td>Jellyfin</td><td>LXC 204</td><td><code>.24</code></td><td>Own auth</td><td>Media server with iGPU hardware transcoding (VAAPI)</td></tr>
+                <tr><td>TrueNAS Scale</td><td>VM 300</td><td><code>.40</code></td><td>Authentik</td><td>NAS — ZFS pool, NFS exports for /media to ARR/Plex/Jellyfin</td></tr>
+                <tr class="group-row"><td colspan="5">Observability</td></tr>
+                <tr><td>Prometheus + Grafana + Alertmanager</td><td>LXC 205</td><td><code>.25</code></td><td>Authentik</td><td>Metrics, dashboards, Discord + SMS alerts. Scrapes Proxmox, Traefik, Blackbox, Dexcom glucose</td></tr>
+                <tr><td>AlertMind</td><td>LXC 205</td><td><code>.25</code></td><td>—</td><td>AI-powered alert triage — enriches Alertmanager webhooks via Claude API, posts to Discord</td></tr>
+                <tr><td>Piboard</td><td>Pi 3B</td><td><code>.131</code></td><td>—</td><td>Go dashboard on a Raspberry Pi with Waveshare 5" display; polls Prometheus via SSE</td></tr>
+                <tr class="group-row"><td colspan="5">Smart Home</td></tr>
+                <tr><td>Home Assistant OS</td><td>VM 301</td><td><code>.41</code></td><td>Own auth</td><td>Smart home controller; USB passthrough, Zigbee, automations</td></tr>
+                <tr><td>Zigbee2MQTT</td><td>LXC 214</td><td><code>.36</code></td><td>—</td><td>Zigbee coordinator on zotac, publishes MQTT to HAOS</td></tr>
+                <tr class="group-row"><td colspan="5">Apps</td></tr>
+                <tr><td>Recipe Site</td><td>LXC 201</td><td><code>.21</code></td><td>—</td><td>Go + SQLite recipe app with nginx frontend</td></tr>
+                <tr><td>Kanboard</td><td>LXC 211</td><td><code>.33</code></td><td>Authentik</td><td>Project management / task queue</td></tr>
+                <tr><td>SDR Scanner</td><td>LXC 210</td><td><code>.32</code></td><td>Authentik</td><td>Trunk Recorder + rdio-scanner, RTL-SDR V4, decodes SNO911 P25 Phase II radio</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 7. Kubernetes -->
+          <h2 id="kubernetes"><span class="sec-num">07</span>Kubernetes Cluster</h2>
+
+          <p><strong>Talos Linux</strong> — an immutable, API-driven Kubernetes OS with no SSH, no shell, and no package manager. All management goes through <code>talosctl</code> and <code>kubectl</code>. This eliminates an entire class of configuration drift: there is no <code>/etc</code> to hand-edit, no packages to patch manually, no cron jobs to manage. An upgrade is: generate new machine configs → apply via talosctl → wait for rolling restart.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Role</th><th>IP</th><th>Host Node</th><th>CPU / RAM</th></tr></thead>
+              <tbody>
+                <tr><td>API VIP</td><td><code>192.168.86.100</code></td><td>— (distributed)</td><td>—</td></tr>
+                <tr><td>Control plane</td><td><code>192.168.86.101</code></td><td>tower1</td><td>2 cores / 4 GB</td></tr>
+                <tr><td>Worker-0</td><td><code>192.168.86.111</code></td><td>thinkcentre2</td><td>4 cores / 8 GB</td></tr>
+                <tr><td>Worker-1</td><td><code>192.168.86.112</code></td><td>thinkcentre3</td><td>4 cores / 8 GB</td></tr>
+                <tr><td>Worker-2</td><td><code>192.168.86.113</code></td><td>zotac</td><td>4 cores / 8 GB</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>The VIP (<code>192.168.86.100</code>) is managed by Talos's built-in virtual IP feature — the control plane node with the lowest uptime holds it. Workers always connect to the VIP, not the control plane's physical IP.</p>
+          <p><strong>MetalLB</strong> runs in L2 mode, advertising a pool of IPs (<code>192.168.86.150–199</code>) via ARP. Services of type <code>LoadBalancer</code> receive an IP from this pool and are directly reachable on the LAN without a separate load balancer appliance.</p>
+          <p>K8s VM disks are on the Ceph pool (3× replicated), allowing VM live migration between Proxmox nodes without unmounting storage.</p>
+
+          <!-- 8. Automation -->
+          <h2 id="automation"><span class="sec-num">08</span>Automation Toolchain</h2>
+
+          <div class="tool-grid">
+            <div class="tool-card">
+              <div class="tool-name">Terraform</div>
+              <div class="tool-role">Provision</div>
+              <p>Creates all VMs and LXC containers via the <code>bpg/proxmox</code> provider. Each LXC/VM is a separate <code>.tf</code> file. API token auth scoped to minimum required permissions.</p>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">Ansible</div>
+              <div class="tool-role">Configure</div>
+              <p>Idempotent playbooks install and configure services inside provisioned containers. Sensitive values are passed as environment variables at run time — nothing in the repo.</p>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">Makefile</div>
+              <div class="tool-role">Orchestrate</div>
+              <p>Top-level Makefile wraps all Terraform and Ansible operations into named targets. The full deploy sequence for a new cluster is documented and executable start-to-finish.</p>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">talosctl / kubectl</div>
+              <div class="tool-role">Kubernetes</div>
+              <p>Cluster management via the Talos and Kubernetes APIs. Generated configs live in <code>talos/_out/</code>. No SSH, no shell access to K8s nodes.</p>
+            </div>
+          </div>
+
+          <p><strong>Service group management</strong> organizes containers into dependency-aware groups (<code>core</code>, <code>storage</code>, <code>security</code>, <code>media</code>, <code>observability</code>, etc.). The group playbooks enforce:</p>
+          <ul>
+            <li><strong>always_on groups</strong> (<code>core</code>, <code>storage</code>) refuse stop operations unconditionally.</li>
+            <li><strong>Dependency blocking:</strong> stopping <code>storage</code> while <code>media</code> is running fails with an error — the operator must stop dependents first.</li>
+            <li><strong>Hardware-bound groups</strong> (<code>special</code>) are excluded from bulk operations; their members must be managed individually.</li>
+          </ul>
+
+          <!-- 9. Operations -->
+          <h2 id="operations"><span class="sec-num">09</span>Operational Considerations</h2>
+
+          <h3>Known Failure Modes</h3>
+
+          <div class="failure-list">
+            <div class="failure-item">
+              <div class="failure-name">NFS cascade</div>
+              <p>Ceph slow ops → TrueNAS write stall → NFS hang → LXC process freeze. Mitigated by Grafana alerting on <code>ceph health</code> and a documented OSD restart runbook.</p>
+            </div>
+            <div class="failure-item">
+              <div class="failure-name">DNS dependency</div>
+              <p>Internal clients depend on external DNS (Cloudflare) for name resolution. During internet outages, <code>*.woodhead.tech</code> is unreachable internally. Planned mitigation: AdGuard Home as an internal DNS resolver with split-horizon records.</p>
+            </div>
+            <div class="failure-item">
+              <div class="failure-name">No offsite backup</div>
+              <p>Proxmox backup jobs write to TrueNAS on the same physical site. A fire, flood, or theft loses both the cluster and the backups. B2/S3 offsite replication is planned.</p>
+            </div>
+          </div>
+
+          <h3>Patching Strategy</h3>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Layer</th><th>Command</th><th>Safety</th></tr></thead>
+              <tbody>
+                <tr><td>Proxmox nodes</td><td><code>make patch-proxmox</code></td><td>Serial — one node at a time</td></tr>
+                <tr><td>LXC containers</td><td><code>make patch-lxc</code></td><td>Parallel across all LXCs</td></tr>
+                <tr><td>Docker images</td><td><code>make patch-docker</code></td><td>Brief per-service restart</td></tr>
+                <tr><td>Talos OS</td><td><code>talosctl upgrade</code></td><td>Rolling, one node at a time</td></tr>
+                <tr><td>Raspberry Pi</td><td><code>make patch-pi</code></td><td>Parallel</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 10. Roadmap -->
+          <h2 id="roadmap"><span class="sec-num">10</span>Roadmap</h2>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th>Status</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td>VLAN segmentation</td><td><span class="status-chip deferred">Deferred</span></td><td>Requires replacing Google Nest with VLAN-aware APs</td></tr>
+                <tr><td>Velero K8s backup</td><td><span class="status-chip planned">Planned</span></td><td>etcd + persistent volume snapshots to object storage</td></tr>
+                <tr><td>Offsite backup (B2)</td><td><span class="status-chip planned">Planned</span></td><td>TrueNAS → Backblaze B2</td></tr>
+                <tr><td>Dedicated firewall (OPNsense)</td><td><span class="status-chip planned">Planned</span></td><td>IDS/IPS, inter-VLAN ACLs</td></tr>
+                <tr><td>K8s observability stack</td><td><span class="status-chip planned">Planned</span></td><td>kube-state-metrics, node-exporter DaemonSet, Loki</td></tr>
+                <tr><td>Certificate expiry alerts</td><td><span class="status-chip planned">Planned</span></td><td>Prometheus ssl_cert_not_after exporter</td></tr>
+                <tr><td>Terraform state — remaining VMs</td><td><span class="status-chip blocked">Blocked</span></td><td>bpg/proxmox API timeout on complex disk configs</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 11. Hardware -->
+          <h2 id="hardware"><span class="sec-num">11</span>Hardware Inventory</h2>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Device</th><th>CPU</th><th>RAM</th><th>Storage</th><th>Role</th></tr></thead>
+              <tbody>
+                <tr><td>ThinkCentre Tiny M710q (×3)</td><td>i5-7500T (4c)</td><td>8 GB</td><td>256 GB SSD</td><td>Proxmox nodes pve1/2/3</td></tr>
+                <tr><td>Custom tower (tower1)</td><td>i7 (6c+)</td><td>32 GB</td><td>1 TB SSD + HDDs</td><td>TrueNAS, K8s control plane</td></tr>
+                <tr><td>Zotac ZBOX</td><td>Ryzen 5</td><td>16 GB</td><td>500 GB SSD</td><td>K8s worker-2, Zigbee</td></tr>
+                <tr><td>Raspberry Pi 3B (×3)</td><td>ARM Cortex-A53 (4c)</td><td>1 GB</td><td>16–32 GB SD</td><td>Piboard dashboard, Klipper ×2</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="summary-box" style="margin-top: 2rem;">
+            <div class="summary-label">Total provisioned resources (all services running)</div>
+            <div class="totals">
+              <div class="total-item"><span class="total-val">~31</span><span class="total-label">vCPUs allocated</span></div>
+              <div class="total-item"><span class="total-val">~42 GB</span><span class="total-label">RAM allocated</span></div>
+              <div class="total-item"><span class="total-val">~171 GB</span><span class="total-label">local-lvm</span></div>
+              <div class="total-item"><span class="total-val">~250 GB</span><span class="total-label">Ceph raw (3× replicated)</span></div>
+            </div>
+          </div>
+
+          <!-- Footer note -->
+          <div class="paper-footer">
+            <div class="paper-date">May 2026</div>
+            <p>This infrastructure is actively maintained. Want to talk architecture, automation, or AI ops? <a href="/contact">Schedule a call.</a></p>
+          </div>
+
+        </article>
+      </div>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  /* ── Hero ── */
+  .hero {
+    padding: 4.5rem 0 3.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.9rem, 4vw, 3rem);
+    margin-bottom: 1.1rem;
+    max-width: 680px;
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--dim);
+    max-width: 620px;
+    line-height: 1.7;
+    margin-bottom: 1.75rem;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .meta-tag {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    background: rgba(181, 85, 26, 0.07);
+    border: 1px solid rgba(181, 85, 26, 0.2);
+    color: var(--accent);
+    padding: 0.2rem 0.55rem;
+    border-radius: 3px;
+  }
+
+  /* ── Body layout ── */
+  .body-section {
+    padding: 4rem 0 6rem;
+  }
+
+  .body-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 4rem;
+    align-items: start;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    padding-right: 1rem;
+  }
+
+  .toc-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .toc-list ol {
+    list-style: none;
+    padding-left: 0.75rem;
+    margin: 0.1rem 0;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .toc-list a {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: none;
+    display: block;
+    padding: 0.2rem 0;
+    line-height: 1.4;
+    transition: color 0.15s;
+  }
+
+  .toc-list a:hover { color: var(--accent); }
+
+  .toc-list ol a {
+    font-size: 0.78rem;
+  }
+
+  /* ── Paper ── */
+  .paper {
+    min-width: 0;
+  }
+
+  .paper h2 {
+    font-size: 1.6rem;
+    margin-top: 3.5rem;
+    margin-bottom: 1.25rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .paper h2:first-of-type { margin-top: 0; }
+
+  .sec-num {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .paper h3 {
+    font-size: 1.05rem;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+
+  .paper p {
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--dim);
+    margin-bottom: 1rem;
+  }
+
+  .paper ul {
+    margin: 0.75rem 0 1.25rem;
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .paper ul li {
+    font-size: 0.9rem;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  .paper code {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    background: rgba(181, 85, 26, 0.06);
+    border: 1px solid rgba(181, 85, 26, 0.15);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  /* ── Summary box ── */
+  .summary-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .summary-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .summary-box p {
+    margin-bottom: 0;
+    font-size: 0.92rem;
+  }
+
+  /* ── Goal grid ── */
+  .goal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .goal-card {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 1.25rem;
+  }
+
+  .goal-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .goal-card p {
+    font-size: 0.85rem;
+    margin-bottom: 0;
+    line-height: 1.6;
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.25rem 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border-lt);
+    color: var(--dim);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody tr:hover td { background: rgba(181, 85, 26, 0.03); }
+
+  .group-row td {
+    padding: 0.3rem 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── Storage tiers ── */
+  .tier-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .tier-card {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 1.5rem;
+  }
+
+  .tier-num {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+    font-family: var(--font-mono);
+  }
+
+  .tier-name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+
+  .tier-scope {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .tier-card p {
+    font-size: 0.85rem;
+    margin-bottom: 0;
+    line-height: 1.6;
+  }
+
+  /* ── Callouts ── */
+  .callout {
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .callout-warn {
+    background: rgba(181, 85, 26, 0.05);
+    border: 1px solid rgba(181, 85, 26, 0.25);
+  }
+
+  .callout-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .callout p { margin-bottom: 0; font-size: 0.88rem; }
+
+  /* ── Traffic flow ── */
+  .traffic-flow {
+    margin: 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 0.85rem 1.25rem;
+  }
+
+  .flow-step.highlight {
+    background: rgba(181, 85, 26, 0.06);
+    border-color: rgba(181, 85, 26, 0.3);
+  }
+
+  .flow-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+
+  .flow-detail {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .flow-arrow {
+    text-align: center;
+    color: var(--accent);
+    font-size: 1rem;
+    line-height: 1.2;
+    padding: 0.1rem 0;
+  }
+
+  /* ── Security layers ── */
+  .security-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin: 1.25rem 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .sec-layer {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-lt);
+  }
+
+  .sec-layer:last-child { border-bottom: none; }
+
+  .sec-layer-num {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: rgba(181, 85, 26, 0.08);
+    border: 1px solid rgba(181, 85, 26, 0.2);
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .sec-layer-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .sec-layer-body p { font-size: 0.85rem; margin-bottom: 0; line-height: 1.6; }
+
+  /* ── Failure list ── */
+  .failure-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 1rem 0 1.5rem;
+  }
+
+  .failure-item {
+    border-left: 2px solid var(--border);
+    padding-left: 1rem;
+  }
+
+  .failure-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.3rem;
+  }
+
+  .failure-item p { font-size: 0.85rem; margin-bottom: 0; line-height: 1.6; }
+
+  /* ── Tool grid ── */
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .tool-card {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 1.25rem;
+  }
+
+  .tool-name {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+
+  .tool-role {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+  }
+
+  .tool-card p { font-size: 0.85rem; margin-bottom: 0; line-height: 1.6; }
+
+  /* ── Service table ── */
+  .service-table-wrap {
+    overflow-x: auto;
+    margin: 1.25rem 0;
+  }
+
+  .service-table {
+    min-width: 700px;
+  }
+
+  /* ── Status chips ── */
+  .status-chip {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+  }
+
+  .status-chip.planned { background: rgba(181, 85, 26, 0.08); color: var(--accent); }
+  .status-chip.deferred { background: rgba(74, 74, 74, 0.08); color: var(--muted); }
+  .status-chip.blocked { background: rgba(100, 30, 0, 0.08); color: var(--dim); }
+
+  /* ── Totals ── */
+  .totals {
+    display: flex;
+    gap: 2.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.75rem;
+  }
+
+  .total-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .total-val {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+
+  .total-label {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  /* ── Paper footer ── */
+  .paper-footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .paper-date {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .paper-footer p {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-bottom: 0;
+  }
+
+  .paper-footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  .paper-footer a:hover { text-decoration: underline; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .body-layout {
+      grid-template-columns: 1fr;
+    }
+    .toc {
+      position: static;
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem;
+      background: var(--surface);
+    }
+    .toc-list { flex-direction: row; flex-wrap: wrap; gap: 0.25rem 1rem; }
+    .toc-list ol { display: none; }
+    .tier-grid { grid-template-columns: 1fr; }
+    .tool-grid { grid-template-columns: 1fr; }
+    .paper h2 { margin-top: 2.5rem; }
+  }
+
+  @media (max-width: 600px) {
+    .goal-grid { grid-template-columns: 1fr; }
+    .totals { gap: 1.5rem; }
+  }
+</style>
