@@ -11,12 +11,12 @@ function formatDate(date: Date) {
 }
 ---
 <Layout
-  title="Writing"
+  title="Blog"
   description="Notes on AI automation, systems design, and engineering operations from Brandon Woodward."
 >
   <section class="page-hero">
     <div class="container">
-      <div class="eyebrow">Writing</div>
+      <div class="eyebrow">Blog</div>
       <h1>Notes on building better systems.</h1>
       <p class="hero-sub">AI automation, on-call ops, and the engineering decisions that actually matter.</p>
     </div>
@@ -26,7 +26,7 @@ function formatDate(date: Date) {
     <div class="container">
       <div class="post-list">
         {posts.map(post => (
-          <a href={`/blog/${post.slug}`} class="post-card">
+          <a href={`/blog/${post.id.replace(/\.md$/, '')}`} class="post-card">
             <div class="post-meta">
               <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
               {post.data.tags && (
