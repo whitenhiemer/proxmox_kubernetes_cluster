@@ -336,8 +336,99 @@ const pageTitle = `${title} — Brandon Woodward`;
       flex-shrink: 0;
     }
 
+    /* ── Hamburger button ── */
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+      border-radius: 8px;
+      gap: 5px;
+      transition: background 0.15s;
+    }
+
+    .nav-hamburger:hover { background: var(--surface); }
+
+    .nav-hamburger span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform 0.2s, opacity 0.2s;
+      transform-origin: center;
+    }
+
+    .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+    .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    /* ── Mobile menu ── */
+    .nav-mobile {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 99;
+    }
+
+    .nav-mobile-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(2px);
+    }
+
+    .nav-mobile-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.98);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .nav-mobile-panel a {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 0.75rem 0.75rem;
+      border-radius: 8px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .nav-mobile-panel a:hover,
+    .nav-mobile-panel a.active {
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    .nav-mobile-panel .nav-cta {
+      margin-top: 0.5rem;
+      background: var(--text) !important;
+      color: var(--bg) !important;
+      font-weight: 600 !important;
+      text-align: center;
+    }
+
+    .nav-mobile.open { display: block; }
+
     @media (max-width: 768px) {
       .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
       .section { padding: 3rem 0; }
       .footer-inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
     }
@@ -367,8 +458,25 @@ const pageTitle = `${title} — Brandon Woodward`;
         <li><a href="/about" class:list={[{ active: currentPath.startsWith('/about') }]}>About</a></li>
         <li><a href="/contact" class="nav-cta">Schedule a Call</a></li>
       </ul>
+
+      <button class="nav-hamburger" aria-label="Toggle menu" aria-expanded="false" id="nav-toggle">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
   </nav>
+
+  <div class="nav-mobile" id="nav-mobile" aria-hidden="true">
+    <div class="nav-mobile-backdrop" id="nav-backdrop"></div>
+    <div class="nav-mobile-panel">
+      <a href="/services" class:list={[{ active: currentPath.startsWith('/services') }]}>Services</a>
+      <a href="/shopstack" class:list={[{ active: currentPath.startsWith('/shopstack') }]}>ShopStack</a>
+      <a href="/homelab" class:list={[{ active: currentPath.startsWith('/homelab') }]}>Homelab</a>
+      <a href="/about" class:list={[{ active: currentPath.startsWith('/about') }]}>About</a>
+      <a href="/contact" class="nav-cta">Schedule a Call</a>
+    </div>
+  </div>
 
   <main>
     <slot />
@@ -395,5 +503,34 @@ const pageTitle = `${title} — Brandon Woodward`;
       <span class="footer-copy">&copy; {new Date().getFullYear()} Brandon Woodward</span>
     </div>
   </footer>
+  <script>
+    const toggle = document.getElementById('nav-toggle');
+    const menu = document.getElementById('nav-mobile');
+    const backdrop = document.getElementById('nav-backdrop');
+
+    function openMenu() {
+      toggle.classList.add('open');
+      menu.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+      menu.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+      toggle.classList.remove('open');
+      menu.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      menu.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+
+    toggle.addEventListener('click', () => {
+      menu.classList.contains('open') ? closeMenu() : openMenu();
+    });
+
+    backdrop.addEventListener('click', closeMenu);
+
+    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMenu));
+  </script>
 </body>
 </html>
