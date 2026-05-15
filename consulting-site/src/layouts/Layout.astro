@@ -180,6 +180,7 @@ const currentPath = Astro.url.pathname;
       <a href="/" class="nav-brand">Brandon <span>Woodward</span></a>
       <ul class="nav-links">
         <li><a href="/services" class:list={[{ active: currentPath.startsWith('/services') }]}>Services</a></li>
+        <li><a href="/shopstack" class:list={[{ active: currentPath.startsWith('/shopstack') }]}>ShopStack</a></li>
         <li><a href="/about" class:list={[{ active: currentPath.startsWith('/about') }]}>About</a></li>
         <li><a href="/contact" class="nav-cta">Schedule a Call</a></li>
       </ul>
