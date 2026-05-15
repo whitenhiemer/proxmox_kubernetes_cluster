@@ -1,16 +1,16 @@
 ---
 import Layout from '../layouts/Layout.astro';
 ---
-<Layout title="ShopStack" description="Managed business infrastructure for small businesses. Website, email, file storage, and database — on hardware you own, maintained by someone you can call.">
+<Layout title="ShopStack" description="Managed business infrastructure for small businesses. Website, email, file storage, and database — on your hardware or in the cloud, maintained by someone you can call.">
 
   <!-- Hero -->
   <section class="hero">
     <div class="container">
       <div class="eyebrow">ShopStack</div>
-      <h1>Your business stack.<br/>Your hardware. No per-user fees.</h1>
+      <h1>Your business stack.<br/>Open source. No per-user fees.</h1>
       <p class="hero-sub">
-        A complete business infrastructure — website, email, file storage, database — running
-        on a mini PC in your back office. You own the hardware. I keep it running.
+        A complete business infrastructure — website, email, file storage, database — built on
+        open-source tools you can self-host or have me set up and maintain for you.
       </p>
       <div class="hero-actions">
         <a href="/contact" class="btn btn-primary">Book a Setup Call →</a>
@@ -54,15 +54,28 @@ import Layout from '../layouts/Layout.astro';
             managed so you never have to think about it.
           </p>
         </div>
-        <div class="hardware-card card">
-          <div class="hw-label">Runs on</div>
-          <div class="hw-name">Beelink EQ12</div>
-          <div class="hw-desc">A mini PC about the size of a paperback book. Sits in your back office, uses less power than a light bulb. You buy it (~$200), I set it up.</div>
-          <div class="hw-specs">
-            <span>16GB RAM</span>
-            <span>500GB SSD</span>
-            <span>Fanless</span>
-            <span>~10W idle</span>
+        <div class="platform-options">
+          <div class="platform-card card">
+            <div class="hw-label">On-Premises</div>
+            <div class="hw-name">Beelink EQ12</div>
+            <div class="hw-desc">A mini PC the size of a paperback. Sits in your back office, uses less power than a light bulb. You buy it (~$200), I set it up.</div>
+            <div class="hw-specs">
+              <span>16GB RAM</span>
+              <span>500GB SSD</span>
+              <span>Works offline</span>
+              <span>~10W idle</span>
+            </div>
+          </div>
+          <div class="platform-card card">
+            <div class="hw-label">Cloud</div>
+            <div class="hw-name">AWS / GCP</div>
+            <div class="hw-desc">No hardware to buy or manage. Runs on a virtual server — same stack, same setup, access from anywhere.</div>
+            <div class="hw-specs">
+              <span>AWS or GCP</span>
+              <span>Always on</span>
+              <span>No hardware</span>
+              <span>~$50–60/mo infra</span>
+            </div>
           </div>
         </div>
       </div>
@@ -108,9 +121,18 @@ import Layout from '../layouts/Layout.astro';
       <div class="eyebrow">Pricing</div>
       <h2 class="section-title">Simple. Predictable. No surprises.</h2>
 
-      <div class="pricing-layout">
-        <div class="price-card card featured-card">
-          <div class="price-badge">Managed</div>
+      <div class="oss-callout card">
+        <div class="oss-left">
+          <div class="oss-badge">Open Source</div>
+          <div class="oss-title">Technical? Run it yourself — free.</div>
+          <div class="oss-desc">The entire ShopStack — Ansible playbooks, Terraform configs for AWS and GCP, all of it — is on GitHub under an MIT license. Fork it, deploy it, use it however you like.</div>
+        </div>
+        <a href="https://github.com/whitenhiemer/homelab-in-a-claude/tree/master/recipes/shopstack" class="btn btn-ghost" target="_blank" rel="noopener">View on GitHub →</a>
+      </div>
+
+      <div class="pricing-cards">
+        <div class="price-card card">
+          <div class="price-badge">On-Premises</div>
           <div class="price-main">
             <span class="price-setup">$500</span>
             <span class="price-setup-label">setup &nbsp;+&nbsp;</span>
@@ -118,57 +140,85 @@ import Layout from '../layouts/Layout.astro';
           </div>
           <div class="price-annual">$2,900 first year · $2,400/yr after</div>
           <ul class="includes-list">
-            <li>Full stack setup &amp; configuration</li>
+            <li>Full stack setup on your Beelink hardware</li>
             <li>Domain + DNS configuration</li>
             <li>Monthly OS &amp; software patching</li>
             <li>Offsite backup monitoring</li>
             <li>24/7 uptime alerting (I get paged, not you)</li>
             <li>Up to 1 hr support included each month</li>
-            <li>Remote access via encrypted tunnel</li>
+            <li>Works offline — no internet dependency</li>
             <li>Rolling month-to-month — cancel anytime</li>
           </ul>
           <a href="/contact" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.75rem;">Get Started →</a>
-          <div class="price-note">Additional support billed at $150/hr</div>
+          <div class="price-note">~$200 hardware purchase required · Additional support billed at $150/hr</div>
         </div>
 
-        <div class="compare-col">
-          <h3 class="compare-title">How it compares</h3>
-          <div class="compare-table">
-            <div class="compare-row compare-header">
-              <span></span>
-              <span>ShopStack</span>
-              <span>SaaS stack</span>
-            </div>
-            <div class="compare-row">
-              <span>Monthly cost</span>
-              <span class="good">$200</span>
-              <span class="bad">$50–150+</span>
-            </div>
-            <div class="compare-row">
-              <span>Per-user fees</span>
-              <span class="good">None</span>
-              <span class="bad">$6–12/user/mo</span>
-            </div>
-            <div class="compare-row">
-              <span>Data location</span>
-              <span class="good">Your hardware</span>
-              <span class="bad">Their servers</span>
-            </div>
-            <div class="compare-row">
-              <span>Works offline</span>
-              <span class="good">Yes</span>
-              <span class="bad">No</span>
-            </div>
-            <div class="compare-row">
-              <span>When it breaks</span>
-              <span class="good">I get paged</span>
-              <span class="bad">You file a ticket</span>
-            </div>
-            <div class="compare-row">
-              <span>Contract lock-in</span>
-              <span class="good">None</span>
-              <span class="bad">Often annual</span>
-            </div>
+        <div class="price-card card featured-card">
+          <div class="price-badge">Cloud</div>
+          <div class="price-main">
+            <span class="price-setup">$300</span>
+            <span class="price-setup-label">setup &nbsp;+&nbsp;</span>
+            <span class="price-mo">$250<span class="price-per">/mo</span></span>
+          </div>
+          <div class="price-annual">$3,300 first year · $3,000/yr after</div>
+          <ul class="includes-list">
+            <li>Full stack setup on AWS or GCP</li>
+            <li>Domain + DNS configuration</li>
+            <li>Cloud infrastructure included in monthly fee</li>
+            <li>Monthly OS &amp; software patching</li>
+            <li>Offsite backup monitoring</li>
+            <li>24/7 uptime alerting (I get paged, not you)</li>
+            <li>Up to 1 hr support included each month</li>
+            <li>Rolling month-to-month — cancel anytime</li>
+          </ul>
+          <a href="/contact" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.75rem;">Get Started →</a>
+          <div class="price-note">No hardware to buy · Additional support billed at $150/hr</div>
+        </div>
+      </div>
+
+      <div class="compare-table-wrap">
+        <div class="compare-table">
+          <div class="compare-row compare-header">
+            <span></span>
+            <span>On-Prem</span>
+            <span>Cloud</span>
+            <span>SaaS stack</span>
+          </div>
+          <div class="compare-row">
+            <span>Monthly fee</span>
+            <span class="good">$200</span>
+            <span class="good">$250</span>
+            <span class="bad">$50–150+</span>
+          </div>
+          <div class="compare-row">
+            <span>Per-user fees</span>
+            <span class="good">None</span>
+            <span class="good">None</span>
+            <span class="bad">$6–12/user/mo</span>
+          </div>
+          <div class="compare-row">
+            <span>Hardware cost</span>
+            <span class="good">~$200 once</span>
+            <span class="good">None</span>
+            <span class="bad">None</span>
+          </div>
+          <div class="compare-row">
+            <span>Works offline</span>
+            <span class="good">Yes</span>
+            <span class="bad">No</span>
+            <span class="bad">No</span>
+          </div>
+          <div class="compare-row">
+            <span>When it breaks</span>
+            <span class="good">I get paged</span>
+            <span class="good">I get paged</span>
+            <span class="bad">You file a ticket</span>
+          </div>
+          <div class="compare-row">
+            <span>Contract lock-in</span>
+            <span class="good">None</span>
+            <span class="good">None</span>
+            <span class="bad">Often annual</span>
           </div>
         </div>
       </div>
@@ -192,8 +242,8 @@ import Layout from '../layouts/Layout.astro';
         <div class="step">
           <div class="step-num">02</div>
           <div class="step-body">
-            <h3>You order the hardware</h3>
-            <p>A Beelink mini PC from Amazon, ~$200. Ships in 2 days. Plug it in and connect it to your router — that's all you do.</p>
+            <h3>Choose your platform</h3>
+            <p>On-premises: order a Beelink mini PC (~$200, ships in 2 days), plug it in, done. Cloud: no hardware — I provision a virtual server on AWS or GCP.</p>
           </div>
         </div>
         <div class="step-connector"></div>
@@ -244,6 +294,14 @@ import Layout from '../layouts/Layout.astro';
         <div class="faq-item">
           <h3>Can you build a custom app for my business?</h3>
           <p>Yes — the database layer is the foundation. Custom scheduling, inventory, or client management apps can be built on top at my standard project rate.</p>
+        </div>
+        <div class="faq-item">
+          <h3>On-premises or cloud — which should I choose?</h3>
+          <p>On-premises is better if you need offline access, have slow internet, or want total data ownership. Cloud is better if you don't want hardware at all, have multiple locations, or want the system to survive a power outage at your office.</p>
+        </div>
+        <div class="faq-item">
+          <h3>What exactly is open source here?</h3>
+          <p>All the infrastructure code — the Ansible playbooks that deploy the stack and the Terraform configs for AWS/GCP — is on GitHub under an MIT license. Technical users can run it themselves for free. The premium service is: I set it up for you, keep it running, and you call me when something needs to change.</p>
         </div>
       </div>
     </div>
@@ -348,7 +406,7 @@ import Layout from '../layouts/Layout.astro';
   /* Stack */
   .stack-intro {
     display: grid;
-    grid-template-columns: 1fr 300px;
+    grid-template-columns: 1fr 640px;
     gap: 4rem;
     align-items: start;
     margin-bottom: 3rem;
@@ -362,7 +420,13 @@ import Layout from '../layouts/Layout.astro';
     max-width: 500px;
   }
 
-  .hardware-card {
+  .platform-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .platform-card {
     background: var(--surface);
     padding: 1.5rem;
   }
@@ -435,11 +499,49 @@ import Layout from '../layouts/Layout.astro';
   /* Pricing */
   .pricing-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 
-  .pricing-layout {
+  .oss-callout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.5rem 2rem;
+    margin-bottom: 2rem;
+    background: var(--bg);
+    flex-wrap: wrap;
+  }
+
+  .oss-left { flex: 1; min-width: 0; }
+
+  .oss-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .oss-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .oss-desc {
+    font-size: 0.875rem;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  .pricing-cards {
     display: grid;
-    grid-template-columns: 400px 1fr;
-    gap: 4rem;
-    align-items: start;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2.5rem;
   }
 
   .price-card {
@@ -532,10 +634,8 @@ import Layout from '../layouts/Layout.astro';
     text-align: center;
   }
 
-  .compare-title {
-    font-size: 1.1rem;
-    margin-bottom: 1.25rem;
-    color: var(--text);
+  .compare-table-wrap {
+    margin-top: 0;
   }
 
   .compare-table {
@@ -549,7 +649,7 @@ import Layout from '../layouts/Layout.astro';
 
   .compare-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
     padding: 0.65rem 1rem;
     font-size: 0.85rem;
     border-bottom: 1px solid var(--border);
@@ -640,18 +740,26 @@ import Layout from '../layouts/Layout.astro';
   .cta-box p { font-size: 1rem; color: var(--dim); line-height: 1.7; margin-bottom: 2rem; }
 
   /* Responsive */
+  @media (max-width: 1100px) {
+    .stack-intro { grid-template-columns: 1fr; gap: 2rem; }
+    .platform-options { grid-template-columns: 1fr 1fr; }
+  }
+
   @media (max-width: 900px) {
     .pain-grid { grid-template-columns: 1fr; }
-    .stack-intro { grid-template-columns: 1fr; gap: 2rem; }
     .services-grid { grid-template-columns: repeat(2, 1fr); }
-    .pricing-layout { grid-template-columns: 1fr; gap: 2.5rem; }
+    .pricing-cards { grid-template-columns: 1fr; }
+    .compare-row { grid-template-columns: 1.5fr 1fr 1fr 1fr; font-size: 0.78rem; }
     .steps { flex-direction: column; gap: 1.5rem; }
     .step-connector { display: none; }
+    .oss-callout { flex-direction: column; align-items: flex-start; }
   }
 
   @media (max-width: 600px) {
+    .platform-options { grid-template-columns: 1fr; }
     .services-grid { grid-template-columns: 1fr; }
     .faq-grid { grid-template-columns: 1fr; }
     .cta-box { padding: 2.5rem 1.5rem; }
+    .compare-row { grid-template-columns: 1fr 0.8fr 0.8fr 0.8fr; font-size: 0.72rem; padding: 0.5rem 0.6rem; }
   }
 </style>
