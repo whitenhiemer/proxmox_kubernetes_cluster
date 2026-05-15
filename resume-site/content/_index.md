@@ -3,24 +3,28 @@ title: "Brandon Woodward"
 ---
 
 <header>
-    <img src="/logo.png" alt="Brandon Woodward">
-    <div>
-        <h1>Brandon A Woodward</h1>
-        <p>Systems Security Engineer</p>
+    <div class="header-text">
+        <h1>Brandon Woodward</h1>
+        <p class="title">Systems Architect &amp; AI Automation Consultant</p>
         <div class="contact">
-            <span>Everett, WA</span>
-            <span>|</span>
             <a href="mailto:bwoodwar@gmail.com">bwoodwar@gmail.com</a>
-            <span>|</span>
+            <span class="sep">·</span>
             <a href="https://woodhead.tech">woodhead.tech</a>
+            <span class="sep">·</span>
+            <a href="https://github.com/whitenhiemer">github.com/whitenhiemer</a>
+            <span class="sep">·</span>
+            <span>San Antonio, TX</span>
         </div>
     </div>
 </header>
 
 <section>
-<h2>Career Objective</h2>
+<h2>Summary</h2>
 <p>
-Over the past two decades at Rackspace, Amazon, and Salesforce, I've taken a hobby and turned it into a career. From managing large-scale cloud infrastructure to developing security tooling for government-compliant environments, doing something that I love for a living has made my career a joy. I'd like to continue broadening my horizons within a position that will push me to experience new technologies and challenge me to find solutions for complex problems.
+20 years building infrastructure at scale — Rackspace, Amazon AWS, Salesforce GovCloud. Currently
+consulting independently: I help engineering teams eliminate ops toil and integrate AI automation
+into real workflows. Parallel to that, I build and maintain a 5-node Proxmox homelab running
+20+ production services as a continuous proving ground for the systems I sell.
 </p>
 </section>
 
@@ -28,116 +32,104 @@ Over the past two decades at Rackspace, Amazon, and Salesforce, I've taken a hob
 <h2>Experience</h2>
 
 <div class="entry">
-<h3>Salesforce -- GovCloud Systems Security Engineer</h3>
-<div class="meta">2019 - Present</div>
+<h3>Woodhead Consulting <span class="company-role">— Systems Architect &amp; AI Automation Consultant</span></h3>
+<div class="meta">2026 – Present · Independent</div>
 <p>
-As a member of the GovCloud Systems Security (GovSysSec) team, I focus on security operations and infrastructure management for Salesforce's FedRAMP and government-compliant cloud environments. My primary responsibilities include certificate lifecycle management, security tooling development, and sprint planning coordination.
-</p>
-<p>
-Led development of sprint3r, a Go-based CLI tool for automated sprint work item tracking and reporting, integrating with GUS API and Slack webhooks to improve team visibility and sprint closeout processes. This tool has become critical infrastructure for the team's agile workflow and sprint retrospectives.
-</p>
-<p>
-Manage end-to-end certificate rotation and lifecycle operations across GovCloud infrastructure, including tracking expiration dates, coordinating renewal requests, and maintaining compliance documentation. Work closely with security operations teams to ensure continuous availability and compliance with federal security standards.
-</p>
-<p>
-Coordinate sprint planning activities, track work items through GUS, and maintain team documentation for security procedures and infrastructure changes. Serve as subject matter expert for certificate management and authentication systems within the GovCloud organization.
+Consulting practice focused on AI ops automation and infrastructure architecture for engineering
+teams. Engagements span discovery audits, project-scope builds, and ongoing advisory retainers.
 </p>
 <ul>
-<li>Go development and CLI tooling</li>
-<li>Certificate management and PKI operations</li>
-<li>Python and shell scripting for automation</li>
-<li>GUS work item management and SOQL queries</li>
-<li>Agile sprint planning and tracking</li>
-<li>FedRAMP and federal compliance requirements</li>
-<li>Bazel build systems</li>
-<li>Kubernetes and containerized infrastructure</li>
+<li>Built AlertMind — a Go webhook service that enriches Alertmanager alerts with Claude AI triage, reducing mean-time-to-diagnosis for on-call engineers</li>
+<li>Developed ShopStack — open-source Ansible + Terraform Infrastructure-as-Code suite deploying a complete business stack (email, file storage, invoicing, SSO, monitoring) on bare metal or AWS/GCP</li>
+<li>Maintains woodhead.tech homelab: 5-node Proxmox cluster, Ceph distributed storage, Talos Kubernetes, 20+ services, full IaC lifecycle from Terraform provision to Ansible configuration</li>
 </ul>
 </div>
 
 <div class="entry">
-<h3>Amazon AWS -- RDS Operations and Secops Team</h3>
-<div class="meta">2016 - 2019</div>
+<h3>Salesforce <span class="company-role">— GovCloud Systems Security Engineer</span></h3>
+<div class="meta">2019 – 2026</div>
 <p>
-Focused on deployment and stability of the RDS Platform across data plane and control plane. Served as escalation point for Premium Support when direct intervention was required, coordinating with Engineering and Development teams. Led an initiative to make Operations hosts an isolated bastion point for logging into customer infrastructure. Central command for handling Large Scale Events involving all service outages.
+Security operations and infrastructure management for Salesforce's FedRAMP and government-compliant
+cloud environments.
 </p>
 <ul>
-<li>Amazon Linux (Redhat Clone)</li>
-<li>Database troubleshooting: MySQL, PostgreSQL, MSSQL, Oracle, Aurora MySQL and Aurora Postgres</li>
-<li>Tool scripting and Java stack debugging</li>
+<li>Led development of sprint3r — a Go CLI tool for automated sprint tracking, GUS API integration, and Slack webhook reporting; became critical team infrastructure for agile retrospectives</li>
+<li>Managed end-to-end certificate lifecycle across GovCloud: expiration tracking, renewal coordination, compliance documentation for FedRAMP continuous monitoring</li>
+<li>Sprint planning coordination, GUS work item management, and security procedure documentation for a distributed SRE team</li>
+<li>Stack: Go, Python, Bash, Bazel, Kubernetes, FedRAMP/NIST controls, PKI</li>
 </ul>
 </div>
 
 <div class="entry">
-<h3>Amazon AWS -- IAM Authentication</h3>
-<div class="meta">2014 - 2016 | Support Engineer</div>
+<h3>Amazon AWS <span class="company-role">— RDS Operations &amp; SecOps</span></h3>
+<div class="meta">2016 – 2019</div>
 <p>
-Maintained health and stability of the IAM stack including ARS/ARPS/Odin/Data Warehouse/Tagris. Converted single data center proof of concepts into multi-location load balanced high availability solutions for Data Warehouse and Tagris teams.
+Deployment and stability of the RDS platform across data plane and control plane at global scale.
+Escalation point for Premium Support on direct interventions. Led initiative to make Operations
+hosts isolated bastion points for customer infrastructure access. Central command for Large Scale
+Events spanning all service outages.
+</p>
+<ul>
+<li>MySQL, PostgreSQL, MSSQL, Oracle, Aurora MySQL, Aurora PostgreSQL</li>
+<li>Amazon Linux, Java stack debugging, internal tooling</li>
+</ul>
+</div>
+
+<div class="entry">
+<h3>Amazon AWS <span class="company-role">— IAM Authentication</span></h3>
+<div class="meta">2014 – 2016 · Support Engineer</div>
+<p>
+Health and stability of the IAM stack: ARS, ARPS, Odin, Data Warehouse, Tagris. Converted
+single-datacenter proof of concepts into multi-location load-balanced high-availability solutions
+for Data Warehouse and Tagris teams.
 </p>
 </div>
 
 <div class="entry">
-<h3>Amazon AWS -- Premium Support</h3>
-<div class="meta">March 2012 - 2014 | Support Engineer</div>
+<h3>Amazon AWS <span class="company-role">— Premium Support</span></h3>
+<div class="meta">2012 – 2014 · Support Engineer</div>
 <p>
-Worked with all AWS products available at the time including EC2/S3/Beanstalk and many more. Participated in oncall rotation managing and routing high severity issues to maintain strict SLA.
+Full AWS product suite (EC2, S3, Elastic Beanstalk, and more). On-call rotation managing and
+routing high-severity events under strict SLA.
 </p>
 </div>
 
 <div class="entry">
-<h3>Rackspace Cloud Hosting -- Email and Apps Operational Engineer</h3>
-<div class="meta">2011 - 2012</div>
+<h3>Rackspace <span class="company-role">— Email &amp; Apps Operations</span></h3>
+<div class="meta">2011 – 2012</div>
 <p>
-Maintained a large scale hosted mail solution running both shared and dedicated solutions across a large fleet of mail servers and front end customer interface servers.
+Large-scale hosted mail platform — shared and dedicated solutions across a fleet of mail servers
+and customer-facing interface servers.
 </p>
 </div>
 
 <div class="entry">
-<h3>Rackspace Cloud Hosting -- Professional Services Specialist</h3>
-<div class="meta">2010 - 2011</div>
+<h3>Rackspace <span class="company-role">— Professional Services Specialist</span></h3>
+<div class="meta">2010 – 2011</div>
 <p>
-Built out solutions for virtual private server environments. Implemented clustered solutions for customers ranging from Domino's Pizza to single-server startups. Focused on converting legacy physical infrastructure to virtualized solutions, rearchitecting topologies for cloud alignment.
+Clustered virtual private server solutions for customers from Domino's Pizza to single-server
+startups. Legacy physical infrastructure migration to cloud-aligned virtualized topologies.
 </p>
 </div>
 
 <div class="entry">
-<h3>Rackspace Cloud Hosting -- Level 2 Technician</h3>
-<div class="meta">February 2009 - 2011</div>
+<h3>Rackspace <span class="company-role">— Level 2 Cloud Technician</span></h3>
+<div class="meta">2009 – 2011</div>
 <p>
-Joined the newly formed Cloud Servers team, helped define the role and mold the product. Created technical articles for experienced and novice users. Served as escalation point for Cloud Sites and training resource for junior technicians.
+Founding member of the Cloud Servers team. Defined the role, wrote technical documentation,
+served as escalation for Cloud Sites, mentored junior technicians.
 </p>
 </div>
 
 <div class="entry">
-<h3>Rackspace Managed Hosting -- Linux Support Fanatic Lvl2</h3>
-<div class="meta">October 2005 - February 2009</div>
+<h3>Rackspace Managed Hosting <span class="company-role">— Linux Support (L1 → L2)</span></h3>
+<div class="meta">2005 – 2009</div>
 <p>
-Started as Level 1 and grew into Level 2 with expertise in MySQL, Apache, and open source stack management. Fast-paced environment of customer support via email, ticketing system, and phone.
+MySQL, Apache, and open-source stack expertise. Customer support via email, ticketing, and phone
+in a high-velocity environment.
 </p>
 </div>
 
-</section>
-
-<section>
-<h2>Education</h2>
-
-<div class="entry">
-<h3>University of Texas at San Antonio</h3>
-<div class="meta">Fall 2000 - Spring 2005 | 88 semester hours toward BA in Computer Science</div>
-</div>
-
-<div class="entry">
-<h3>San Antonio College</h3>
-<div class="meta">Summer 2009</div>
-</div>
-
-</section>
-
-<section>
-<h2>Certifications</h2>
-<div class="entry">
-<h3>RHCE, Red Hat Certified Engineer</h3>
-<div class="meta">September 11, 2008 | Cert # 805008050233914 | Red Hat Enterprise Linux 5</div>
-</div>
 </section>
 
 <section>
@@ -150,21 +142,23 @@ Started as Level 1 and grew into Level 2 with expertise in MySQL, Apache, and op
 <span class="skill-tag">Ansible</span>
 <span class="skill-tag">Docker</span>
 <span class="skill-tag">Kubernetes</span>
-<span class="skill-tag">AWS (EC2, RDS, S3, IAM)</span>
-<span class="skill-tag">RHEL / Amazon Linux</span>
-<span class="skill-tag">Debian / Ubuntu</span>
-<span class="skill-tag">MySQL / PostgreSQL</span>
-<span class="skill-tag">Apache / NGINX</span>
-<span class="skill-tag">HAProxy</span>
+<span class="skill-tag">Talos Linux</span>
 <span class="skill-tag">Proxmox VE</span>
 <span class="skill-tag">Ceph</span>
-<span class="skill-tag">Prometheus / Grafana</span>
+<span class="skill-tag">AWS (EC2, RDS, IAM, S3)</span>
+<span class="skill-tag">GCP</span>
 <span class="skill-tag">Traefik</span>
-<span class="skill-tag">Postfix / Dovecot</span>
+<span class="skill-tag">Prometheus / Grafana</span>
+<span class="skill-tag">Alertmanager</span>
+<span class="skill-tag">Claude API</span>
+<span class="skill-tag">MySQL / PostgreSQL</span>
+<span class="skill-tag">NGINX / Apache</span>
+<span class="skill-tag">WireGuard</span>
 <span class="skill-tag">FedRAMP / GovCloud</span>
 <span class="skill-tag">PKI / Certificate Management</span>
 <span class="skill-tag">Bazel</span>
 <span class="skill-tag">Git</span>
+<span class="skill-tag">RHEL / Debian / Amazon Linux</span>
 </div>
 </section>
 
@@ -173,34 +167,49 @@ Started as Level 1 and grew into Level 2 with expertise in MySQL, Apache, and op
 <div class="projects">
 
 <div class="project-card">
-<h4><a href="https://woodhead.tech">woodhead.tech</a></h4>
-<p>4-node Proxmox cluster with Ceph, Talos K8s, 15+ services, full IaC with Terraform + Ansible</p>
+<h4><a href="https://github.com/whitenhiemer/alertmind">AlertMind</a></h4>
+<p>Go · Claude API · Alertmanager webhook receiver. AI-powered alert triage — enriches ops alerts with structured diagnosis and posts to Discord. Deployed in production.</p>
 </div>
 
 <div class="project-card">
-<h4>sprint3r</h4>
-<p>Go CLI tool for automated sprint work item tracking, GUS API integration, Slack webhooks</p>
+<h4><a href="https://github.com/whitenhiemer/shopstack">ShopStack</a></h4>
+<p>Ansible + Terraform IaC suite. Deploys a full business stack (email, file storage, invoicing, SSO, monitoring) on a $200 mini PC or AWS/GCP. Open source, MIT license.</p>
 </div>
 
 <div class="project-card">
-<h4><a href="https://scanner.woodhead.tech">SDR Scanner</a></h4>
-<p>P25 Phase II radio decoder with RTL-SDR, Trunk Recorder, and rdio-scanner</p>
+<h4><a href="https://woodhead.tech">woodhead.tech homelab</a></h4>
+<p>5-node Proxmox cluster · Ceph · Talos Kubernetes · 20+ production services · full lifecycle IaC with Terraform + Ansible · Traefik + Authentik SSO</p>
 </div>
 
 <div class="project-card">
 <h4>Piboard</h4>
-<p>Go dashboard on Raspberry Pi with SSE streaming from Prometheus metrics</p>
+<p>Go dashboard on a Raspberry Pi 3B with Waveshare 5" display. Polls Prometheus via SSE, renders live service status in a Chromium kiosk.</p>
 </div>
 
 <div class="project-card">
 <h4><a href="https://recipes.woodhead.tech">Gourmand</a></h4>
-<p>Go + SQLite recipe management app with GitHub webhook auto-deploy</p>
+<p>Go + SQLite recipe management app with NGINX frontend and GitHub webhook auto-deploy.</p>
 </div>
 
 <div class="project-card">
 <h4>Glucose Monitor</h4>
-<p>Dexcom CGM exporter for Prometheus with SMS + Alexa alerts</p>
+<p>Dexcom Share API exporter for Prometheus. Alerts via Twilio SMS + Home Assistant Alexa when glucose is out of range.</p>
 </div>
 
 </div>
+</section>
+
+<section>
+<h2>Education &amp; Certifications</h2>
+
+<div class="entry">
+<h3>University of Texas at San Antonio</h3>
+<div class="meta">2000 – 2005 · 88 semester hours toward BA, Computer Science</div>
+</div>
+
+<div class="entry">
+<h3>RHCE — Red Hat Certified Engineer</h3>
+<div class="meta">September 2008 · RHEL 5 · Cert # 805008050233914</div>
+</div>
+
 </section>
