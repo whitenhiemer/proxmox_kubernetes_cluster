@@ -1,0 +1,236 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map(post => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+---
+<Layout
+  title={post.data.title}
+  description={post.data.description}
+>
+  <article class="post">
+    <div class="container">
+      <header class="post-header">
+        <a href="/blog" class="back-link">← Writing</a>
+        <div class="post-meta">
+          <time datetime={post.data.pubDate.toISOString()}>{formatDate(post.data.pubDate)}</time>
+          {post.data.tags && (
+            <div class="post-tags">
+              {post.data.tags.map(tag => <span class="tag">{tag}</span>)}
+            </div>
+          )}
+        </div>
+        <h1>{post.data.title}</h1>
+        <p class="post-desc">{post.data.description}</p>
+      </header>
+
+      <div class="post-body">
+        <Content />
+      </div>
+
+      <footer class="post-footer">
+        <div class="post-footer-inner">
+          <div class="author-block">
+            <div class="author-name">Brandon Woodward</div>
+            <div class="author-bio">Systems Architect & AI Automation Consultant. I help engineering teams cut manual ops and integrate AI that actually works.</div>
+          </div>
+          <a href="/contact" class="btn btn-primary">Work with me</a>
+        </div>
+        <a href="/blog" class="back-link back-bottom">← All posts</a>
+      </footer>
+    </div>
+  </article>
+</Layout>
+
+<style>
+  .post { padding: 3rem 0 5rem; }
+
+  .post-header {
+    max-width: 720px;
+    margin: 0 auto 3rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .back-link {
+    display: inline-block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--muted);
+    text-decoration: none;
+    margin-bottom: 1.5rem;
+    transition: color 0.15s;
+  }
+
+  .back-link:hover { color: var(--accent); }
+
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .post-meta time {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .post-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  .tag {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .post-header h1 {
+    font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+    line-height: 1.15;
+  }
+
+  .post-desc {
+    font-size: 1.05rem;
+    color: var(--dim);
+    line-height: 1.65;
+  }
+
+  /* Post body prose */
+  .post-body {
+    max-width: 720px;
+    margin: 0 auto;
+    font-size: 1.05rem;
+    line-height: 1.75;
+    color: var(--dim);
+  }
+
+  .post-body :global(h2) {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 2.5rem 0 0.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  .post-body :global(h3) {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 2rem 0 0.5rem;
+  }
+
+  .post-body :global(p) { margin-bottom: 1.25rem; }
+
+  .post-body :global(ul),
+  .post-body :global(ol) {
+    padding-left: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .post-body :global(li) { margin-bottom: 0.4rem; }
+
+  .post-body :global(code) {
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    color: var(--text);
+  }
+
+  .post-body :global(pre) {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .post-body :global(pre code) {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  .post-body :global(blockquote) {
+    border-left: 3px solid var(--accent);
+    padding-left: 1.25rem;
+    margin: 1.5rem 0;
+    color: var(--dim);
+    font-style: italic;
+  }
+
+  .post-body :global(a) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .post-body :global(strong) { color: var(--text); font-weight: 600; }
+
+  .post-body :global(hr) {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.5rem 0;
+  }
+
+  /* Footer */
+  .post-footer {
+    max-width: 720px;
+    margin: 3rem auto 0;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .post-footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .author-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .author-bio {
+    font-size: 0.875rem;
+    color: var(--muted);
+    max-width: 420px;
+    line-height: 1.5;
+  }
+
+  .back-bottom { margin-top: 0; }
+
+  @media (max-width: 768px) {
+    .post-footer-inner { flex-direction: column; align-items: flex-start; }
+  }
+</style>
