@@ -154,6 +154,30 @@ import Layout from '../layouts/Layout.astro';
         </div>
 
         <div class="price-card card featured-card">
+          <div class="price-badge">Plug &amp; Play</div>
+          <div class="plug-play-label">Most hands-off</div>
+          <div class="price-main">
+            <span class="price-setup">$800</span>
+            <span class="price-setup-label">setup &nbsp;+&nbsp;</span>
+            <span class="price-mo">$200<span class="price-per">/mo</span></span>
+          </div>
+          <div class="price-annual">$3,200 first year · $2,400/yr after</div>
+          <ul class="includes-list">
+            <li><strong>Beelink EQ12 hardware included</strong></li>
+            <li><strong>Pre-configured and tested before shipping</strong></li>
+            <li>Arrives ready — plug in power + ethernet, done</li>
+            <li>Domain + DNS configuration</li>
+            <li>Monthly OS &amp; software patching</li>
+            <li>Offsite backup monitoring</li>
+            <li>24/7 uptime alerting (I get paged, not you)</li>
+            <li>Up to 1 hr support included each month</li>
+            <li>Rolling month-to-month — cancel anytime</li>
+          </ul>
+          <a href="/contact" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.75rem;">Get Started →</a>
+          <div class="price-note">Ships within 3 business days of onboarding call · Additional support billed at $150/hr</div>
+        </div>
+
+        <div class="price-card card">
           <div class="price-badge">Cloud</div>
           <div class="price-main">
             <span class="price-setup">$300</span>
@@ -181,11 +205,13 @@ import Layout from '../layouts/Layout.astro';
           <div class="compare-row compare-header">
             <span></span>
             <span>On-Prem</span>
+            <span>Plug &amp; Play</span>
             <span>Cloud</span>
             <span>SaaS stack</span>
           </div>
           <div class="compare-row">
             <span>Monthly fee</span>
+            <span class="good">$200</span>
             <span class="good">$200</span>
             <span class="good">$250</span>
             <span class="bad">$50–150+</span>
@@ -194,16 +220,26 @@ import Layout from '../layouts/Layout.astro';
             <span>Per-user fees</span>
             <span class="good">None</span>
             <span class="good">None</span>
+            <span class="good">None</span>
             <span class="bad">$6–12/user/mo</span>
           </div>
           <div class="compare-row">
-            <span>Hardware cost</span>
+            <span>Hardware</span>
             <span class="good">~$200 once</span>
+            <span class="good">Included</span>
+            <span class="good">None needed</span>
+            <span class="bad">None needed</span>
+          </div>
+          <div class="compare-row">
+            <span>Setup effort</span>
+            <span class="good">Minimal</span>
+            <span class="good">Plug in &amp; done</span>
             <span class="good">None</span>
-            <span class="bad">None</span>
+            <span class="bad">DIY config</span>
           </div>
           <div class="compare-row">
             <span>Works offline</span>
+            <span class="good">Yes</span>
             <span class="good">Yes</span>
             <span class="bad">No</span>
             <span class="bad">No</span>
@@ -212,13 +248,8 @@ import Layout from '../layouts/Layout.astro';
             <span>When it breaks</span>
             <span class="good">I get paged</span>
             <span class="good">I get paged</span>
+            <span class="good">I get paged</span>
             <span class="bad">You file a ticket</span>
-          </div>
-          <div class="compare-row">
-            <span>Contract lock-in</span>
-            <span class="good">None</span>
-            <span class="good">None</span>
-            <span class="bad">Often annual</span>
           </div>
         </div>
       </div>
@@ -242,8 +273,8 @@ import Layout from '../layouts/Layout.astro';
         <div class="step">
           <div class="step-num">02</div>
           <div class="step-body">
-            <h3>Choose your platform</h3>
-            <p>On-premises: order a Beelink mini PC (~$200, ships in 2 days), plug it in, done. Cloud: no hardware — I provision a virtual server on AWS or GCP.</p>
+            <h3>Choose your path</h3>
+            <p>Plug &amp; Play: I ship you a pre-configured Beelink — just plug it in. Self-supplied: order the Beelink yourself (~$200) and I set it up remotely. Cloud: no hardware at all — I provision a virtual server.</p>
           </div>
         </div>
         <div class="step-connector"></div>
@@ -294,6 +325,10 @@ import Layout from '../layouts/Layout.astro';
         <div class="faq-item">
           <h3>Can you build a custom app for my business?</h3>
           <p>Yes — the database layer is the foundation. Custom scheduling, inventory, or client management apps can be built on top at my standard project rate.</p>
+        </div>
+        <div class="faq-item">
+          <h3>What exactly is the Plug &amp; Play option?</h3>
+          <p>I configure a Beelink EQ12 mini PC with your full stack — domain, email, file storage, everything — test it, and ship it to you. You plug in ethernet and power. That's it. No Debian install, no port forwarding guide, nothing technical on your end.</p>
         </div>
         <div class="faq-item">
           <h3>On-premises or cloud — which should I choose?</h3>
@@ -539,9 +574,18 @@ import Layout from '../layouts/Layout.astro';
 
   .pricing-cards {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.25rem;
     margin-bottom: 2.5rem;
+  }
+
+  .plug-play-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
   }
 
   .price-card {
@@ -649,9 +693,9 @@ import Layout from '../layouts/Layout.astro';
 
   .compare-row {
     display: grid;
-    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
     padding: 0.65rem 1rem;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     border-bottom: 1px solid var(--border);
     gap: 0.5rem;
     align-items: center;
@@ -745,11 +789,16 @@ import Layout from '../layouts/Layout.astro';
     .platform-options { grid-template-columns: 1fr 1fr; }
   }
 
+  @media (max-width: 1050px) {
+    .pricing-cards { grid-template-columns: 1fr; max-width: 480px; margin-left: auto; margin-right: auto; }
+  }
+
   @media (max-width: 900px) {
     .pain-grid { grid-template-columns: 1fr; }
     .services-grid { grid-template-columns: repeat(2, 1fr); }
-    .pricing-cards { grid-template-columns: 1fr; }
-    .compare-row { grid-template-columns: 1.5fr 1fr 1fr 1fr; font-size: 0.78rem; }
+    .compare-table-wrap { overflow-x: auto; }
+    .compare-table { min-width: 560px; }
+    .compare-row { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; font-size: 0.75rem; }
     .steps { flex-direction: column; gap: 1.5rem; }
     .step-connector { display: none; }
     .oss-callout { flex-direction: column; align-items: flex-start; }
