@@ -1,6 +1,9 @@
 {
   "name": "consulting-site",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
