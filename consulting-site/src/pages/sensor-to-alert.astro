@@ -1,0 +1,982 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Sensor to Alert: IoT Environment Monitoring on a Self-Hosted Stack" description="How a bearded dragon's enclosure became a proof-of-work for self-hosted IoT automation — Zigbee, Matter, Home Assistant, Prometheus, and IaC on a Proxmox homelab.">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="eyebrow">IoT · Automation · White Paper</div>
+      <h1>Sensor to Alert</h1>
+      <p class="hero-sub">
+        IoT environment monitoring on a self-hosted stack. How a bearded dragon's enclosure
+        became a proof-of-work for closed-loop automation, Prometheus observability, and
+        Infrastructure-as-Code discipline — all deployed with a single <code>make</code> command.
+      </p>
+      <div class="hero-meta">
+        <span class="meta-tag">Home Assistant</span>
+        <span class="meta-tag">Zigbee2MQTT</span>
+        <span class="meta-tag">Matter</span>
+        <span class="meta-tag">MQTT</span>
+        <span class="meta-tag">Proxmox VE</span>
+        <span class="meta-tag">Prometheus</span>
+        <span class="meta-tag">Ansible</span>
+        <span class="meta-tag">Discord</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Body -->
+  <section class="body-section">
+    <div class="container">
+      <div class="body-layout">
+
+        <!-- Sidebar TOC -->
+        <nav class="toc" aria-label="Table of contents">
+          <div class="toc-label">Contents</div>
+          <ol class="toc-list">
+            <li><a href="#problem">The Problem</a></li>
+            <li><a href="#hardware">Hardware Layer</a></li>
+            <li><a href="#integration">Integration Layer</a></li>
+            <li><a href="#automation">Automation Logic</a>
+              <ol>
+                <li><a href="#daytime">Daytime Heat</a></li>
+                <li><a href="#nighttime">Nighttime Heat</a></li>
+                <li><a href="#lighting">Lighting Schedule</a></li>
+                <li><a href="#thresholds">Runtime Thresholds</a></li>
+              </ol>
+            </li>
+            <li><a href="#alerting">Alerting</a></li>
+            <li><a href="#iac">Infrastructure-as-Code</a></li>
+            <li><a href="#observability">Observability</a></li>
+            <li><a href="#ai">Where AI Enters</a></li>
+            <li><a href="#pattern">The Broader Pattern</a></li>
+            <li><a href="#conclusion">Conclusion</a></li>
+          </ol>
+        </nav>
+
+        <!-- Main Content -->
+        <article class="paper">
+
+          <!-- Executive Summary -->
+          <div class="summary-box">
+            <div class="summary-label">Executive Summary</div>
+            <p>
+              Gutgrinda Skullkrumpa da Choppy is a bearded dragon. She requires careful
+              temperature management: basking temps between 95–110°F during the day, ambient
+              heat above 70°F at night, and full-spectrum lighting on a seasonal schedule.
+              Before automation, this was entirely manual — check a thermometer, toggle a plug,
+              hope nothing goes wrong overnight. The system built here uses a Zigbee sensor,
+              three Matter smart plugs, and 236 lines of Home Assistant YAML to handle every
+              edge case: day/night transitions, seasonal light schedules, failure alerting, and
+              runtime threshold adjustment — all deployed from a single <code>make</code> command,
+              all producing Prometheus metrics that feed into the same Grafana dashboards used
+              for the rest of the homelab.
+            </p>
+          </div>
+
+          <!-- 1. The Problem -->
+          <h2 id="problem"><span class="sec-num">01</span>The Problem with Manual Anything</h2>
+
+          <p>Bearded dragons are ectotherms. They cannot regulate their own body temperature, which means the enclosure is their entire climate system. The thermal requirements are specific:</p>
+
+          <div class="req-grid">
+            <div class="req-card">
+              <div class="req-label">Basking zone</div>
+              <div class="req-range">95–110°F</div>
+              <div class="req-when">Daytime only</div>
+            </div>
+            <div class="req-card">
+              <div class="req-label">Ambient (cool side)</div>
+              <div class="req-range">80–85°F</div>
+              <div class="req-when">Daytime</div>
+            </div>
+            <div class="req-card">
+              <div class="req-label">Nighttime floor</div>
+              <div class="req-range">&gt;65–70°F</div>
+              <div class="req-when">Supplemental heat if needed</div>
+            </div>
+          </div>
+
+          <p>These are not suggestions. Sustained temperatures outside these ranges cause illness. A lamp left on all night disrupts sleep cycles. A dead bulb on a cold night is an emergency.</p>
+          <p>Before automation, management was entirely manual: check the thermometer, toggle a smart plug app, remember to turn things off before bed. The cognitive overhead was low on any given day but accumulated across weeks and months. More importantly, it was failure-prone — there is no reliable human process for "check the thermometer at 2am."</p>
+          <p>The goal was simple: zero manual intervention under normal conditions, immediate notification when something is abnormal.</p>
+
+          <!-- 2. Hardware -->
+          <h2 id="hardware"><span class="sec-num">02</span>Hardware Layer</h2>
+
+          <p>The physical layer consists of four devices, all running open protocols with no proprietary cloud dependencies.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Device</th><th>Model</th><th>Protocol</th><th>Role</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Temp/humidity sensor</td>
+                  <td><code>ZG-227Z</code></td>
+                  <td>Zigbee → Z2M → MQTT</td>
+                  <td>Ground truth for all automation logic</td>
+                </tr>
+                <tr>
+                  <td>Basking lamp plug</td>
+                  <td>Linkind LC09003256</td>
+                  <td>Matter (WiFi)</td>
+                  <td>Primary daytime heat source</td>
+                </tr>
+                <tr>
+                  <td>Ambient light plug</td>
+                  <td>Linkind LC09003256</td>
+                  <td>Matter (WiFi)</td>
+                  <td>Full-spectrum UVB light, seasonal schedule</td>
+                </tr>
+                <tr>
+                  <td>Ceramic heater plug</td>
+                  <td>Linkind LC09003256</td>
+                  <td>Matter (WiFi)</td>
+                  <td>Nighttime supplemental heat</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p><strong>Why Zigbee for the sensor?</strong> Battery-powered Zigbee sensors are cheap, reliable, and integrate directly with the Zigbee2MQTT instance running on the homelab. The ZG-227Z reports temperature and humidity every few minutes on a CR2032 battery with months of life.</p>
+          <p><strong>Why Matter for the plugs?</strong> Matter over WiFi gives local-network control without a proprietary cloud. The Linkind plugs commission directly into Home Assistant, are controllable offline, and expose on/off state back to HA for monitoring. No proprietary hubs. No cloud dependencies. Everything talks to infrastructure I control.</p>
+
+          <!-- 3. Integration -->
+          <h2 id="integration"><span class="sec-num">03</span>Integration Layer</h2>
+
+          <p>The data path from hardware to automation engine runs through three stages:</p>
+
+          <div class="traffic-flow">
+            <div class="flow-step">
+              <div class="flow-label">ZG-227Z Zigbee sensor</div>
+              <div class="flow-detail">Reports temperature + humidity every few minutes via Zigbee radio</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step">
+              <div class="flow-label">Zigbee2MQTT — LXC <code>192.168.86.36</code></div>
+              <div class="flow-detail">Handles Zigbee coordinator, publishes device state to Mosquitto MQTT broker on same LXC</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step highlight">
+              <div class="flow-label">Home Assistant OS — VM <code>192.168.86.41</code></div>
+              <div class="flow-detail">Subscribes to MQTT topics, surfaces sensor as <code>sensor.*</code> entities, runs automation engine</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step">
+              <div class="flow-label">Switch entities</div>
+              <div class="flow-detail">Basking lamp, ambient light, ceramic heater — controlled via Matter over LAN</div>
+            </div>
+            <div class="flow-arrow">↓</div>
+            <div class="flow-step">
+              <div class="flow-label">Discord webhook</div>
+              <div class="flow-detail">Alert notifications for out-of-range temps and sensor offline events</div>
+            </div>
+          </div>
+
+          <p>Home Assistant OS runs as a VM on the Proxmox cluster. HAOS restricts direct SSH access (a protected addon limitation), so file deployment goes through the Proxmox <code>qm guest exec</code> API rather than direct SSH — handled transparently by the Makefile. Matter commissioning is done once via the HA Companion app; after initial pairing, plugs are persistent <code>switch.*</code> entities.</p>
+
+          <!-- 4. Automation Logic -->
+          <h2 id="automation"><span class="sec-num">04</span>Automation Logic</h2>
+
+          <p>All automation lives in a single HA package file (<code>beardie.yaml</code>) deployed to the HAOS config directory. The logic divides into three clean domains: daytime heat management, nighttime heat management, and the seasonal lighting schedule. Sun state comes from HA's built-in <code>sun.sun</code> entity, which calculates sunrise/sunset from the configured latitude/longitude — the schedule adapts to seasonal day length automatically, no cron jobs required.</p>
+
+          <h3 id="daytime">Daytime Heat — Basking Lamp</h3>
+          <p>The basking lamp runs closed-loop temperature control during daylight hours:</p>
+
+          <div class="logic-block">
+            <div class="logic-row">
+              <div class="logic-condition">temp &lt; 95°F AND sun above horizon</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">basking lamp ON</div>
+            </div>
+            <div class="logic-row">
+              <div class="logic-condition">temp &gt; 110°F (anytime)</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">basking lamp OFF</div>
+            </div>
+            <div class="logic-row logic-row-failsafe">
+              <div class="logic-condition">sunset (event)</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">basking lamp OFF <span class="failsafe-tag">failsafe</span></div>
+            </div>
+          </div>
+
+          <p>The sunset failsafe is intentional redundancy. The too-hot cutoff would trigger if the lamp ran at night and overheated, but explicitly turning it off at sunset eliminates the scenario entirely.</p>
+
+          <h3 id="nighttime">Nighttime Heat — Ceramic Heater</h3>
+          <p>The ceramic heater runs the same closed-loop logic, constrained to nighttime hours:</p>
+
+          <div class="logic-block">
+            <div class="logic-row">
+              <div class="logic-condition">temp &lt; 70°F AND sun below horizon</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">ceramic heater ON</div>
+            </div>
+            <div class="logic-row">
+              <div class="logic-condition">temp &gt; 80°F AND sun below horizon</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">ceramic heater OFF</div>
+            </div>
+            <div class="logic-row logic-row-failsafe">
+              <div class="logic-condition">sunrise (event)</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">ceramic heater OFF <span class="failsafe-tag">handoff</span></div>
+            </div>
+          </div>
+
+          <p>The sunrise handoff is the cleanest part of the design. The ceramic heater and basking lamp never run simultaneously — the heater shuts off at sunrise, and the basking lamp's own automation takes over within minutes as the enclosure warms up.</p>
+
+          <h3 id="lighting">Lighting Schedule — Ambient Light</h3>
+          <p>UVB lighting follows fixed offsets from sunrise and sunset. The 30-minute buffers mimic a natural dusk/dawn transition and give the basking lamp a head start before UVB comes on each morning.</p>
+
+          <div class="logic-block">
+            <div class="logic-row">
+              <div class="logic-condition">sunrise + 30 minutes</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">ambient light ON</div>
+            </div>
+            <div class="logic-row">
+              <div class="logic-condition">sunset − 30 minutes</div>
+              <div class="logic-arrow">→</div>
+              <div class="logic-action">ambient light OFF</div>
+            </div>
+          </div>
+
+          <h3 id="thresholds">Runtime Threshold Adjustment</h3>
+          <p>All temperature thresholds are exposed as <code>input_number</code> helpers in the HA dashboard. Changing a threshold is a slider adjustment — no YAML edit, no redeploy. This matters for seasonal tuning: summer ambient temps mean the enclosure holds heat differently than winter.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Threshold</th><th>Default</th><th>Adjustable Range</th></tr></thead>
+              <tbody>
+                <tr><td>Basking lamp ON</td><td>95°F</td><td>70–120°F</td></tr>
+                <tr><td>Basking lamp OFF</td><td>110°F</td><td>70–130°F</td></tr>
+                <tr><td>Ceramic heater ON</td><td>70°F</td><td>50–85°F</td></tr>
+                <tr><td>Ceramic heater OFF</td><td>80°F</td><td>55–90°F</td></tr>
+                <tr><td>Alert: too hot</td><td>115°F</td><td>80–140°F</td></tr>
+                <tr><td>Alert: too cold</td><td>70°F</td><td>50–90°F</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 5. Alerting -->
+          <h2 id="alerting"><span class="sec-num">05</span>Alerting</h2>
+
+          <p>Three conditions trigger Discord notifications. Hold timers before alerting are intentional — a momentary temperature spike from opening the enclosure door should not fire a page. A sustained anomaly should.</p>
+
+          <div class="alert-list">
+            <div class="alert-item alert-hot">
+              <div class="alert-header">
+                <span class="alert-label">Too hot</span>
+                <span class="alert-trigger">&gt;115°F sustained for 5 minutes</span>
+              </div>
+              <div class="alert-message">WAAAGH! Gutgrinda iz too HOT! Da warboss iz roastin' at 118°F — above da 115°F limit. TURN IT OFF!</div>
+            </div>
+            <div class="alert-item alert-cold">
+              <div class="alert-header">
+                <span class="alert-label">Too cold</span>
+                <span class="alert-trigger">&lt;70°F sustained for 10 minutes</span>
+              </div>
+              <div class="alert-message">Gutgrinda iz FREEZIN'! Da warboss iz shiverin' at 67°F — below da 70°F limit. GET DA BURNA!</div>
+            </div>
+            <div class="alert-item alert-offline">
+              <div class="alert-header">
+                <span class="alert-label">Sensor offline</span>
+                <span class="alert-trigger">unavailable for 15 minutes</span>
+              </div>
+              <div class="alert-message">Da Gubbinz iz Broken! Gutgrinda'z temperature sensor iz offline — check da Zigbee2MQTT at 192.168.86.36:8080, ya grot!</div>
+            </div>
+          </div>
+
+          <p>The Discord webhook URL is stored in HAOS <code>secrets.yaml</code> and never committed to the repository. The Makefile accepts it as a deploy-time parameter and writes it to the secrets file — the value lives only in the running system and in the operator's secure storage.</p>
+
+          <!-- 6. IaC -->
+          <h2 id="iac"><span class="sec-num">06</span>Infrastructure-as-Code</h2>
+
+          <p>The full deployment runs from a single make target:</p>
+
+          <div class="code-block">
+            <div class="code-label">bash</div>
+            <pre><code>make beardie GUTGRINDA_DISCORD_WEBHOOK=&lt;webhook_url&gt; HA_TOKEN=&lt;token&gt;</code></pre>
+          </div>
+
+          <p>The Makefile target deploys <code>beardie.yaml</code> to <code>/mnt/data/supervisor/homeassistant/packages/</code> on the HAOS VM via <code>qm guest exec</code> (Proxmox host API), then calls the HA API to reload automations. If the Discord webhook has not changed, the parameter can be omitted — the existing value in <code>secrets.yaml</code> is preserved.</p>
+
+          <div class="goal-grid">
+            <div class="goal-card">
+              <div class="goal-title">Reproducible</div>
+              <p>No configuration exists outside of the repository and the running system. Wipe the HAOS VM and <code>make beardie</code> restores the full automation stack in under two minutes.</p>
+            </div>
+            <div class="goal-card">
+              <div class="goal-title">Secrets-safe</div>
+              <p>Webhook URLs and API tokens are passed as parameters at deploy time. Nothing sensitive is committed to the repository. Secrets live only in the running system.</p>
+            </div>
+            <div class="goal-card">
+              <div class="goal-title">Zero runtime configuration</div>
+              <p>Every threshold is runtime-adjustable via the HA dashboard. Changing a value does not require a redeploy — the YAML reacts to <code>input_number</code> state in real time.</p>
+            </div>
+          </div>
+
+          <p>This is the same IaC discipline applied across the rest of the homelab — every service is a <code>make</code> target, every secret is a parameter, nothing is manually configured. See the <a href="/homelab">Homelab Architecture paper</a> for the full stack this runs on.</p>
+
+          <!-- 7. Observability -->
+          <h2 id="observability"><span class="sec-num">07</span>Observability</h2>
+
+          <p>The package exposes all enclosure entities to Prometheus via the HA Prometheus integration:</p>
+
+          <div class="code-block">
+            <div class="code-label">yaml</div>
+            <pre><code>prometheus:
+  namespace: homeassistant
+  filter:
+    include_entity_globs:
+      - "sensor.0xa4c13874d0343902_*"   # temp + humidity
+      - "switch.gutgrinda_*"             # lamp/heater state
+      - "input_number.gutgrinda_*"       # thresholds</code></pre>
+          </div>
+
+          <p>Temperature history, device on/off state, and threshold values all appear in Grafana alongside the rest of the infrastructure metrics. A single dashboard can show server CPU load next to enclosure temperature — not because those metrics are related, but because the same observability stack covers everything.</p>
+
+          <div class="callout callout-info">
+            <div class="callout-label">What Prometheus reveals that thresholds don't</div>
+            <p>A basking lamp that cycles on and off every 90 seconds is technically within range — temps are between 95°F and 110°F — but the duty cycle is abnormal. It may indicate a failing bulb, a drafty enclosure location, or unusual ambient temps. Prometheus duty-cycle data makes this visible; raw threshold logic never would.</p>
+          </div>
+
+          <!-- 8. AI -->
+          <h2 id="ai"><span class="sec-num">08</span>Where AI Enters the Picture</h2>
+
+          <p>The current system is entirely rule-based. It works well for the defined conditions, but rule-based systems have a known failure mode: they handle the cases you thought of, not the ones you didn't. AI augmentation can address three gaps without replacing the automation layer.</p>
+
+          <div class="ai-grid">
+            <div class="ai-card">
+              <div class="ai-title">Anomaly detection</div>
+              <p>A model trained on normal duty-cycle patterns could flag abnormal lamp cycling before temperatures actually go out of range — catching a failing bulb or unusual ambient condition earlier than any fixed threshold.</p>
+            </div>
+            <div class="ai-card">
+              <div class="ai-title">Seasonal threshold recommendations</div>
+              <p>Prometheus has months of temperature and duty-cycle history. An LLM with access to that data and the current date could recommend threshold adjustments based on how the enclosure behaves differently across seasons.</p>
+            </div>
+            <div class="ai-card">
+              <div class="ai-title">Natural language health summaries</div>
+              <p>Instead of raw Grafana panels, a daily summary generated from Prometheus data: average temps, heater activation count, days since last alert. No new sensors — just a Claude API call against data already collected.</p>
+            </div>
+          </div>
+
+          <p>None of this requires replacing the rule-based system. The automations run regardless. AI adds a layer of interpretation on top of data that's already being collected — the same pattern that makes <a href="https://github.com/whitenhiemer/alertmind" target="_blank" rel="noopener">AlertMind</a> useful for infrastructure triage.</p>
+
+          <!-- 9. The Pattern -->
+          <h2 id="pattern"><span class="sec-num">09</span>The Pattern Is Not About Bearded Dragons</h2>
+
+          <p>The full stack in use here is the same architecture pattern found in industrial monitoring, building management systems, and server room environmental control — implemented on commodity hardware with open-source software.</p>
+
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Environment</th><th>Sensor</th><th>"Basking Lamp"</th><th>Alert trigger</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>Server room</td>
+                  <td>Temp/humidity sensor</td>
+                  <td>CRAC unit relay</td>
+                  <td>Rack ambient &gt;85°F</td>
+                </tr>
+                <tr>
+                  <td>Greenhouse</td>
+                  <td>Temp + soil moisture</td>
+                  <td>Misting relay + grow light</td>
+                  <td>Frost risk or drought threshold</td>
+                </tr>
+                <tr>
+                  <td>Brewery fermentation</td>
+                  <td>Thermocouple probe</td>
+                  <td>Heating pad or glycol chiller</td>
+                  <td>Out-of-range fermentation temp</td>
+                </tr>
+                <tr>
+                  <td>3D printing farm</td>
+                  <td>Enclosure temp + humidity</td>
+                  <td>Heater relay, exhaust fan</td>
+                  <td>ABS warp risk, filament moisture</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>In every case: <strong>sensor → MQTT → Home Assistant → smart relay → alert</strong>. The YAML changes. The stack does not. The same Proxmox homelab that runs this enclosure automation also runs Traefik, Authentik, a Kubernetes cluster, Grafana, and AlertMind — all managed by a single operator from a single Makefile.</p>
+
+          <!-- 10. Conclusion -->
+          <h2 id="conclusion"><span class="sec-num">10</span>Conclusion</h2>
+
+          <p>What started as "I don't want to manually manage smart plugs" became a fully observable, IaC-driven, alert-enabled environment monitoring system running on the same infrastructure stack used for production-grade services.</p>
+          <p>The implementation took one afternoon. The ongoing maintenance cost is near zero — the system has operated for months without a config change. The alerts have fired twice: once when a bulb started failing and the lamp couldn't reach target temp, and once when the Zigbee sensor battery died. Both times, Discord delivered the notification before the temperature reached a dangerous level.</p>
+
+          <div class="callout callout-info">
+            <div class="callout-label">The actual outcome</div>
+            <p>Not the technology. Not the architecture diagram. The outcome is that an enclosure is safer and more consistent than it was before, managed by a system that runs without human intervention and pages when something is wrong. That outcome is achievable for any environment where temperature, humidity, or device state matters — at the cost of a few smart plugs, an open-source automation platform, and an afternoon of YAML.</p>
+          </div>
+
+          <!-- Footer -->
+          <div class="paper-footer">
+            <div class="paper-date">May 2026</div>
+            <p>Want to apply this pattern to your infrastructure — server room, warehouse, or production environment? <a href="/contact">Schedule a call.</a></p>
+          </div>
+
+        </article>
+      </div>
+    </div>
+  </section>
+
+</Layout>
+
+<style>
+  /* ── Hero ── */
+  .hero {
+    padding: 4.5rem 0 3.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.9rem, 4vw, 3rem);
+    margin-bottom: 1.1rem;
+    max-width: 680px;
+  }
+
+  .hero-sub {
+    font-size: 1.05rem;
+    color: var(--dim);
+    max-width: 620px;
+    line-height: 1.7;
+    margin-bottom: 1.75rem;
+  }
+
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .meta-tag {
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    background: rgba(181, 85, 26, 0.07);
+    border: 1px solid rgba(181, 85, 26, 0.2);
+    color: var(--accent);
+    padding: 0.2rem 0.55rem;
+    border-radius: 3px;
+  }
+
+  /* ── Body layout ── */
+  .body-section { padding: 4rem 0 6rem; }
+
+  .body-layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 4rem;
+    align-items: start;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    position: sticky;
+    top: 80px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    padding-right: 1rem;
+  }
+
+  .toc-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+  }
+
+  .toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .toc-list ol {
+    list-style: none;
+    padding-left: 0.75rem;
+    margin: 0.1rem 0;
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .toc-list a {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: none;
+    display: block;
+    padding: 0.2rem 0;
+    line-height: 1.4;
+    transition: color 0.15s;
+  }
+
+  .toc-list a:hover { color: var(--accent); }
+  .toc-list ol a { font-size: 0.78rem; }
+
+  /* ── Paper ── */
+  .paper { min-width: 0; }
+
+  .paper h2 {
+    font-size: 1.6rem;
+    margin-top: 3.5rem;
+    margin-bottom: 1.25rem;
+    padding-top: 2.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .paper h2:first-of-type { margin-top: 0; }
+
+  .sec-num {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .paper h3 {
+    font-size: 1.05rem;
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    color: var(--text);
+  }
+
+  .paper p {
+    font-size: 0.95rem;
+    line-height: 1.75;
+    color: var(--dim);
+    margin-bottom: 1rem;
+  }
+
+  .paper code {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    background: rgba(181, 85, 26, 0.06);
+    border: 1px solid rgba(181, 85, 26, 0.15);
+    padding: 0.1em 0.35em;
+    border-radius: 3px;
+    color: var(--accent);
+  }
+
+  .paper a { color: var(--accent); text-decoration: none; }
+  .paper a:hover { text-decoration: underline; }
+
+  /* ── Summary box ── */
+  .summary-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    padding: 1.5rem 1.75rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .summary-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+
+  .summary-box p { margin-bottom: 0; font-size: 0.92rem; }
+
+  /* ── Temp requirements ── */
+  .req-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .req-card {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+
+  .req-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .req-range {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+  }
+
+  .req-when {
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  /* ── Tables ── */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.25rem 0;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+
+  thead th {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border-lt);
+    color: var(--dim);
+    vertical-align: top;
+    line-height: 1.5;
+  }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(181, 85, 26, 0.03); }
+
+  /* ── Traffic flow ── */
+  .traffic-flow {
+    margin: 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 0.85rem 1.25rem;
+  }
+
+  .flow-step.highlight {
+    background: rgba(181, 85, 26, 0.06);
+    border-color: rgba(181, 85, 26, 0.3);
+  }
+
+  .flow-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+  }
+
+  .flow-detail {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .flow-arrow {
+    text-align: center;
+    color: var(--accent);
+    font-size: 1rem;
+    line-height: 1.2;
+    padding: 0.1rem 0;
+  }
+
+  /* ── Automation logic blocks ── */
+  .logic-block {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1rem 0 1.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+  }
+
+  .logic-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid var(--border-lt);
+  }
+
+  .logic-row:last-child { border-bottom: none; }
+
+  .logic-row-failsafe {
+    background: rgba(181, 85, 26, 0.04);
+  }
+
+  .logic-condition { color: var(--dim); }
+
+  .logic-arrow {
+    color: var(--accent);
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .logic-action {
+    color: var(--text);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .failsafe-tag {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    background: rgba(181, 85, 26, 0.1);
+    border: 1px solid rgba(181, 85, 26, 0.25);
+    color: var(--accent);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+  }
+
+  /* ── Alert list ── */
+  .alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+  }
+
+  .alert-item {
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .alert-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-lt);
+  }
+
+  .alert-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .alert-hot .alert-label { color: #c0392b; }
+  .alert-cold .alert-label { color: #2980b9; }
+  .alert-offline .alert-label { color: var(--muted); }
+
+  .alert-trigger {
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    color: var(--muted);
+  }
+
+  .alert-message {
+    padding: 0.75rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--dim);
+    line-height: 1.6;
+    background: rgba(0,0,0,0.02);
+  }
+
+  /* ── Code blocks ── */
+  .code-block {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 1.25rem 0;
+  }
+
+  .code-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-lt);
+    padding: 0.4rem 1rem;
+  }
+
+  .code-block pre {
+    margin: 0;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    background: rgba(0,0,0,0.02);
+  }
+
+  .code-block code {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+
+  /* ── Goal grid (reused for IaC props) ── */
+  .goal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .goal-card {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 1.25rem;
+  }
+
+  .goal-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .goal-card p { font-size: 0.85rem; margin-bottom: 0; line-height: 1.6; }
+
+  /* ── Callouts ── */
+  .callout {
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .callout-info {
+    background: rgba(181, 85, 26, 0.05);
+    border: 1px solid rgba(181, 85, 26, 0.2);
+  }
+
+  .callout-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .callout p { margin-bottom: 0; font-size: 0.88rem; }
+
+  /* ── AI grid ── */
+  .ai-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .ai-card {
+    background: var(--surface);
+    border: 1px solid var(--border-lt);
+    border-radius: 6px;
+    padding: 1.25rem;
+  }
+
+  .ai-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .ai-card p { font-size: 0.85rem; margin-bottom: 0; line-height: 1.6; }
+
+  /* ── Paper footer ── */
+  .paper-footer {
+    margin-top: 4rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .paper-date {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .paper-footer p { font-size: 0.88rem; color: var(--muted); margin-bottom: 0; }
+  .paper-footer a { color: var(--accent); text-decoration: none; }
+  .paper-footer a:hover { text-decoration: underline; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .body-layout { grid-template-columns: 1fr; }
+    .toc {
+      position: static;
+      max-height: none;
+      overflow: visible;
+      padding-right: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.25rem;
+      background: var(--surface);
+    }
+    .toc-list { flex-direction: row; flex-wrap: wrap; gap: 0.25rem 1rem; }
+    .toc-list ol { display: none; }
+    .req-grid { grid-template-columns: 1fr; }
+    .ai-grid { grid-template-columns: 1fr; }
+    .paper h2 { margin-top: 2.5rem; }
+  }
+
+  @media (max-width: 600px) {
+    .goal-grid { grid-template-columns: 1fr; }
+    .logic-row { grid-template-columns: 1fr; gap: 0.25rem; }
+    .logic-arrow { text-align: left; }
+  }
+</style>

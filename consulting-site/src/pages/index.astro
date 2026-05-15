@@ -168,7 +168,10 @@ import Layout from '../layouts/Layout.astro';
       </div>
       <div class="homelab-cta">
         <span class="muted-text">20+ services, 5-node Proxmox cluster, full IaC — running in production.</span>
-        <a href="/homelab" class="btn btn-outline">Read the architecture paper →</a>
+        <div class="paper-links">
+          <a href="/homelab" class="btn btn-outline">Homelab architecture →</a>
+          <a href="/sensor-to-alert" class="btn btn-outline">IoT automation white paper →</a>
+        </div>
       </div>
     </div>
   </section>
@@ -428,6 +431,14 @@ import Layout from '../layouts/Layout.astro';
     font-size: 0.875rem;
     color: var(--muted);
   }
+
+  .paper-links {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .paper-links .btn { font-size: 0.85rem; flex-shrink: 0; }
 
   .homelab-cta .btn { font-size: 0.85rem; flex-shrink: 0; }
 
