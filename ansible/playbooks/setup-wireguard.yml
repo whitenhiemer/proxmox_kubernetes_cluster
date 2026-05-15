@@ -32,7 +32,7 @@
     wg_subnet: "10.10.0.0/24"
     wg_server_ip: "10.10.0.1"
     wg_dns: "192.168.86.1"
-    wg_endpoint: "woodhead.tech"
+    wg_endpoint: "wg.woodhead.tech"
     # AllowedIPs: route all LAN + VPN traffic through tunnel
     # Use 0.0.0.0/0 for full tunnel, or specific subnets for split tunnel
     wg_allowed_ips: "192.168.86.0/24, 10.10.0.0/24"
