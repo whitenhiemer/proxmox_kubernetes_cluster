@@ -5,48 +5,68 @@ import Layout from '../layouts/Layout.astro';
 
   <!-- Hero -->
   <section class="hero">
+    <div class="hero-grain"></div>
     <div class="container">
-      <div class="hero-eyebrow">Systems Architecture &amp; AI Automation</div>
-      <h1>
-        Stop running your team<br />
-        on <span class="accent">manual work.</span>
-      </h1>
-      <p class="hero-sub">
-        I help engineering teams cut ops toil and integrate AI tooling into real workflows —
-        not demos, not pilots. Systems that run in production.
-      </p>
-      <div class="hero-cta">
-        <a href="/contact" class="btn btn-primary">Schedule a Discovery Call &nbsp;→</a>
-        <a href="/services" class="btn btn-outline">See Services</a>
-      </div>
-      <div class="social-proof">
-        <span>20+ years engineering</span>
-        <span class="dot">&middot;</span>
-        <span>Rackspace &nbsp;·&nbsp; Amazon &nbsp;·&nbsp; Salesforce GovCloud</span>
-        <span class="dot">&middot;</span>
-        <span>FedRAMP-cleared environments</span>
+      <div class="hero-inner">
+        <div class="hero-text">
+          <div class="hero-eyebrow">Systems Architecture &amp; AI Automation</div>
+          <h1>
+            Stop running your team<br />
+            on <em>manual work.</em>
+          </h1>
+          <p class="hero-sub">
+            I help engineering teams cut ops toil and integrate AI tooling into real workflows —
+            not demos, not pilots. Systems that run in production.
+          </p>
+          <div class="hero-cta">
+            <a href="/contact" class="btn btn-primary">Schedule a Discovery Call &nbsp;→</a>
+            <a href="/services" class="btn btn-outline">See Services</a>
+          </div>
+          <div class="social-proof">
+            <span>20+ years engineering</span>
+            <span class="rule">&nbsp;·&nbsp;</span>
+            <span>Rackspace · Amazon · Salesforce GovCloud</span>
+            <span class="rule">&nbsp;·&nbsp;</span>
+            <span>FedRAMP-cleared environments</span>
+          </div>
+        </div>
+        <div class="hero-mark" aria-hidden="true">
+          <svg viewBox="0 0 200 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Large decorative logo mark -->
+            <!-- Hat crown -->
+            <path d="M 55 80 Q 54 20 100 18 Q 146 20 145 80" fill="#C9A87C" opacity="0.35"/>
+            <!-- Hat brim -->
+            <rect x="22" y="75" width="156" height="24" rx="6" fill="#C9A87C" opacity="0.35"/>
+            <!-- Hat band -->
+            <rect x="55" y="75" width="90" height="11" fill="#B5551A" opacity="0.4"/>
+            <!-- Mustache right -->
+            <path d="M 100 128 C 112 120 133 115 150 118 C 164 121 172 133 168 145 C 164 155 150 158 143 152 C 136 146 134 136 122 128 C 114 124 107 124 100 128 Z" fill="#B5551A" opacity="0.35"/>
+            <!-- Mustache left -->
+            <path d="M 100 128 C 88 120 67 115 50 118 C 36 121 28 133 32 145 C 36 155 50 158 57 152 C 64 146 66 136 78 128 C 86 124 93 124 100 128 Z" fill="#B5551A" opacity="0.35"/>
+          </svg>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- Pain points -->
-  <section class="section">
+  <section class="section pain-section">
     <div class="container">
       <div class="section-label">Sound familiar?</div>
       <h2 class="section-title">Your team is capable.<br />Your systems are holding them back.</h2>
       <div class="pain-grid">
         <div class="card pain-card">
-          <div class="pain-icon">01</div>
+          <div class="pain-num">01</div>
           <h3>Manual toil stealing sprint capacity</h3>
           <p>Your engineers are spending hours on deploys, incident response, and runbooks that should be automated. That time belongs in your roadmap.</p>
         </div>
         <div class="card pain-card">
-          <div class="pain-icon">02</div>
+          <div class="pain-num">02</div>
           <h3>AI that doesn't connect to your systems</h3>
           <p>You've tried AI tools. They work in isolation but don't plug into your actual infrastructure. You need architecture, not another SaaS subscription.</p>
         </div>
         <div class="card pain-card">
-          <div class="pain-icon">03</div>
+          <div class="pain-num">03</div>
           <h3>Architecture decisions made without expertise</h3>
           <p>Hiring a senior systems architect full-time costs $250K+. You need that expertise for specific decisions, not a permanent headcount.</p>
         </div>
@@ -60,7 +80,7 @@ import Layout from '../layouts/Layout.astro';
       <div class="what-inner">
         <div class="what-text">
           <div class="section-label">What I do</div>
-          <h2>Architecture that runs.<br /><span class="accent">AI that earns its keep.</span></h2>
+          <h2>Architecture that runs.<br /><em>AI that earns its keep.</em></h2>
           <p>
             I design systems that automate real operational work — the CI/CD toil, the runbook
             theater, the alert noise — and integrate AI where it delivers measurable throughput,
@@ -112,35 +132,44 @@ import Layout from '../layouts/Layout.astro';
       <div class="section-label">Engagements</div>
       <h2 class="section-title">Three ways to work together.</h2>
       <div class="services-preview">
-        <div class="card service-preview-card">
-          <div class="service-badge">Entry point</div>
+        <div class="card service-card">
+          <div class="service-tier">Entry point</div>
           <h3>Discovery Audit</h3>
           <p>A deep-dive into your current systems. Walk away with a written report of automation opportunities and an AI integration roadmap.</p>
           <div class="service-price">From $2,000</div>
-          <a href="/services#discovery" class="btn btn-outline" style="margin-top: 1rem; font-size: 0.85rem; padding: 0.5rem 1rem;">Learn more →</a>
+          <a href="/services#discovery" class="btn btn-outline service-btn">Learn more →</a>
         </div>
-        <div class="card service-preview-card featured">
-          <div class="service-badge accent-badge">Most common</div>
+        <div class="card service-card service-card--featured">
+          <div class="service-tier service-tier--accent">Most common</div>
           <h3>Project Engagement</h3>
           <p>Design and build one specific automation or AI integration — from architecture to production delivery.</p>
           <div class="service-price">$10,000–25,000</div>
-          <a href="/services#project" class="btn btn-primary" style="margin-top: 1rem; font-size: 0.85rem; padding: 0.5rem 1rem;">Learn more →</a>
+          <a href="/services#project" class="btn btn-primary service-btn">Learn more →</a>
         </div>
-        <div class="card service-preview-card">
-          <div class="service-badge">Ongoing</div>
+        <div class="card service-card">
+          <div class="service-tier">Ongoing</div>
           <h3>Advisory Retainer</h3>
           <p>Async architecture guidance and a monthly strategy call. Senior systems expertise on demand without the headcount.</p>
           <div class="service-price">$3,000/mo</div>
-          <a href="/services#retainer" class="btn btn-outline" style="margin-top: 1rem; font-size: 0.85rem; padding: 0.5rem 1rem;">Learn more →</a>
+          <a href="/services#retainer" class="btn btn-outline service-btn">Learn more →</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Final CTA -->
+  <!-- CTA -->
   <section class="section cta-section">
     <div class="container">
-      <div class="cta-inner card">
+      <div class="cta-inner">
+        <div class="cta-mark" aria-hidden="true">
+          <svg viewBox="0 0 56 50" width="48" height="43" fill="none">
+            <path d="M 14 20 Q 14 4 28 4 Q 42 4 42 20" fill="#C9A87C"/>
+            <rect x="3" y="18" width="50" height="7" rx="2" fill="#C9A87C"/>
+            <rect x="14" y="18" width="28" height="3.5" fill="#B5551A"/>
+            <path d="M 28 34 C 32 31 39 29 45 30 C 50 31 53 36 51 41 C 49 45 44 46 41 43 C 38 40 37 36 33 33 C 31 32 29 32 28 34 Z" fill="#C9A87C"/>
+            <path d="M 28 34 C 24 31 17 29 11 30 C 6 31 3 36 5 41 C 7 45 12 46 15 43 C 18 40 19 36 23 33 C 25 32 27 32 28 34 Z" fill="#C9A87C"/>
+          </svg>
+        </div>
         <h2>Ready to automate what's slowing you down?</h2>
         <p>Start with a 30-minute conversation. No pitch deck. Just an honest look at where automation and AI can move the needle for your team.</p>
         <a href="/contact" class="btn btn-primary">Schedule a Free Intro Call →</a>
@@ -153,14 +182,48 @@ import Layout from '../layouts/Layout.astro';
 <style>
   /* Hero */
   .hero {
+    position: relative;
     padding: 6rem 0 5rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--border-lt);
+    overflow: hidden;
+  }
+
+  .hero-grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      repeating-linear-gradient(
+        89deg,
+        transparent 0px, transparent 14px,
+        rgba(160, 100, 40, 0.028) 14px, rgba(160, 100, 40, 0.028) 15px
+      ),
+      repeating-linear-gradient(
+        91deg,
+        transparent 0px, transparent 22px,
+        rgba(140, 80, 20, 0.018) 22px, rgba(140, 80, 20, 0.018) 23px
+      );
+  }
+
+  .hero-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4rem;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .hero-mark {
+    opacity: 0.6;
+    flex-shrink: 0;
   }
 
   .hero-eyebrow {
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.12em;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: 1.5rem;
@@ -169,15 +232,21 @@ import Layout from '../layouts/Layout.astro';
   .hero h1 {
     font-size: clamp(2.5rem, 5vw, 4rem);
     margin-bottom: 1.5rem;
-    color: var(--text);
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--accent);
   }
 
   .hero-sub {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
     color: var(--dim);
-    max-width: 600px;
+    max-width: 560px;
     margin-bottom: 2.5rem;
-    line-height: 1.7;
+    line-height: 1.75;
   }
 
   .hero-cta {
@@ -190,28 +259,35 @@ import Layout from '../layouts/Layout.astro';
   .social-proof {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
     flex-wrap: wrap;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: var(--muted);
+    gap: 0.25rem;
   }
 
-  .dot { opacity: 0.4; }
+  .rule { color: var(--border); }
 
-  /* Pain section */
+  /* Pain */
+  .pain-section {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-lt);
+  }
+
   .section-label {
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: 1rem;
   }
 
   .section-title {
+    font-family: var(--font-display);
     font-size: clamp(1.8rem, 3vw, 2.5rem);
     margin-bottom: 3rem;
-    color: var(--text);
+    font-weight: 700;
   }
 
   .pain-grid {
@@ -222,25 +298,33 @@ import Layout from '../layouts/Layout.astro';
 
   .pain-card { position: relative; }
 
-  .pain-icon {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
+  .pain-num {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
     color: var(--accent);
     margin-bottom: 1rem;
-    font-family: monospace;
+    display: block;
+    border-left: 2px solid var(--accent);
+    padding-left: 0.5rem;
   }
 
   .pain-card h3 {
-    font-size: 1.05rem;
+    font-size: 1rem;
     margin-bottom: 0.75rem;
-    color: var(--text);
+    font-weight: 600;
   }
 
-  .pain-card p { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+  .pain-card p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
 
   /* What I do */
-  .what-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .what-section {
+    border-top: 1px solid var(--border-lt);
+    border-bottom: 1px solid var(--border-lt);
+  }
 
   .what-inner {
     display: grid;
@@ -249,85 +333,131 @@ import Layout from '../layouts/Layout.astro';
     align-items: start;
   }
 
-  .what-text h2 { font-size: clamp(1.8rem, 3vw, 2.25rem); margin-bottom: 1.5rem; }
+  .what-text h2 {
+    font-size: clamp(1.8rem, 3vw, 2.25rem);
+    margin-bottom: 1.5rem;
+  }
 
-  .what-text p { color: var(--dim); margin-bottom: 1rem; line-height: 1.7; font-size: 0.95rem; }
+  .what-text h2 em {
+    font-style: italic;
+    color: var(--accent);
+  }
 
-  .what-stack { display: flex; flex-direction: column; gap: 1rem; }
+  .what-text p {
+    color: var(--dim);
+    margin-bottom: 1rem;
+    line-height: 1.75;
+    font-size: 0.95rem;
+  }
 
-  .stack-card { padding: 1.25rem 1.5rem; }
+  .what-stack { display: flex; flex-direction: column; gap: 0.9rem; }
+
+  .stack-card { padding: 1.1rem 1.4rem; background: var(--surface2); }
 
   .stack-label {
-    font-size: 0.75rem;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     color: var(--muted);
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.65rem;
   }
 
-  .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
 
   .tag {
-    background: rgba(63, 185, 80, 0.08);
-    border: 1px solid rgba(63, 185, 80, 0.25);
-    color: var(--accent);
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
-    font-size: 0.78rem;
-    font-weight: 500;
+    background: rgba(181, 85, 26, 0.08);
+    border: 1px solid rgba(181, 85, 26, 0.22);
+    color: var(--accent2);
+    padding: 0.18rem 0.55rem;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
   }
 
-  /* Services preview */
+  /* Services */
   .services-preview {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 1.25rem;
   }
 
-  .service-preview-card { display: flex; flex-direction: column; }
+  .service-card { display: flex; flex-direction: column; }
 
-  .service-preview-card.featured {
+  .service-card--featured {
     border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent), 0 8px 32px rgba(63, 185, 80, 0.1);
+    box-shadow: 0 0 0 1px var(--accent), 0 8px 32px rgba(181, 85, 26, 0.1);
+    background: #F5E8D0;
   }
 
-  .service-badge {
-    font-size: 0.72rem;
+  .service-tier {
+    font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     color: var(--muted);
     margin-bottom: 1rem;
+    font-family: var(--font-body);
   }
 
-  .accent-badge { color: var(--accent); }
+  .service-tier--accent { color: var(--accent); }
 
-  .service-preview-card h3 { font-size: 1.1rem; margin-bottom: 0.75rem; }
+  .service-card h3 { font-size: 1.1rem; margin-bottom: 0.75rem; }
 
-  .service-preview-card p { font-size: 0.88rem; color: var(--muted); flex: 1; line-height: 1.6; }
+  .service-card p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    flex: 1;
+    line-height: 1.7;
+  }
 
   .service-price {
-    font-size: 1.2rem;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--accent);
     margin-top: 1.25rem;
   }
 
+  .service-btn {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
+    align-self: flex-start;
+  }
+
   /* CTA */
-  .cta-section { padding-bottom: 6rem; }
+  .cta-section {
+    padding-bottom: 6rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border-lt);
+  }
 
   .cta-inner {
     text-align: center;
-    padding: 3.5rem 2rem;
-    border-color: var(--border);
+    padding: 4rem 2rem;
+    max-width: 600px;
+    margin: 0 auto;
   }
 
-  .cta-inner h2 { font-size: clamp(1.6rem, 3vw, 2.25rem); margin-bottom: 1rem; }
+  .cta-mark { margin-bottom: 1.5rem; }
 
-  .cta-inner p { color: var(--muted); max-width: 520px; margin: 0 auto 2rem; font-size: 0.95rem; }
+  .cta-inner h2 {
+    font-size: clamp(1.6rem, 3vw, 2.25rem);
+    margin-bottom: 1rem;
+  }
 
-  @media (max-width: 768px) {
+  .cta-inner p {
+    color: var(--muted);
+    margin: 0 auto 2rem;
+    font-size: 0.95rem;
+    line-height: 1.75;
+  }
+
+  @media (max-width: 900px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-mark { display: none; }
     .what-inner { grid-template-columns: 1fr; gap: 2.5rem; }
     .hero { padding: 3.5rem 0 3rem; }
   }

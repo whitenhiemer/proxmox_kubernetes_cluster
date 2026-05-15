@@ -13,19 +13,26 @@ const currentPath = Astro.url.pathname;
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{title} — Brandon Woodward</title>
   <meta name="description" content={description} />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:      #0d1117;
-      --surface: #161b22;
-      --border:  #30363d;
-      --accent:  #3fb950;
-      --accent2: #2ea043;
-      --text:    #e6edf3;
-      --muted:   #8b949e;
-      --dim:     #c9d1d9;
-      --font:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --bg:       #F8EFE0;
+      --surface:  #EFE3CC;
+      --surface2: #E4D3B2;
+      --border:   #C9A87C;
+      --border-lt:#DEC9A4;
+      --accent:   #B5551A;
+      --accent2:  #8F3F0E;
+      --text:     #180A00;
+      --dim:      #4B2812;
+      --muted:    #8A5E3C;
+      --font-display: 'Playfair Display', Georgia, serif;
+      --font-body:    'Lora', Georgia, serif;
+      --font-mono:    'IBM Plex Mono', monospace;
     }
 
     html { scroll-behavior: smooth; }
@@ -33,9 +40,9 @@ const currentPath = Astro.url.pathname;
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: var(--font);
+      font-family: var(--font-body);
       font-size: 16px;
-      line-height: 1.6;
+      line-height: 1.7;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -46,30 +53,50 @@ const currentPath = Astro.url.pathname;
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(13, 17, 23, 0.92);
+      background: rgba(248, 239, 224, 0.95);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
-      padding: 0 2rem;
     }
 
     .nav-inner {
       max-width: 1100px;
       margin: 0 auto;
+      padding: 0 2rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 60px;
+      height: 64px;
     }
 
     .nav-brand {
-      font-weight: 700;
-      font-size: 1rem;
-      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
       text-decoration: none;
-      letter-spacing: -0.01em;
+      color: var(--text);
     }
 
-    .nav-brand span { color: var(--accent); }
+    .nav-brand-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.1;
+    }
+
+    .nav-brand-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text);
+      letter-spacing: 0.01em;
+    }
+
+    .nav-brand-sub {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
 
     .nav-links {
       display: flex;
@@ -79,25 +106,51 @@ const currentPath = Astro.url.pathname;
     }
 
     .nav-links a {
+      font-family: var(--font-body);
+      font-size: 0.9rem;
       color: var(--muted);
       text-decoration: none;
-      font-size: 0.9rem;
+      letter-spacing: 0.01em;
       transition: color 0.15s;
+      position: relative;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transition: transform 0.2s;
     }
 
     .nav-links a:hover,
-    .nav-links a.active { color: var(--text); }
+    .nav-links a.active {
+      color: var(--text);
+    }
+
+    .nav-links a:hover::after,
+    .nav-links a.active::after {
+      transform: scaleX(1);
+    }
 
     .nav-cta {
-      background: var(--accent);
-      color: #0d1117 !important;
-      font-weight: 600;
-      padding: 0.4rem 1rem;
-      border-radius: 6px;
+      background: var(--accent) !important;
+      color: var(--bg) !important;
+      font-family: var(--font-body) !important;
+      font-weight: 600 !important;
+      font-size: 0.85rem !important;
+      padding: 0.45rem 1.1rem !important;
+      border-radius: 4px !important;
+      letter-spacing: 0.02em !important;
       transition: background 0.15s !important;
     }
 
-    .nav-cta:hover { background: var(--accent2) !important; }
+    .nav-cta::after { display: none !important; }
+    .nav-cta:hover { background: var(--accent2) !important; color: var(--bg) !important; }
 
     /* ── Main ── */
     main { flex: 1; }
@@ -105,14 +158,53 @@ const currentPath = Astro.url.pathname;
     /* ── Footer ── */
     footer {
       border-top: 1px solid var(--border);
-      padding: 2rem;
-      text-align: center;
-      color: var(--muted);
-      font-size: 0.85rem;
+      padding: 2.5rem 2rem;
+      background: var(--surface);
     }
 
-    footer a { color: var(--muted); text-decoration: none; }
-    footer a:hover { color: var(--accent); }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .footer-mark {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .footer-name {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--dim);
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover { color: var(--accent); }
+
+    .footer-copy {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
 
     /* ── Shared utilities ── */
     .container {
@@ -124,10 +216,19 @@ const currentPath = Astro.url.pathname;
     .section { padding: 5rem 0; }
     .section-sm { padding: 3rem 0; }
 
-    h1, h2, h3 {
+    h1, h2 {
+      font-family: var(--font-display);
       font-weight: 700;
-      letter-spacing: -0.02em;
       line-height: 1.2;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    h3 {
+      font-family: var(--font-body);
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text);
     }
 
     .accent { color: var(--accent); }
@@ -137,21 +238,27 @@ const currentPath = Astro.url.pathname;
       align-items: center;
       gap: 0.4rem;
       padding: 0.75rem 1.5rem;
-      border-radius: 8px;
+      border-radius: 4px;
+      font-family: var(--font-body);
       font-weight: 600;
       font-size: 0.95rem;
       text-decoration: none;
       cursor: pointer;
       transition: all 0.15s;
       border: none;
+      letter-spacing: 0.01em;
     }
 
     .btn-primary {
       background: var(--accent);
-      color: #0d1117;
+      color: var(--bg);
     }
 
-    .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+    .btn-primary:hover {
+      background: var(--accent2);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(181, 85, 26, 0.25);
+    }
 
     .btn-outline {
       background: transparent;
@@ -159,25 +266,63 @@ const currentPath = Astro.url.pathname;
       border: 1px solid var(--accent);
     }
 
-    .btn-outline:hover { background: rgba(63, 185, 80, 0.1); }
+    .btn-outline:hover {
+      background: rgba(181, 85, 26, 0.07);
+    }
 
     .card {
       background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      border: 1px solid var(--border-lt);
+      border-radius: 6px;
       padding: 1.75rem;
+    }
+
+    /* Divider ornament */
+    .ornament {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--border);
+      margin: 0 auto;
+    }
+
+    .ornament::before,
+    .ornament::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
     }
 
     @media (max-width: 768px) {
       .nav-links { display: none; }
       .section { padding: 3rem 0; }
+      .footer-inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
     }
   </style>
 </head>
 <body>
   <nav>
     <div class="nav-inner">
-      <a href="/" class="nav-brand">Brandon <span>Woodward</span></a>
+      <a href="/" class="nav-brand">
+        <!-- Hat + Handlebar Mustache mark -->
+        <svg viewBox="0 0 56 50" width="42" height="38" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- Hat crown -->
+          <path d="M 14 20 Q 14 4 28 4 Q 42 4 42 20" fill="#180A00"/>
+          <!-- Hat brim -->
+          <rect x="3" y="18" width="50" height="7" rx="2" fill="#180A00"/>
+          <!-- Hat band -->
+          <rect x="14" y="18" width="28" height="3.5" fill="#B5551A"/>
+          <!-- Mustache right half -->
+          <path d="M 28 34 C 32 31 39 29 45 30 C 50 31 53 36 51 41 C 49 45 44 46 41 43 C 38 40 37 36 33 33 C 31 32 29 32 28 34 Z" fill="#180A00"/>
+          <!-- Mustache left half -->
+          <path d="M 28 34 C 24 31 17 29 11 30 C 6 31 3 36 5 41 C 7 45 12 46 15 43 C 18 40 19 36 23 33 C 25 32 27 32 28 34 Z" fill="#180A00"/>
+        </svg>
+        <div class="nav-brand-text">
+          <span class="nav-brand-name">Brandon Woodward</span>
+          <span class="nav-brand-sub">woodhead.tech</span>
+        </div>
+      </a>
       <ul class="nav-links">
         <li><a href="/services" class:list={[{ active: currentPath.startsWith('/services') }]}>Services</a></li>
         <li><a href="/shopstack" class:list={[{ active: currentPath.startsWith('/shopstack') }]}>ShopStack</a></li>
@@ -192,11 +337,24 @@ const currentPath = Astro.url.pathname;
   </main>
 
   <footer>
-    <p>
-      &copy; {new Date().getFullYear()} Brandon Woodward &nbsp;&middot;&nbsp;
-      <a href="mailto:bwoodwar@gmail.com">bwoodwar@gmail.com</a> &nbsp;&middot;&nbsp;
-      <a href="https://woodhead.tech">woodhead.tech</a>
-    </p>
+    <div class="footer-inner">
+      <div class="footer-mark">
+        <svg viewBox="0 0 56 50" width="28" height="25" fill="none" aria-hidden="true">
+          <path d="M 14 20 Q 14 4 28 4 Q 42 4 42 20" fill="#8A5E3C"/>
+          <rect x="3" y="18" width="50" height="7" rx="2" fill="#8A5E3C"/>
+          <rect x="14" y="18" width="28" height="3.5" fill="#C9A87C"/>
+          <path d="M 28 34 C 32 31 39 29 45 30 C 50 31 53 36 51 41 C 49 45 44 46 41 43 C 38 40 37 36 33 33 C 31 32 29 32 28 34 Z" fill="#8A5E3C"/>
+          <path d="M 28 34 C 24 31 17 29 11 30 C 6 31 3 36 5 41 C 7 45 12 46 15 43 C 18 40 19 36 23 33 C 25 32 27 32 28 34 Z" fill="#8A5E3C"/>
+        </svg>
+        <span class="footer-name">Brandon Woodward</span>
+      </div>
+      <div class="footer-links">
+        <a href="mailto:bwoodwar@gmail.com">bwoodwar@gmail.com</a>
+        <a href="https://woodhead.tech">woodhead.tech</a>
+        <a href="https://github.com/whitenhiemer/shopstack" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <span class="footer-copy">&copy; {new Date().getFullYear()}</span>
+    </div>
   </footer>
 </body>
 </html>
