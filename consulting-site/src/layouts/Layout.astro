@@ -6,13 +6,13 @@ interface Props {
 }
 const {
   title,
-  description = 'Systems Architect & AI Automation Consultant',
+  description = 'Woodhead Tech — Systems Architecture & AI Automation for Engineering Teams',
   ogImage = '/og-default.png',
 } = Astro.props;
 const currentPath = Astro.url.pathname;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 const ogImageUrl = new URL(ogImage, Astro.site).href;
-const pageTitle = `${title} — Brandon Woodward`;
+const pageTitle = `${title} — Woodhead Tech`;
 ---
 <!DOCTYPE html>
 <html lang="en">

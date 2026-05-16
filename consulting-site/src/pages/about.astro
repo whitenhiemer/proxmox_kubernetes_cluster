@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 ---
-<Layout title="About" description="Brandon Woodward — 20+ years of infrastructure engineering at Rackspace, Amazon, and Salesforce GovCloud.">
+<Layout title="About" description="Woodhead Tech — 20+ years of infrastructure engineering at Rackspace, Amazon, and Salesforce GovCloud.">
 
   <section class="page-hero">
     <div class="container">
@@ -16,27 +16,28 @@ import Layout from '../layouts/Layout.astro';
         <div class="about-main">
           <div class="bio-section">
             <p class="lead">
-              I started at Rackspace in 2005 as a Linux support technician. By 2009, I was a
-              founding member of the Cloud Servers team — one of the first public cloud offerings
-              before that term meant what it means today.
+              Woodhead Tech was founded on 20+ years of infrastructure engineering across three
+              major cloud environments — starting at Rackspace in 2005 as a Linux support
+              technician, then as a founding member of the Cloud Servers team, one of the first
+              public cloud offerings before that term meant what it means today.
             </p>
             <p>
-              From there: Amazon AWS, where I spent six years across Premium Support, IAM
-              Authentication infrastructure, and RDS Operations. I was the escalation point
-              for complex database issues across MySQL, PostgreSQL, MSSQL, Oracle, and Aurora.
-              I built high-availability infrastructure for AWS's own internal systems.
+              Six years at Amazon AWS followed: Premium Support, IAM Authentication
+              infrastructure, and RDS Operations — serving as the escalation point for complex
+              database issues across MySQL, PostgreSQL, MSSQL, Oracle, and Aurora, and building
+              high-availability infrastructure for AWS's own internal systems.
             </p>
             <p>
-              Since 2019, I've been at Salesforce GovCloud as a Systems Security Engineer —
-              building and operating FedRAMP-compliant cloud infrastructure, leading certificate
-              lifecycle and PKI operations, and writing production Go tooling. I built
-              <em>sprint3r</em>, a Go CLI for automated sprint tracking that integrates with
-              GUS (Salesforce's internal work tracker) and posts to Slack.
+              Since 2019: Salesforce GovCloud as a Systems Security Engineer — building and
+              operating FedRAMP-compliant cloud infrastructure, leading certificate lifecycle
+              and PKI operations, and shipping production Go tooling. The work that became
+              Woodhead Tech grew out of the same instinct: find the manual work, automate it,
+              and make the system legible enough that someone else can operate it.
             </p>
             <p>
-              Outside of work, I run a four-node Proxmox homelab with Ceph storage, a Talos
-              Kubernetes cluster, and 15+ self-hosted services — all managed with Terraform and
-              Ansible. That's where I prototype the systems I later recommend to clients.
+              The homelab at woodhead.tech — a five-node Proxmox cluster with Ceph storage, a
+              Talos Kubernetes cluster, and 20+ self-hosted services, all managed with Terraform
+              and Ansible — is where every system Woodhead Tech recommends gets prototyped first.
             </p>
           </div>
 
@@ -149,10 +150,6 @@ import Layout from '../layouts/Layout.astro';
           <div class="card sidebar-card">
             <div class="sidebar-label">Selected projects</div>
             <div class="project-list">
-              <div class="project-item">
-                <div class="project-name">sprint3r</div>
-                <div class="project-desc">Go CLI for sprint automation — integrates Salesforce GUS API with Slack webhooks</div>
-              </div>
               <div class="project-item">
                 <div class="project-name">woodhead.tech homelab</div>
                 <div class="project-desc">4-node Proxmox cluster, Ceph, Talos K8s, 15+ services, full IaC</div>
