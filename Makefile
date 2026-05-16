@@ -169,6 +169,19 @@ authentik: ## Deploy Authentik identity provider into its LXC
 wireguard: ## Deploy WireGuard VPN tunnel into its LXC
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-wireguard.yml
 
+wireguard-shopstack: ## One-time: set up ShopStack management hub (wg1, 10.99.0.0/24, port 51821)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-wireguard-shopstack.yml
+
+shopstack-add-peer: ## Register a customer spoke with the hub. Usage: make shopstack-add-peer CLIENT=tshirts-demo WG_IP=10.99.0.2
+	@test -n "$(CLIENT)" || (echo "Usage: make shopstack-add-peer CLIENT=<name> WG_IP=<ip>"; exit 1)
+	@test -n "$(WG_IP)"  || (echo "Usage: make shopstack-add-peer CLIENT=<name> WG_IP=<ip>"; exit 1)
+	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/add-shopstack-peer.yml \
+		--extra-vars "peer_name=$(CLIENT) peer_ip=$(WG_IP)"
+
+shopstack-ssh: ## SSH to a customer via WireGuard. Usage: make shopstack-ssh CLIENT=tshirts-demo
+	@test -n "$(CLIENT)" || (echo "Usage: make shopstack-ssh CLIENT=<name>"; exit 1)
+	ssh -i ~/.ssh/id_ansible admin@$(shell grep -A2 "$(CLIENT):" ~/Workspace/shopstack/ansible/inventory/customers/$(CLIENT).yml | grep ansible_host | awk '{print $$2}')
+
 homeassistant: ## Deploy Traefik route for Home Assistant (post-onboarding config via HA_TOKEN=)
 	cd $(ANSIBLE_DIR) && ansible-playbook playbooks/setup-homeassistant.yml \
 		$(if $(HA_TOKEN),--extra-vars "ha_token=$(HA_TOKEN)")

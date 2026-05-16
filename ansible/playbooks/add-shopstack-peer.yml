@@ -1,0 +1,103 @@
+---
+# add-shopstack-peer.yml - Register a new ShopStack customer as a peer on wg1.
+#
+# Run this AFTER deploying the spoke on the customer box. The spoke playbook
+# fetches peer info to ~/Workspace/shopstack/ansible/spoke/peers/<client>.yml.
+#
+# Usage:
+#   make shopstack-add-peer CLIENT=tshirts-demo WG_IP=10.99.0.2
+#
+# Required vars:
+#   peer_name   Customer name (matches filename in spoke/peers/)
+#   peer_ip     WireGuard IP assigned to this customer (e.g. 10.99.0.2)
+#
+# The pubkey and psk are read from:
+#   ~/Workspace/shopstack/ansible/spoke/peers/<peer_name>.yml
+
+- name: Register ShopStack customer peer on wg1
+  hosts: lxc_services:&wireguard
+  vars:
+    wg1_config_dir: /etc/wireguard
+    wg1_peers_file: /etc/wireguard/shopstack-peers.yml
+    local_peer_file: "{{ lookup('env', 'HOME') }}/Workspace/shopstack/ansible/spoke/peers/{{ peer_name }}.yml"
+    local_wireguard_dir: "{{ playbook_dir }}/../files/wireguard"
+
+  tasks:
+    - name: Assert required variables
+      ansible.builtin.assert:
+        that:
+          - peer_name is defined and peer_name != ""
+          - peer_ip is defined and peer_ip != ""
+        fail_msg: "peer_name and peer_ip are required. Pass via --extra-vars or make shopstack-add-peer CLIENT=<name> WG_IP=<ip>"
+
+    - name: Load peer info from local spoke peers file
+      ansible.builtin.set_fact:
+        peer_info: "{{ lookup('file', local_peer_file) | from_yaml }}"
+
+    - name: Read current peers registry from hub
+      ansible.builtin.slurp:
+        src: "{{ wg1_peers_file }}"
+      register: peers_file
+
+    - name: Parse existing peers
+      ansible.builtin.set_fact:
+        existing_peers: "{{ (peers_file.content | b64decode | from_yaml).peers }}"
+
+    - name: Build updated peers list
+      ansible.builtin.set_fact:
+        wg1_peers: >-
+          {{
+            (existing_peers | rejectattr('name', 'equalto', peer_name) | list)
+            + [{
+              'name': peer_name,
+              'ip': peer_ip,
+              'public_key': peer_info.public_key,
+              'preshared_key': peer_info.preshared_key
+            }]
+          }}
+
+    - name: Write updated peers registry
+      ansible.builtin.copy:
+        content: "{{ {'peers': wg1_peers} | to_nice_yaml }}"
+        dest: "{{ wg1_peers_file }}"
+        mode: "0600"
+
+    - name: Read wg1 private key
+      ansible.builtin.slurp:
+        src: "{{ wg1_config_dir }}/wg1_server_private.key"
+      register: wg1_privkey_file
+      no_log: true
+
+    - name: Set wg1 private key fact
+      ansible.builtin.set_fact:
+        wg1_server_private_key: "{{ wg1_privkey_file.content | b64decode | trim }}"
+      no_log: true
+
+    - name: Regenerate wg1.conf with new peer
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../files/wireguard/wg1.conf.j2"
+        dest: "{{ wg1_config_dir }}/wg1.conf"
+        mode: "0600"
+
+    - name: Hot-reload wg1 (zero-downtime — existing tunnels unaffected)
+      ansible.builtin.shell:
+        cmd: wg syncconf wg1 <(wg-quick strip wg1)
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Confirm peer is registered
+      ansible.builtin.command:
+        cmd: wg show wg1 peers
+      register: wg1_peers_output
+      changed_when: false
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Peer registered on wg1"
+          - "  Name   : {{ peer_name }}"
+          - "  WG IP  : {{ peer_ip }}"
+          - "  Pubkey : {{ peer_info.public_key[:20] }}..."
+          - ""
+          - "SSH to customer: ssh -i ~/.ssh/id_ansible admin@{{ peer_ip }}"
+          - "Tunnel active when customer box connects (PersistentKeepalive=25 on spoke)"

@@ -1,0 +1,135 @@
+---
+# setup-wireguard-shopstack.yml - Set up wg1 on the WireGuard LXC for ShopStack remote management.
+#
+# This is a ONE-TIME setup. Run it before onboarding the first ShopStack customer.
+# It creates a second WireGuard interface (wg1) on the existing WireGuard LXC (192.168.86.39),
+# isolated from the personal VPN (wg0 / 10.10.0.0/24).
+#
+# After this runs:
+#   - wg1 is up on port 51821, subnet 10.99.0.0/24
+#   - Hub pubkey saved to ansible/files/wireguard/shopstack-hub.pubkey (used by spoke deployments)
+#   - Brandon's machine needs a static route: ip route add 10.99.0.0/24 via 192.168.86.39
+#
+# Usage:
+#   make wireguard-shopstack
+
+- name: Set up ShopStack management hub (wg1)
+  hosts: lxc_services:&wireguard
+  vars:
+    wg1_port: 51821
+    wg1_subnet: "10.99.0.0/24"
+    wg1_server_ip: "10.99.0.1"
+    wg1_config_dir: /etc/wireguard
+    wg1_peers_file: /etc/wireguard/shopstack-peers.yml
+    local_wireguard_dir: "{{ playbook_dir }}/../files/wireguard"
+
+  tasks:
+    - name: Ensure WireGuard is installed
+      ansible.builtin.apt:
+        name: [wireguard, wireguard-tools, iptables]
+        state: present
+        update_cache: true
+
+    - name: Generate wg1 server private key
+      ansible.builtin.shell:
+        cmd: wg genkey
+        creates: "{{ wg1_config_dir }}/wg1_server_private.key"
+      register: wg1_privkey_gen
+      no_log: true
+
+    - name: Save wg1 server private key
+      ansible.builtin.copy:
+        content: "{{ wg1_privkey_gen.stdout }}"
+        dest: "{{ wg1_config_dir }}/wg1_server_private.key"
+        mode: "0600"
+      when: wg1_privkey_gen.changed
+      no_log: true
+
+    - name: Read wg1 server private key
+      ansible.builtin.slurp:
+        src: "{{ wg1_config_dir }}/wg1_server_private.key"
+      register: wg1_privkey_file
+      no_log: true
+
+    - name: Set wg1 private key fact
+      ansible.builtin.set_fact:
+        wg1_server_private_key: "{{ wg1_privkey_file.content | b64decode | trim }}"
+      no_log: true
+
+    - name: Derive wg1 server public key
+      ansible.builtin.shell:
+        cmd: "echo '{{ wg1_server_private_key }}' | wg pubkey"
+      register: wg1_pubkey_result
+      changed_when: false
+      no_log: true
+
+    - name: Save wg1 public key to hub (for spoke deployments)
+      ansible.builtin.copy:
+        content: "{{ wg1_pubkey_result.stdout | trim }}\n"
+        dest: "{{ wg1_config_dir }}/wg1_server_public.key"
+        mode: "0644"
+
+    - name: Initialize empty peers registry (if not present)
+      ansible.builtin.copy:
+        content: "peers: []\n"
+        dest: "{{ wg1_peers_file }}"
+        mode: "0600"
+        force: false
+
+    - name: Read current peers registry
+      ansible.builtin.slurp:
+        src: "{{ wg1_peers_file }}"
+      register: peers_file
+
+    - name: Parse peers
+      ansible.builtin.set_fact:
+        wg1_peers: "{{ (peers_file.content | b64decode | from_yaml).peers }}"
+
+    - name: Template wg1.conf
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/../files/wireguard/wg1.conf.j2"
+        dest: "{{ wg1_config_dir }}/wg1.conf"
+        mode: "0600"
+      notify: Restart wg1
+
+    - name: Enable and start wg-quick@wg1
+      ansible.builtin.systemd:
+        name: wg-quick@wg1
+        enabled: true
+        state: started
+
+    - name: Verify wg1 is up
+      ansible.builtin.command:
+        cmd: wg show wg1
+      register: wg1_status
+      changed_when: false
+
+    - name: Fetch hub pubkey to local files
+      ansible.builtin.fetch:
+        src: "{{ wg1_config_dir }}/wg1_server_public.key"
+        dest: "{{ local_wireguard_dir }}/shopstack-hub.pubkey"
+        flat: true
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "ShopStack management hub (wg1) deployed"
+          - "  Interface : wg1"
+          - "  Server IP : {{ wg1_server_ip }}"
+          - "  Port      : {{ wg1_port }}"
+          - "  Subnet    : {{ wg1_subnet }}"
+          - ""
+          - "Hub pubkey saved to: ansible/files/wireguard/shopstack-hub.pubkey"
+          - ""
+          - "NEXT STEPS:"
+          - "  1. Add static route on your machine:"
+          - "       sudo ip route add 10.99.0.0/24 via 192.168.86.39"
+          - "  2. Make it persistent (add to /etc/network/interfaces or nmcli)"
+          - "  3. Deploy a customer spoke: cd ~/Workspace/shopstack && make spoke CLIENT=<name> WG_IP=10.99.0.X"
+          - "  4. Register the peer:       cd ~/Workspace/proxmox_kubernetes_cluster && make shopstack-add-peer CLIENT=<name> WG_IP=10.99.0.X"
+
+  handlers:
+    - name: Restart wg1
+      ansible.builtin.systemd:
+        name: wg-quick@wg1
+        state: restarted
