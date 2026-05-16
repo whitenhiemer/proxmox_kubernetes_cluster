@@ -19,6 +19,9 @@
   vars:
     wg1_config_dir: /etc/wireguard
     wg1_peers_file: /etc/wireguard/shopstack-peers.yml
+    wg1_port: 51821
+    wg1_subnet: "10.99.0.0/24"
+    wg1_server_ip: "10.99.0.1"
     local_peer_file: "{{ lookup('env', 'HOME') }}/Workspace/shopstack/ansible/spoke/peers/{{ peer_name }}.yml"
     local_wireguard_dir: "{{ playbook_dir }}/../files/wireguard"
 
