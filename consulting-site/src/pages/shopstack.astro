@@ -137,6 +137,15 @@ import Layout from '../layouts/Layout.astro';
       <div class="eyebrow">Pricing</div>
       <h2 class="section-title">Simple. Predictable. No surprises.</h2>
 
+      <div class="online-callout card">
+        <div class="online-left">
+          <div class="online-badge">Online sellers</div>
+          <div class="online-title">Run your business entirely online?</div>
+          <div class="online-desc">ShopStack Online is built for Etsy sellers, digital product shops, and online boutiques — with a WooCommerce storefront and digital delivery included. $99/mo flat.</div>
+        </div>
+        <a href="/shopstack-online" class="btn btn-outline">See ShopStack Online →</a>
+      </div>
+
       <div class="oss-callout card">
         <div class="oss-left">
           <div class="oss-badge">Open Source</div>
@@ -596,6 +605,45 @@ import Layout from '../layouts/Layout.astro';
 
   /* Pricing */
   .pricing-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+  .online-callout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.5rem 2rem;
+    margin-bottom: 1.5rem;
+    background: rgba(232, 88, 12, 0.03);
+    border-color: rgba(232, 88, 12, 0.2);
+    flex-wrap: wrap;
+  }
+
+  .online-left { flex: 1; min-width: 0; }
+
+  .online-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 1px solid rgba(232, 88, 12, 0.3);
+    color: var(--accent);
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+
+  .online-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+
+  .online-desc {
+    font-size: 0.875rem;
+    color: var(--dim);
+    line-height: 1.55;
+  }
 
   .oss-callout {
     display: flex;
