@@ -77,6 +77,17 @@ import Layout from '../layouts/Layout.astro';
               <span>~$50–60/mo infra</span>
             </div>
           </div>
+          <div class="platform-card card featured-platform">
+            <div class="hw-label">Premium Hosted</div>
+            <div class="hw-name">Fully Managed</div>
+            <div class="hw-desc">No hardware. No AWS account. Hosted on my managed infrastructure — just tell me your domain and you're live in 24 hours.</div>
+            <div class="hw-specs">
+              <span>Zero setup</span>
+              <span>24hr onboarding</span>
+              <span>No accounts needed</span>
+              <span>Fastest start</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -158,9 +169,9 @@ import Layout from '../layouts/Layout.astro';
           <div class="price-note">~$200 hardware purchase required · Additional support billed at $150/hr</div>
         </div>
 
-        <div class="price-card card featured-card">
+        <div class="price-card card">
           <div class="price-badge">Plug &amp; Play</div>
-          <div class="plug-play-label">Most hands-off</div>
+          <div class="plug-play-label">Hardware included</div>
           <div class="price-main">
             <span class="price-setup">$800</span>
             <span class="price-setup-label">setup &nbsp;+&nbsp;</span>
@@ -201,7 +212,31 @@ import Layout from '../layouts/Layout.astro';
             <li>Rolling month-to-month — cancel anytime</li>
           </ul>
           <a href="/contact" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.75rem;">Get Started →</a>
-          <div class="price-note">No hardware to buy · Additional support billed at $150/hr</div>
+          <div class="price-note">Requires an AWS or GCP account · Additional support billed at $150/hr</div>
+        </div>
+
+        <div class="price-card card featured-card">
+          <div class="price-badge">Premium Hosted</div>
+          <div class="plug-play-label">Fastest onboarding — live in 24 hours</div>
+          <div class="price-main">
+            <span class="price-setup">$150</span>
+            <span class="price-setup-label">setup &nbsp;+&nbsp;</span>
+            <span class="price-mo">$350<span class="price-per">/mo</span></span>
+          </div>
+          <div class="price-annual">$4,350 first year · $4,200/yr after</div>
+          <ul class="includes-list">
+            <li><strong>No hardware to buy or manage</strong></li>
+            <li><strong>No AWS or GCP account required</strong></li>
+            <li>Hosted on my managed infrastructure — fully isolated</li>
+            <li>Domain + DNS configuration</li>
+            <li>Monthly OS &amp; software patching</li>
+            <li>Automated encrypted backups</li>
+            <li>24/7 uptime alerting (I get paged, not you)</li>
+            <li>Up to 2 hrs support included each month</li>
+            <li>Rolling month-to-month — cancel anytime</li>
+          </ul>
+          <a href="/contact" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1.75rem;">Get Started →</a>
+          <div class="price-note">Nothing to set up on your end · Additional support billed at $150/hr</div>
         </div>
       </div>
 
@@ -212,6 +247,7 @@ import Layout from '../layouts/Layout.astro';
             <span>On-Prem</span>
             <span>Plug &amp; Play</span>
             <span>Cloud</span>
+            <span>Premium Hosted</span>
             <span>SaaS stack</span>
           </div>
           <div class="compare-row">
@@ -219,6 +255,7 @@ import Layout from '../layouts/Layout.astro';
             <span class="good">$200</span>
             <span class="good">$200</span>
             <span class="good">$250</span>
+            <span class="good">$350</span>
             <span class="bad">$50–150+</span>
           </div>
           <div class="compare-row">
@@ -226,20 +263,31 @@ import Layout from '../layouts/Layout.astro';
             <span class="good">None</span>
             <span class="good">None</span>
             <span class="good">None</span>
+            <span class="good">None</span>
             <span class="bad">$6–12/user/mo</span>
           </div>
           <div class="compare-row">
-            <span>Hardware</span>
+            <span>Hardware needed</span>
             <span class="good">~$200 once</span>
             <span class="good">Included</span>
-            <span class="good">None needed</span>
-            <span class="bad">None needed</span>
+            <span class="good">None</span>
+            <span class="good">None</span>
+            <span class="bad">None</span>
+          </div>
+          <div class="compare-row">
+            <span>Cloud account needed</span>
+            <span class="good">No</span>
+            <span class="good">No</span>
+            <span class="bad">Yes</span>
+            <span class="good">No</span>
+            <span class="bad">Yes</span>
           </div>
           <div class="compare-row">
             <span>Setup effort</span>
             <span class="good">Minimal</span>
             <span class="good">Plug in &amp; done</span>
             <span class="good">None</span>
+            <span class="good">None — 24hr live</span>
             <span class="bad">DIY config</span>
           </div>
           <div class="compare-row">
@@ -248,9 +296,11 @@ import Layout from '../layouts/Layout.astro';
             <span class="good">Yes</span>
             <span class="bad">No</span>
             <span class="bad">No</span>
+            <span class="bad">No</span>
           </div>
           <div class="compare-row">
             <span>When it breaks</span>
+            <span class="good">I get paged</span>
             <span class="good">I get paged</span>
             <span class="good">I get paged</span>
             <span class="good">I get paged</span>
@@ -338,6 +388,10 @@ import Layout from '../layouts/Layout.astro';
         <div class="faq-item">
           <h3>On-premises or cloud — which should I choose?</h3>
           <p>On-premises is better if you need offline access, have slow internet, or want total data ownership. Cloud is better if you don't want hardware at all, have multiple locations, or want the system to survive a power outage at your office.</p>
+        </div>
+        <div class="faq-item">
+          <h3>What is Premium Hosted and who is it for?</h3>
+          <p>Premium Hosted runs your stack on my managed infrastructure — you don't buy hardware or set up an AWS account. You provide your domain name, I handle the rest. Live in 24 hours. It's the right choice if you want the absolute minimum friction and don't mind paying a bit more for it.</p>
         </div>
         <div class="faq-item">
           <h3>What exactly is open source here?</h3>
@@ -462,8 +516,12 @@ import Layout from '../layouts/Layout.astro';
 
   .platform-options {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 1rem;
+  }
+
+  .featured-platform {
+    border-color: var(--accent);
   }
 
   .platform-card {
@@ -579,7 +637,7 @@ import Layout from '../layouts/Layout.astro';
 
   .pricing-cards {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     gap: 1.25rem;
     margin-bottom: 2.5rem;
   }
@@ -698,7 +756,7 @@ import Layout from '../layouts/Layout.astro';
 
   .compare-row {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 1fr;
     padding: 0.65rem 1rem;
     font-size: 0.82rem;
     border-bottom: 1px solid var(--border);
@@ -794,7 +852,7 @@ import Layout from '../layouts/Layout.astro';
     .platform-options { grid-template-columns: 1fr 1fr; }
   }
 
-  @media (max-width: 1050px) {
+  @media (max-width: 800px) {
     .pricing-cards { grid-template-columns: 1fr; max-width: 480px; margin-left: auto; margin-right: auto; }
   }
 
@@ -802,8 +860,8 @@ import Layout from '../layouts/Layout.astro';
     .pain-grid { grid-template-columns: 1fr; }
     .services-grid { grid-template-columns: repeat(2, 1fr); }
     .compare-table-wrap { overflow-x: auto; }
-    .compare-table { min-width: 560px; }
-    .compare-row { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; font-size: 0.75rem; }
+    .compare-table { min-width: 640px; }
+    .compare-row { grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr 1fr; font-size: 0.75rem; }
     .steps { flex-direction: column; gap: 1.5rem; }
     .step-connector { display: none; }
     .oss-callout { flex-direction: column; align-items: flex-start; }
@@ -814,6 +872,6 @@ import Layout from '../layouts/Layout.astro';
     .services-grid { grid-template-columns: 1fr; }
     .faq-grid { grid-template-columns: 1fr; }
     .cta-box { padding: 2.5rem 1.5rem; }
-    .compare-row { grid-template-columns: 1fr 0.8fr 0.8fr 0.8fr; font-size: 0.72rem; padding: 0.5rem 0.6rem; }
+    .compare-row { grid-template-columns: 1fr 0.7fr 0.7fr 0.7fr 0.7fr; font-size: 0.68rem; padding: 0.5rem 0.6rem; }
   }
 </style>
