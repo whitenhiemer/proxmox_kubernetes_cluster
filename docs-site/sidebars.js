@@ -33,6 +33,20 @@ const sidebars = {
       label: 'Kubernetes',
       items: ['kubernetes/talos', 'kubernetes/workloads'],
     },
+    {
+      type: 'category',
+      label: 'ShopStack Operations',
+      items: [
+        'consulting-ops/index',
+        'consulting-ops/shopstack-deployment',
+        'consulting-ops/client-onboarding',
+        'consulting-ops/inbound-lead-response',
+        'consulting-ops/linkedin-posting',
+        'consulting-ops/facebook-content',
+        'consulting-ops/monthly-business-review',
+        'consulting-ops/client-support',
+      ],
+    },
   ],
 };
 

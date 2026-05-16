@@ -1,0 +1,31 @@
+:root {
+  --ifm-color-primary: #E8580C;
+  --ifm-color-primary-dark: #d14f0b;
+  --ifm-color-primary-darker: #c54b0a;
+  --ifm-color-primary-darkest: #a23d08;
+  --ifm-color-primary-light: #ea6924;
+  --ifm-color-primary-lighter: #eb7030;
+  --ifm-color-primary-lightest: #ef8a56;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #ef8a56;
+  --ifm-color-primary-dark: #eb7030;
+  --ifm-color-primary-darker: #ea6924;
+  --ifm-color-primary-darkest: #E8580C;
+  --ifm-color-primary-light: #f2a07a;
+  --ifm-color-primary-lighter: #f4a988;
+  --ifm-color-primary-lightest: #f8c4a8;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+.navbar__title {
+  font-weight: 700;
+}
+
+/* Make callout boxes slightly more prominent */
+.alert {
+  border-left-width: 4px;
+}
