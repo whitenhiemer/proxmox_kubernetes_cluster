@@ -9,6 +9,8 @@ export async function getStaticPaths() {
 
 const { post } = Astro.props;
 const { Content } = await render(post);
+const postUrl = new URL(Astro.url.pathname, Astro.site).href;
+const linkedInShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postUrl)}`;
 
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -39,12 +41,18 @@ function formatDate(date: Date) {
       </div>
 
       <footer class="post-footer">
+        <div class="share-row">
+          <span class="share-label">Share this post</span>
+          <a href={linkedInShareUrl} target="_blank" rel="noopener noreferrer" class="share-btn">
+            LinkedIn →
+          </a>
+        </div>
         <div class="post-footer-inner">
           <div class="author-block">
-            <div class="author-name">Brandon Woodward</div>
-            <div class="author-bio">Systems Architect & AI Automation Consultant. I help engineering teams cut manual ops and integrate AI that actually works.</div>
+            <div class="author-name">Woodhead Tech</div>
+            <div class="author-bio">Systems architecture & AI automation for engineering teams. Built on 20+ years at Rackspace, Amazon, and Salesforce GovCloud.</div>
           </div>
-          <a href="/contact" class="btn btn-primary">Work with me</a>
+          <a href="/contact" class="btn btn-primary">Get in touch</a>
         </div>
         <a href="/blog" class="back-link back-bottom">← All posts</a>
       </footer>
@@ -204,6 +212,36 @@ function formatDate(date: Date) {
     padding-top: 2.5rem;
     border-top: 1px solid var(--border);
   }
+
+  .share-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .share-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .share-btn {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid rgba(232, 88, 12, 0.3);
+    border-radius: 6px;
+    padding: 0.3rem 0.75rem;
+    transition: background 0.15s;
+  }
+
+  .share-btn:hover { background: rgba(232, 88, 12, 0.06); }
 
   .post-footer-inner {
     display: flex;
